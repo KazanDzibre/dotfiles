@@ -47,8 +47,9 @@ Scope {
 
           WindowTitle {
             id: windowTitle
-            // Kept tight so a long title can't reach the centred clock.
-            maxWidth: 160
+            // Measured: the left group has ~248px of slack before the
+            // appearance island, so this can be generous.
+            maxWidth: 280
           }
         }
       }
@@ -70,8 +71,22 @@ Scope {
         anchors.rightMargin: Theme.gap
         anchors.verticalCenter: parent.verticalCenter
         padding: 8
+        spacing: 10
 
         WallpaperButton {}
+
+        ThemeButton {}
+
+        BrightnessButton {}
+      }
+
+      Island {
+        anchors.left: clockIsland.right
+        anchors.leftMargin: Theme.gap
+        anchors.verticalCenter: parent.verticalCenter
+        padding: 8
+
+        WindowsButton {}
       }
 
       // --------------------------------------------------------------- right
@@ -86,7 +101,9 @@ Scope {
 
           MediaIsland {
             id: media
-            maxWidth: 130
+            // Measured: with the power island added, this cap is what keeps
+            // the right group clear of the windows button while music plays.
+            maxWidth: 88
           }
         }
 
@@ -98,6 +115,12 @@ Scope {
           SystemIsland {
             id: system
           }
+        }
+
+        Island {
+          padding: 8
+
+          PowerButton {}
         }
       }
     }

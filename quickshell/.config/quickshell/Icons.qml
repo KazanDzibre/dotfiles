@@ -44,6 +44,31 @@ Singleton {
   readonly property string chevronLeft: String.fromCodePoint(0xf0141)
   readonly property string chevronRight: String.fromCodePoint(0xf0142)
 
+  // ----------------------------------------------------------------- display
+  readonly property string brightness: String.fromCodePoint(0xf00df)
+  readonly property string brightnessLow: String.fromCodePoint(0xf00de)
+  readonly property string warmth: String.fromCodePoint(0xf05a6)
+  readonly property string alert: String.fromCodePoint(0xf002a)
+
+  // ------------------------------------------------------------------ power
+  readonly property string power: String.fromCodePoint(0xf0425)
+  readonly property string logout: String.fromCodePoint(0xf0343)
+  readonly property string restart: String.fromCodePoint(0xf0709)
+  readonly property string sleep: String.fromCodePoint(0xf04b2)
+
+  // -------------------------------------------------------------- bluetooth
+  readonly property string bluetooth: String.fromCodePoint(0xf00af)
+  readonly property string bluetoothOff: String.fromCodePoint(0xf00b2)
+  readonly property string bluetoothConnected: String.fromCodePoint(0xf00b1)
+
+  // ------------------------------------------------------------------ theme
+  readonly property string sun: String.fromCodePoint(0xf0599)
+  readonly property string moon: String.fromCodePoint(0xf0594)
+
+  // ---------------------------------------------------------------- windows
+  readonly property string windows: String.fromCodePoint(0xf05b2)
+  readonly property string close: String.fromCodePoint(0xf0156)
+
   // ------------------------------------------------------------- wallpaper
   readonly property string wallpaper: String.fromCodePoint(0xf0e09)
   readonly property string shuffle: String.fromCodePoint(0xf049f)
@@ -60,6 +85,7 @@ Singleton {
   readonly property string download: String.fromCodePoint(0xf01da)
 
   // -------------------------------------------------------------- interface
+  readonly property string forget: String.fromCodePoint(0xf09e7)
   readonly property string check: String.fromCodePoint(0xf012c)
   readonly property string lock: String.fromCodePoint(0xf033e)
   readonly property string spinner: String.fromCodePoint(0xf0772)
@@ -76,6 +102,53 @@ Singleton {
   readonly property string appFiles: String.fromCodePoint(0xf024b)
   readonly property string appChat: String.fromCodePoint(0xf0361)
   readonly property string appSettings: String.fromCodePoint(0xf08bb)
+
+  // Real application icon from the icon theme, as a URL for Image/IconImage,
+  // or "" when the theme has nothing for this app.
+  //
+  // DesktopEntries is tried first because a .desktop file names the icon
+  // properly, but it silently yields nothing when XDG_DATA_DIRS is unset — so
+  // fall back to treating the window class itself as an icon name, which is
+  // right far more often than not.
+  function themeIconFor(cls) {
+    if (!cls)
+      return "";
+
+    const entry = DesktopEntries.heuristicLookup(cls);
+    if (entry && entry.icon && Quickshell.hasThemeIcon(entry.icon))
+      return Quickshell.iconPath(entry.icon);
+
+    const candidates = [cls, cls.toLowerCase(), cls.split(".").pop().toLowerCase()];
+    for (const c of candidates) {
+      if (c && Quickshell.hasThemeIcon(c))
+        return Quickshell.iconPath(c);
+    }
+    return "";
+  }
+
+  // BlueZ reports a freedesktop icon name such as "audio-headset". Used as the
+  // fallback when the icon theme has no matching image.
+  function forBluetoothDevice(iconName) {
+    const n = (iconName ?? "").toLowerCase();
+    if (n.includes("headset") || n.includes("headphone"))
+      return String.fromCodePoint(0xf02cb);
+    if (n.includes("speaker") || n.includes("audio"))
+      return String.fromCodePoint(0xf04c3);
+    if (n.includes("mouse"))
+      return String.fromCodePoint(0xf037d);
+    if (n.includes("keyboard"))
+      return String.fromCodePoint(0xf030c);
+    if (n.includes("phone"))
+      return String.fromCodePoint(0xf011c);
+    if (n.includes("watch"))
+      return String.fromCodePoint(0xf0589);
+    return root.bluetooth;
+  }
+
+  // A themed icon URL for any freedesktop icon name, or "" if absent.
+  function themeIcon(name) {
+    return name && Quickshell.hasThemeIcon(name) ? Quickshell.iconPath(name) : "";
+  }
 
   // Maps a Hyprland window class to a glyph. Matching is substring-based and
   // case-insensitive, so "org.mozilla.firefox" still finds "firefox".

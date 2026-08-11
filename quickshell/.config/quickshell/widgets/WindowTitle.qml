@@ -1,25 +1,41 @@
 // WindowTitle.qml — icon + title of the focused window.
 //
+// Sourced from the Wayland toplevel manager, not Hyprland.activeToplevel: the
+// latter only populates once Hyprland emits an activewindow event, so after a
+// shell restart it stays null until you switch windows.
+//
 // Truncates rather than pushing the centre clock off-centre; at 1280 logical
 // pixels wide that matters.
 import QtQuick
-import Quickshell.Hyprland
+import Quickshell
+import Quickshell.Wayland
+import Quickshell.Widgets
 import qs
 
 Row {
   id: root
 
-  readonly property var toplevel: Hyprland.activeToplevel
+  readonly property var toplevel: ToplevelManager.activeToplevel
   readonly property string title: toplevel ? toplevel.title : ""
-  readonly property string appClass: toplevel && toplevel.lastIpcObject ? (toplevel.lastIpcObject["class"] ?? "") : ""
+  readonly property string appClass: toplevel ? (toplevel.appId ?? "") : ""
   readonly property bool hasWindow: title.length > 0
+  readonly property string iconUrl: Icons.themeIconFor(appClass)
 
-  property int maxWidth: 220
+  property int maxWidth: 160
 
   spacing: 7
 
+  IconImage {
+    anchors.verticalCenter: parent.verticalCenter
+    visible: root.iconUrl !== ""
+    source: root.iconUrl
+    implicitSize: Theme.iconSize
+    asynchronous: true
+  }
+
   Text {
     anchors.verticalCenter: parent.verticalCenter
+    visible: root.iconUrl === ""
     text: Icons.forClass(root.appClass)
     font.family: Theme.fontFamily
     font.pixelSize: Theme.iconSize

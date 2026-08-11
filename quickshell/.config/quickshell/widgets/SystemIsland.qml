@@ -6,6 +6,7 @@ import Quickshell
 import Quickshell.Services.Pipewire
 import Quickshell.Services.UPower
 import Quickshell.Networking
+import Quickshell.Bluetooth
 import qs
 
 Row {
@@ -147,6 +148,40 @@ Row {
     }
   }
 
+  // --------------------------------------------------------------- bluetooth
+  Item {
+    id: bt
+
+    readonly property var adapter: Bluetooth.defaultAdapter
+    readonly property bool poweredOn: adapter ? adapter.enabled : false
+    readonly property int connectedCount: Bluetooth.devices ? Array.from(Bluetooth.devices.values).filter(d => d.connected).length : 0
+
+    anchors.verticalCenter: parent.verticalCenter
+    implicitWidth: btIcon.implicitWidth
+    implicitHeight: 18
+
+    Text {
+      id: btIcon
+      anchors.centerIn: parent
+      text: !bt.poweredOn ? Icons.bluetoothOff : bt.connectedCount > 0 ? Icons.bluetoothConnected : Icons.bluetooth
+      font.family: Theme.fontFamily
+      font.pixelSize: Theme.iconSize
+      color: bt.connectedCount > 0 ? Theme.accent : bt.poweredOn ? Theme.fg : Theme.fgDim
+
+      Behavior on color {
+        ColorAnimation {
+          duration: Theme.animFast
+        }
+      }
+    }
+
+    MouseArea {
+      anchors.fill: parent
+      cursorShape: Qt.PointingHandCursor
+      onClicked: bluetoothPopup.toggle()
+    }
+  }
+
   // ----------------------------------------------------------------- battery
   Item {
     id: bat
@@ -230,5 +265,10 @@ Row {
   WifiPopup {
     id: wifiPopup
     anchorItem: net
+  }
+
+  BluetoothPopup {
+    id: bluetoothPopup
+    anchorItem: bt
   }
 }
