@@ -73,26 +73,6 @@ Item {
       }
     }
 
-    // Scratchpad indicator — only present while the special workspace has
-    // something in it.
-    Rectangle {
-      readonly property var special: Array.from(Hyprland.workspaces.values).find(w => w.id < 0) ?? null
-
-      visible: special !== null
-      implicitWidth: 18
-      implicitHeight: 18
-      radius: height / 2
-      color: "transparent"
-      border.width: 1
-      border.color: Theme.accent
-
-      Text {
-        anchors.centerIn: parent
-        text: "●"
-        font.pixelSize: Theme.smallSize - 2
-        color: Theme.accent
-      }
-    }
   }
 
   WheelHandler {

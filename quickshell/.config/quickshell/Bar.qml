@@ -78,6 +78,8 @@ Scope {
         ThemeButton {}
 
         BrightnessButton {}
+
+        AiButton {}
       }
 
       Island {
@@ -97,14 +99,9 @@ Scope {
         spacing: Theme.gap
 
         Island {
-          shown: media.hasPlayer
+          shown: Media.hasPlayer
 
-          MediaIsland {
-            id: media
-            // Measured: with the power island added, this cap is what keeps
-            // the right group clear of the windows button while music plays.
-            maxWidth: 88
-          }
+          MediaButton {}
         }
 
         Island {

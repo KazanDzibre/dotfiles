@@ -38,11 +38,20 @@ Singleton {
   readonly property string next: String.fromCodePoint(0xf04ad)
   readonly property string prev: String.fromCodePoint(0xf04ae)
   readonly property string music: String.fromCodePoint(0xf075a)
+  readonly property string musicNote: String.fromCodePoint(0xf0387)
+  readonly property string album: String.fromCodePoint(0xf0025)
+  readonly property string repeatAll: String.fromCodePoint(0xf0456)
+  readonly property string repeatOne: String.fromCodePoint(0xf0458)
+  readonly property string repeatOff: String.fromCodePoint(0xf0457)
+  readonly property string shuffleOff: String.fromCodePoint(0xf049e)
 
   // -------------------------------------------------------------- calendar
   readonly property string calendar: String.fromCodePoint(0xf00ed)
   readonly property string chevronLeft: String.fromCodePoint(0xf0141)
   readonly property string chevronRight: String.fromCodePoint(0xf0142)
+
+  // ------------------------------------------------------------ ai assistant
+  readonly property string ai: String.fromCodePoint(0xf06a9)
 
   // ----------------------------------------------------------------- display
   readonly property string brightness: String.fromCodePoint(0xf00df)
