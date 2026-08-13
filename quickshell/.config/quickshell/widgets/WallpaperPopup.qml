@@ -32,8 +32,8 @@ Popup {
 
   readonly property bool selectedIsCurrent: selectedPath.length > 0 && selectedPath === Wallpaper.current
 
-  onVisibleChanged: {
-    if (visible) {
+  onOpenedChanged: {
+    if (opened) {
       root.primed = true;
       Wallpaper.rescan();
       if (Wallpaper.currentIndex >= 0)

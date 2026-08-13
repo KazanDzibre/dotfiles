@@ -18,8 +18,8 @@ Popup {
   property int viewYear: Time.now.getFullYear()
   property int viewMonth: Time.now.getMonth()
 
-  onVisibleChanged: {
-    if (visible) {
+  onOpenedChanged: {
+    if (opened) {
       root.viewYear = Time.now.getFullYear();
       root.viewMonth = Time.now.getMonth();
     }

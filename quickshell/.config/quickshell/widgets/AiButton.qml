@@ -10,6 +10,34 @@ Item {
   implicitWidth: 18
   implicitHeight: 18
 
+  // Halo behind the glyph while the panel is on screen, so the button reads as
+  // "held down" for as long as the drawer is out. It grows in on roughly the
+  // same curve Hyprland slides the panel with, which ties the two together.
+  Rectangle {
+    id: halo
+
+    anchors.centerIn: parent
+    width: 20
+    height: 20
+    radius: width / 2
+
+    color: Theme.accentSoft
+    opacity: AiAssistant.shown ? 1 : 0
+    scale: AiAssistant.shown ? 1 : 0.5
+
+    Behavior on opacity {
+      NumberAnimation {
+        duration: Theme.animFast
+      }
+    }
+    Behavior on scale {
+      NumberAnimation {
+        duration: Theme.animSlow
+        easing.type: Easing.OutBack
+      }
+    }
+  }
+
   Text {
     id: glyph
 
@@ -26,20 +54,37 @@ Item {
         duration: Theme.animFast
       }
     }
+
+    // Hover lift and a dip on press — the click has to feel like it landed
+    // before the panel has finished sliding.
+    scale: mouse.pressed ? 0.86 : mouse.containsMouse ? 1.12 : 1
+
+    Behavior on scale {
+      NumberAnimation {
+        duration: Theme.animFast
+        easing.type: Easing.OutBack
+      }
+    }
   }
 
   // Pulse while chromium is starting up — cold start takes a few seconds and
-  // silence would read as a dead button.
-  SequentialAnimation on opacity {
+  // silence would read as a dead button. alwaysRunToEnd matters here: without
+  // it, a window that appears mid-fade leaves the glyph stuck half transparent.
+  SequentialAnimation {
     running: starting.running
     loops: Animation.Infinite
+    alwaysRunToEnd: true
 
     NumberAnimation {
+      target: root
+      property: "opacity"
       to: 0.4
       duration: 500
       easing.type: Easing.InOutSine
     }
     NumberAnimation {
+      target: root
+      property: "opacity"
       to: 1.0
       duration: 500
       easing.type: Easing.InOutSine

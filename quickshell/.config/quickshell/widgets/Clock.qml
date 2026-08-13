@@ -18,7 +18,7 @@ Item {
       text: Icons.calendar
       font.family: Theme.fontFamily
       font.pixelSize: Theme.iconSize
-      color: popup.visible ? Theme.accent : Theme.fgDim
+      color: popup.opened ? Theme.accent : Theme.fgDim
 
       Behavior on color {
         ColorAnimation {
@@ -48,7 +48,7 @@ Item {
   MouseArea {
     anchors.fill: parent
     cursorShape: Qt.PointingHandCursor
-    onClicked: popup.visible = !popup.visible
+    onClicked: popup.toggle()
   }
 
   CalendarPopup {

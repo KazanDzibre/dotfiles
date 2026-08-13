@@ -11,7 +11,7 @@ Popup {
   align: "center"
 
   // Only poll MPRIS position while the panel is actually on screen.
-  onVisibleChanged: Media.trackPosition = visible
+  onOpenedChanged: Media.trackPosition = opened
 
   readonly property var player: Media.active
 

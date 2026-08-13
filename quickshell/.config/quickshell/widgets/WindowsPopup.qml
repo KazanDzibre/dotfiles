@@ -43,8 +43,8 @@ Popup {
     return -1;
   }
 
-  onVisibleChanged: {
-    if (visible)
+  onOpenedChanged: {
+    if (opened)
       Hyprland.refreshToplevels();   // populate the workspace numbers
     else
       root.hovered = null;

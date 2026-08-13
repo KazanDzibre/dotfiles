@@ -69,8 +69,8 @@ Popup {
     id: runner
   }
 
-  onVisibleChanged: {
-    if (!visible)
+  onOpenedChanged: {
+    if (!opened)
       root.armed = "";
   }
 

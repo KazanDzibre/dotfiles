@@ -14,7 +14,7 @@ Item {
   Spectrum {
     id: spectrum
     anchors.centerIn: parent
-    color: popup.visible || mouse.containsMouse ? Theme.accent : Media.playing ? Theme.accent : Theme.fgDim
+    color: popup.opened || mouse.containsMouse ? Theme.accent : Media.playing ? Theme.accent : Theme.fgDim
   }
 
   MouseArea {

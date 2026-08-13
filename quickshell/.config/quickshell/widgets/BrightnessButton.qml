@@ -14,7 +14,7 @@ Item {
     text: Backlight.brightness < 0.4 ? Icons.brightnessLow : Icons.brightness
     font.family: Theme.fontFamily
     font.pixelSize: Theme.iconSize
-    color: popup.visible || mouse.containsMouse ? Theme.accent : Theme.fgDim
+    color: popup.opened || mouse.containsMouse ? Theme.accent : Theme.fgDim
 
     Behavior on color {
       ColorAnimation {

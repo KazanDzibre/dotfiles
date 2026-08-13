@@ -17,7 +17,20 @@ PopupWindow {
   // right edges up, which keeps islands near the screen edge on-screen.
   property string align: "center"
 
+  // Whether the card *wants* to be on screen. Deliberately separate from
+  // `visible`, which is the Wayland surface and has to outlive this by the
+  // length of the close animation. Anything reacting to a popup opening or
+  // closing should watch this, not `visible`.
+  property bool opened: false
+
   default property alias content: inner.data
+
+  // How far the card falls on the way in. The window grows by the same amount
+  // so the slide isn't clipped, and the anchor moves up to match, which leaves
+  // the card resting exactly where it always did.
+  readonly property int lift: 8
+  // Room underneath for the settle to overshoot into.
+  readonly property int slack: 4
 
   anchor.item: anchorItem
   anchor.rect.x: {
@@ -27,19 +40,38 @@ PopupWindow {
       return anchorItem.width - root.implicitWidth;
     return Math.round((anchorItem.width - root.implicitWidth) / 2);
   }
-  anchor.rect.y: anchorItem ? anchorItem.height + Theme.padding + Theme.margin : 0
+  anchor.rect.y: anchorItem ? anchorItem.height + Theme.padding + Theme.margin - root.lift : 0
 
   implicitWidth: cardWidth
-  implicitHeight: card.implicitHeight
+  implicitHeight: card.implicitHeight + lift + slack
   color: "transparent"
-  visible: false
+
+  // A PopupWindow is gone the frame `visible` goes false, so binding that
+  // straight to the open state means the exit animation never renders. Hold the
+  // surface up until the card has actually faded out.
+  visible: opened || card.opacity > 0.001
+
+  // Take input only where the card actually rests. Without this the travel room
+  // above and below it would be transparent but still clickable, so clicking
+  // the gap under the bar would fail to dismiss the popup. Deliberately the
+  // resting rect rather than `item: card`, so it doesn't churn every frame of
+  // the animation.
+  mask: Region {
+    y: root.lift
+    width: root.width
+    height: card.implicitHeight
+  }
 
   function toggle() {
-    root.visible = !root.visible;
+    root.opened = !root.opened;
+  }
+
+  function open() {
+    root.opened = true;
   }
 
   function close() {
-    root.visible = false;
+    root.opened = false;
   }
 
   // Clicking anywhere else drops the grab, which is our cue to close.
@@ -62,7 +94,7 @@ PopupWindow {
     repeat: true
 
     onTriggered: {
-      if (!root.visible || grab.active || attempts > 25) {
+      if (!root.opened || grab.active || attempts > 25) {
         stop();
         return;
       }
@@ -71,13 +103,13 @@ PopupWindow {
     }
   }
 
-  // Deliberately a Connections block rather than an `onVisibleChanged` handler:
+  // Deliberately a Connections block rather than an `onOpenedChanged` handler:
   // components deriving from Popup define their own, which would override ours.
   Connections {
     target: root
 
-    function onVisibleChanged() {
-      if (root.visible) {
+    function onOpenedChanged() {
+      if (root.opened) {
         armGrab.attempts = 0;
         armGrab.restart();
       } else {
@@ -99,27 +131,84 @@ PopupWindow {
     border.width: 1
     border.color: Theme.border
 
-    opacity: root.visible ? 1 : 0
-    scale: root.visible ? 1 : 0.94
+    // The closed pose. `open` below is the resting one; everything animates
+    // between the two.
+    y: 0
+    opacity: 0
+    scale: 0.94
     transformOrigin: Item.Top
 
-    Behavior on opacity {
-      NumberAnimation {
-        duration: Theme.animFast
+    states: State {
+      name: "open"
+      when: root.opened
+
+      PropertyChanges {
+        card.y: root.lift
+        card.opacity: 1
+        card.scale: 1
+      }
+      PropertyChanges {
+        inner.opacity: 1
       }
     }
-    Behavior on scale {
-      NumberAnimation {
-        duration: Theme.animSlow
-        easing.type: Easing.OutBack
+
+    // Asymmetric on purpose: opening is a spring you watch land, closing is a
+    // dismissal that shouldn't keep you waiting.
+    transitions: [
+      Transition {
+        to: "open"
+
+        NumberAnimation {
+          target: card
+          property: "opacity"
+          duration: Theme.animFast
+          easing.type: Easing.OutCubic
+        }
+        NumberAnimation {
+          target: card
+          properties: "y,scale"
+          duration: Theme.animSlow
+          easing.type: Easing.OutBack
+          easing.overshoot: 1.2
+        }
+        // Content trails the card by a frame or two, so the surface arrives
+        // first and fills in rather than everything blooming at once.
+        SequentialAnimation {
+          PauseAnimation {
+            duration: 50
+          }
+          NumberAnimation {
+            target: inner
+            property: "opacity"
+            duration: Theme.animFast
+            easing.type: Easing.OutCubic
+          }
+        }
+      },
+      Transition {
+        from: "open"
+
+        NumberAnimation {
+          targets: [card, inner]
+          property: "opacity"
+          duration: Theme.animFast
+          easing.type: Easing.InCubic
+        }
+        NumberAnimation {
+          target: card
+          properties: "y,scale"
+          duration: Theme.animFast
+          easing.type: Easing.InCubic
+        }
       }
-    }
+    ]
 
     Column {
       id: inner
       anchors.centerIn: parent
       width: parent.width - 28
       spacing: 12
+      opacity: 0
     }
   }
 }

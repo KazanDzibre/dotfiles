@@ -15,7 +15,7 @@ Item {
     font.pixelSize: Theme.iconSize
     // The one control on the bar that can end your session — it gets the
     // warning colour on hover rather than the accent.
-    color: popup.visible || mouse.containsMouse ? Theme.crit : Theme.fgDim
+    color: popup.opened || mouse.containsMouse ? Theme.crit : Theme.fgDim
 
     Behavior on color {
       ColorAnimation {

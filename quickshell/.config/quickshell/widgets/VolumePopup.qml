@@ -40,7 +40,7 @@ Popup {
   PwNodePeakMonitor {
     id: peakMonitor
     node: root.sink
-    enabled: root.visible
+    enabled: root.opened
   }
 
   // ------------------------------------------------------------------ output

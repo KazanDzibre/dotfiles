@@ -24,7 +24,7 @@ Popup {
   property string errorText: ""
 
   // Bar.qml reads this to decide when the panel should accept keystrokes.
-  readonly property bool wantsKeyboard: visible && pendingNetwork !== null
+  readonly property bool wantsKeyboard: opened && pendingNetwork !== null
 
   // Access points are per-BSSID, so the same SSID can appear several times.
   // Keep the strongest of each, connected first, then by signal.
@@ -49,12 +49,12 @@ Popup {
   Binding {
     target: root.wifiDevice
     property: "scannerEnabled"
-    value: root.visible
+    value: root.opened
     when: root.wifiDevice !== null
   }
 
-  onVisibleChanged: {
-    if (!visible) {
+  onOpenedChanged: {
+    if (!opened) {
       root.pendingNetwork = null;
       root.password = "";
       root.errorText = "";

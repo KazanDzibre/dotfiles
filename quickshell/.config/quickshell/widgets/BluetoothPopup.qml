@@ -42,7 +42,7 @@ Popup {
     target: root.adapter
     property: "discovering"
     value: true
-    when: root.adapter !== null && root.visible && root.poweredOn
+    when: root.adapter !== null && root.opened && root.poweredOn
   }
 
   function label(device) {
