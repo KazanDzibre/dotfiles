@@ -39,6 +39,8 @@ Scope {
         spacing: Theme.gap
 
         Island {
+          id: workspacesIsland
+
           Workspaces {}
         }
 
@@ -47,9 +49,16 @@ Scope {
 
           WindowTitle {
             id: windowTitle
-            // Measured: the left group has ~248px of slack before the
-            // appearance island, so this can be generous.
-            maxWidth: 280
+
+            // The workspace island grows as you open workspaces, which used to
+            // push a long title straight through the appearance island. Rather
+            // than a fixed cap, take whatever room is actually left: the gap
+            // between where this island starts and where the appearance island
+            // begins, minus this island's own icon, spacing and padding.
+            //
+            // Derived from workspacesIsland.width rather than this island's own
+            // x, which would be a binding loop.
+            maxWidth: Math.max(60, appearanceIsland.x - (Theme.margin + workspacesIsland.width + Theme.gap) - Theme.gap - (Theme.iconSize + 7 + Theme.padding * 2))
           }
         }
       }
@@ -67,6 +76,8 @@ Scope {
       // Hung off the clock's left edge rather than placed in a row with it, so
       // the clock itself stays exactly centred on the screen.
       Island {
+        id: appearanceIsland
+
         anchors.right: clockIsland.left
         anchors.rightMargin: Theme.gap
         anchors.verticalCenter: parent.verticalCenter
@@ -109,9 +120,25 @@ Scope {
         }
 
         Island {
+          shown: tray.hasItems
+          padding: 9
+
+          TrayIsland {
+            id: tray
+            hostWindow: bar
+          }
+        }
+
+        Island {
           SystemIsland {
             id: system
           }
+        }
+
+        Island {
+          padding: 8
+
+          NotificationButton {}
         }
 
         Island {

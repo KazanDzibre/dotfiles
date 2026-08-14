@@ -50,6 +50,16 @@ Singleton {
   readonly property string chevronLeft: String.fromCodePoint(0xf0141)
   readonly property string chevronRight: String.fromCodePoint(0xf0142)
 
+  // ---------------------------------------------------------- notifications
+  readonly property string bell: String.fromCodePoint(0xf009a)
+  readonly property string bellOutline: String.fromCodePoint(0xf009c)
+  readonly property string bellOff: String.fromCodePoint(0xf009b)
+  readonly property string bellBadge: String.fromCodePoint(0xf116b)
+  readonly property string clearAll: String.fromCodePoint(0xf039f)
+
+  // ------------------------------------------------------------------- tray
+  readonly property string chip: String.fromCodePoint(0xf061a)
+
   // ------------------------------------------------------------ ai assistant
   readonly property string ai: String.fromCodePoint(0xf06a9)
 
