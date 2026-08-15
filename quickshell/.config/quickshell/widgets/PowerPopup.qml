@@ -191,4 +191,113 @@ Popup {
       }
     }
   }
+
+  Rectangle {
+    width: parent.width
+    height: 1
+    color: Theme.border
+  }
+
+  // Keep awake belongs here rather than in the bar: it is a session behaviour,
+  // like everything else in this panel, and it is off almost all the time — so
+  // it earns a row here instead of permanent bar space. While it is on, an
+  // indicator appears next to the battery.
+  Rectangle {
+    width: parent.width
+    height: 34
+    radius: 9
+    color: awakeHover.containsMouse ? Theme.hover : "transparent"
+
+    Behavior on color {
+      ColorAnimation {
+        duration: Theme.animFast
+      }
+    }
+
+    Text {
+      id: awakeGlyph
+      anchors.left: parent.left
+      anchors.leftMargin: 9
+      anchors.verticalCenter: parent.verticalCenter
+      text: IdleInhibit.enabled ? Icons.coffee : Icons.coffeeOff
+      font.family: Theme.fontFamily
+      font.pixelSize: Theme.iconSize + 2
+      color: IdleInhibit.enabled ? Theme.accent : Theme.fgDim
+
+      Behavior on color {
+        ColorAnimation {
+          duration: Theme.animFast
+        }
+      }
+    }
+
+    Column {
+      anchors.left: awakeGlyph.right
+      anchors.leftMargin: 10
+      anchors.right: awakeSwitch.left
+      anchors.rightMargin: 8
+      anchors.verticalCenter: parent.verticalCenter
+      spacing: 0
+
+      Text {
+        width: parent.width
+        text: "Keep awake"
+        elide: Text.ElideRight
+        font.family: Theme.fontFamily
+        font.pixelSize: Theme.fontSize
+        color: Theme.fg
+      }
+
+      Text {
+        width: parent.width
+        text: IdleInhibit.enabled ? "Screen won't lock or sleep" : "Idle timeout is active"
+        elide: Text.ElideRight
+        font.family: Theme.fontFamily
+        font.pixelSize: Theme.smallSize - 1
+        color: Theme.fgDim
+      }
+    }
+
+    Rectangle {
+      id: awakeSwitch
+
+      anchors.right: parent.right
+      anchors.rightMargin: 9
+      anchors.verticalCenter: parent.verticalCenter
+      width: 36
+      height: 20
+      radius: 10
+      color: IdleInhibit.enabled ? Theme.accent : Theme.raised
+
+      Behavior on color {
+        ColorAnimation {
+          duration: Theme.animFast
+        }
+      }
+
+      Rectangle {
+        x: IdleInhibit.enabled ? parent.width - width - 3 : 3
+        anchors.verticalCenter: parent.verticalCenter
+        width: 14
+        height: 14
+        radius: 7
+        color: IdleInhibit.enabled ? Theme.base : Theme.fgDim
+
+        Behavior on x {
+          NumberAnimation {
+            duration: Theme.animSlow
+            easing.type: Easing.OutBack
+          }
+        }
+      }
+    }
+
+    MouseArea {
+      id: awakeHover
+      anchors.fill: parent
+      hoverEnabled: true
+      cursorShape: Qt.PointingHandCursor
+      onClicked: IdleInhibit.toggle()
+    }
+  }
 }

@@ -182,6 +182,40 @@ Row {
     }
   }
 
+  // Keep-awake indicator. Present only while the inhibitor is on, so it costs
+  // no bar space in the normal case; clicking it turns it back off.
+  Item {
+    id: awake
+
+    visible: IdleInhibit.enabled
+    anchors.verticalCenter: parent.verticalCenter
+    implicitWidth: awakeIcon.implicitWidth
+    implicitHeight: 18
+
+    Text {
+      id: awakeIcon
+      anchors.centerIn: parent
+      text: Icons.coffee
+      font.family: Theme.fontFamily
+      font.pixelSize: Theme.iconSize
+      color: awakeMouse.containsMouse ? Theme.crit : Theme.accent
+
+      Behavior on color {
+        ColorAnimation {
+          duration: Theme.animFast
+        }
+      }
+    }
+
+    MouseArea {
+      id: awakeMouse
+      anchors.fill: parent
+      hoverEnabled: true
+      cursorShape: Qt.PointingHandCursor
+      onClicked: IdleInhibit.enabled = false
+    }
+  }
+
   // ----------------------------------------------------------------- battery
   Item {
     id: bat

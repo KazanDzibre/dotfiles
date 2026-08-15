@@ -3,6 +3,8 @@
 // The panel itself is transparent; everything visible is an Island, so the
 // wallpaper shows through the gaps between groups.
 import Quickshell
+import Quickshell.Wayland
+import Quickshell.Hyprland
 import QtQuick
 import qs
 import qs.widgets
@@ -27,9 +29,45 @@ Scope {
       color: "transparent"
 
       // Only take keyboard focus while something on the bar actually needs to
-      // read keystrokes (the Wi-Fi password field). The rest of the time the
-      // bar must not pull focus off your windows.
-      focusable: system.wantsKeyboard
+      // read keystrokes (the Wi-Fi password field, the clipboard search). The
+      // rest of the time the bar must not pull focus off your windows.
+      focusable: system.wantsKeyboard || tools.wantsKeyboard
+
+      // Holds the compositor awake while IdleInhibit says so. It has to hang
+      // off a real window, which is why it lives here and not in the singleton.
+      IdleInhibitor {
+        window: bar
+        enabled: IdleInhibit.enabled
+      }
+
+      // Keys are bound in hyprland.conf with `bind = ..., global, quickshell:<name>`.
+      GlobalShortcut {
+        appid: "quickshell"
+        name: "screenshotRegion"
+        description: "Select a region to screenshot"
+        onPressed: Screenshot.region()
+      }
+
+      GlobalShortcut {
+        appid: "quickshell"
+        name: "screenshotScreen"
+        description: "Screenshot the whole screen"
+        onPressed: Screenshot.fullScreen()
+      }
+
+      GlobalShortcut {
+        appid: "quickshell"
+        name: "clipboard"
+        description: "Open clipboard history"
+        onPressed: tools.toggleClipboard()
+      }
+
+      GlobalShortcut {
+        appid: "quickshell"
+        name: "keepAwake"
+        description: "Toggle keep awake"
+        onPressed: IdleInhibit.toggle()
+      }
 
       // ---------------------------------------------------------------- left
       Row {
@@ -108,6 +146,12 @@ Scope {
         anchors.rightMargin: Theme.margin
         anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.gap
+
+        Island {
+          ToolsIsland {
+            id: tools
+          }
+        }
 
         Island {
           shown: Media.hasPlayer

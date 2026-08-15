@@ -7,4 +7,7 @@ ShellRoot {
   // Its own layer-shell window rather than part of the bar: toasts have to
   // appear without anything being clicked.
   NotificationToasts {}
+
+  // Fullscreen, and only mapped while a capture is in progress.
+  ScreenshotOverlay {}
 }

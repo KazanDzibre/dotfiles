@@ -50,6 +50,16 @@ Singleton {
   readonly property string chevronLeft: String.fromCodePoint(0xf0141)
   readonly property string chevronRight: String.fromCodePoint(0xf0142)
 
+  // ------------------------------------------------------------------ tools
+  readonly property string camera: String.fromCodePoint(0xf0100)
+  readonly property string crop: String.fromCodePoint(0xf019e)
+  readonly property string monitorShot: String.fromCodePoint(0xf0e51)
+  readonly property string clipboard: String.fromCodePoint(0xf0a38)
+  readonly property string copy: String.fromCodePoint(0xf018f)
+  readonly property string search: String.fromCodePoint(0xf0349)
+  readonly property string coffee: String.fromCodePoint(0xf0176)
+  readonly property string coffeeOff: String.fromCodePoint(0xf06ca)
+
   // ---------------------------------------------------------- notifications
   readonly property string bell: String.fromCodePoint(0xf009a)
   readonly property string bellOutline: String.fromCodePoint(0xf009c)
