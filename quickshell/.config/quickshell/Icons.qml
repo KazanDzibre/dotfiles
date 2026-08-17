@@ -50,6 +50,14 @@ Singleton {
   readonly property string chevronLeft: String.fromCodePoint(0xf0141)
   readonly property string chevronRight: String.fromCodePoint(0xf0142)
 
+  // -------------------------------------------------------------- dashboard
+  readonly property string dashboard: String.fromCodePoint(0xf1489)
+  readonly property string chart: String.fromCodePoint(0xf012a)
+  readonly property string newspaper: String.fromCodePoint(0xf1004)
+  readonly property string trendUp: String.fromCodePoint(0xf0535)
+  readonly property string trendDown: String.fromCodePoint(0xf0533)
+  readonly property string openExternal: String.fromCodePoint(0xf03cc)
+
   // ------------------------------------------------------------------ tools
   readonly property string camera: String.fromCodePoint(0xf0100)
   readonly property string crop: String.fromCodePoint(0xf019e)
@@ -72,6 +80,11 @@ Singleton {
 
   // ------------------------------------------------------------ ai assistant
   readonly property string ai: String.fromCodePoint(0xf06a9)
+  readonly property string send: String.fromCodePoint(0xf048a)
+  readonly property string plus: String.fromCodePoint(0xf0415)
+  readonly property string web: String.fromCodePoint(0xf059f)
+  readonly property string key: String.fromCodePoint(0xf0dd6)
+  readonly property string stop: String.fromCodePoint(0xf04db)
 
   // ----------------------------------------------------------------- display
   readonly property string brightness: String.fromCodePoint(0xf00df)

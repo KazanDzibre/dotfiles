@@ -22,8 +22,8 @@ Item {
     radius: width / 2
 
     color: Theme.accentSoft
-    opacity: AiAssistant.shown ? 1 : 0
-    scale: AiAssistant.shown ? 1 : 0.5
+    opacity: AiChat.open || AiAssistant.shown ? 1 : 0
+    scale: AiChat.open || AiAssistant.shown ? 1 : 0.5
 
     Behavior on opacity {
       NumberAnimation {
@@ -47,7 +47,7 @@ Item {
     font.pixelSize: Theme.iconSize
     // Accent while the panel is on screen, a dimmer tint while it is merely
     // loaded, so you can tell "running but hidden" from "not started".
-    color: AiAssistant.shown ? Theme.accent : AiAssistant.running ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.55) : mouse.containsMouse ? Theme.accent : Theme.fgDim
+    color: AiChat.open || AiAssistant.shown ? Theme.accent : AiAssistant.running ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.55) : mouse.containsMouse ? Theme.accent : Theme.fgDim
 
     Behavior on color {
       ColorAnimation {
@@ -106,10 +106,15 @@ Item {
     acceptedButtons: Qt.LeftButton | Qt.RightButton
 
     onClicked: event => {
+      // Left click is the web app — it has the logged-in session, history and
+      // file uploads, which is what actually gets used. The native panel is
+      // still here on right click, but it is the secondary tool now.
       if (event.button === Qt.RightButton) {
-        AiAssistant.quit();
+        Dashboard.close();
+        AiChat.toggle();
         return;
       }
+      AiChat.close();
       if (!AiAssistant.running)
         starting.restart();
       AiAssistant.toggle();

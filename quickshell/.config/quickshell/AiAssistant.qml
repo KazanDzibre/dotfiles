@@ -8,9 +8,9 @@
 //
 // Everything about *which* assistant it is comes from the environment:
 //
-//   QS_AI_NAME     label in the bar            (default "Kimi")
-//   QS_AI_URL      web app to open             (default https://www.kimi.com/)
-//   QS_AI_PROFILE  chromium profile directory  (default ~/Nuketown/Webapps/kimi-profile)
+//   QS_AI_NAME     label in the bar            (default "Gemini")
+//   QS_AI_URL      web app to open             (default https://gemini.google.com/app)
+//   QS_AI_PROFILE  browser profile directory   (default ~/Nuketown/Webapps/gemini-profile)
 //   QS_AI_CLASS    window class *prefix*       (default "chrome-")
 //   QS_AI_COMMAND  full launcher command; overrides URL/PROFILE. If you use it,
 //                  its window class must start with QS_AI_CLASS.
@@ -40,9 +40,9 @@ Singleton {
 
   readonly property string home: Quickshell.env("HOME")
 
-  readonly property string name: envOr("QS_AI_NAME", "Kimi")
-  readonly property string url: envOr("QS_AI_URL", "https://www.kimi.com/")
-  readonly property string profile: envOr("QS_AI_PROFILE", home + "/Nuketown/Webapps/kimi-profile")
+  readonly property string name: envOr("QS_AI_NAME", "Gemini")
+  readonly property string url: envOr("QS_AI_URL", "https://gemini.google.com/app")
+  readonly property string profile: envOr("QS_AI_PROFILE", home + "/Nuketown/Webapps/gemini-profile")
   readonly property string classPrefix: envOr("QS_AI_CLASS", "chrome-")
   readonly property string customCommand: envOr("QS_AI_COMMAND", "")
 
@@ -85,7 +85,11 @@ Singleton {
   }
 
   function launch() {
-    launcher.command = root.customCommand.length > 0 ? ["sh", "-c", root.customCommand] : ["chromium", "--app=" + root.url, "--user-data-dir=" + root.profile, "--ozone-platform-hint=auto", "--no-first-run"];
+    // Prefer real Chrome: Google blocks account sign-in from some non-Chrome
+    // Chromium builds, and Gemini needs a signed-in account. Falls back to
+    // chromium where Chrome isn't installed. Same shape as the standalone
+    // launcher in ~/Nuketown/Webapps/Gemini.
+    launcher.command = root.customCommand.length > 0 ? ["sh", "-c", root.customCommand] : ["sh", "-c", "if command -v google-chrome-stable >/dev/null 2>&1; then browser=google-chrome-stable; else browser=chromium; fi; " + "exec \"$browser\" --app=\"$1\" --user-data-dir=\"$2\" --ozone-platform-hint=auto --no-first-run", "sh", root.url, root.profile];
     launcher.startDetached();
   }
 

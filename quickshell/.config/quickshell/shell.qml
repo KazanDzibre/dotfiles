@@ -10,4 +10,9 @@ ShellRoot {
 
   // Fullscreen, and only mapped while a capture is in progress.
   ScreenshotOverlay {}
+
+  // Left-edge drawers. Both native, so both slide from the edge they live on.
+  DashboardPanel {}
+
+  AiChatPanel {}
 }

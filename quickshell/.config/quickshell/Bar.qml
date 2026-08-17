@@ -136,8 +136,11 @@ Scope {
         anchors.leftMargin: Theme.gap
         anchors.verticalCenter: parent.verticalCenter
         padding: 8
+        spacing: 10
 
         WindowsButton {}
+
+        DashboardButton {}
       }
 
       // --------------------------------------------------------------- right
