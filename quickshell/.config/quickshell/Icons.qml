@@ -54,6 +54,7 @@ Singleton {
   readonly property string dashboard: String.fromCodePoint(0xf1489)
   readonly property string chart: String.fromCodePoint(0xf012a)
   readonly property string newspaper: String.fromCodePoint(0xf1004)
+  readonly property string devFeed: String.fromCodePoint(0xf0174)   // md-code_tags
   readonly property string trendUp: String.fromCodePoint(0xf0535)
   readonly property string trendDown: String.fromCodePoint(0xf0533)
   readonly property string openExternal: String.fromCodePoint(0xf03cc)

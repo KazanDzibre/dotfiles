@@ -69,7 +69,7 @@ Item {
     onClicked: event => {
       if (event.button === Qt.RightButton) {
         AiChat.close();
-        Dashboard.show(Dashboard.tab === "stocks" ? "news" : "stocks");
+        Dashboard.show(Dashboard.tabs[(Dashboard.tabs.indexOf(Dashboard.tab) + 1) % Dashboard.tabs.length]);
         return;
       }
       AiChat.close();

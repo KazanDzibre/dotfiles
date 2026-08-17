@@ -24,15 +24,63 @@ Singleton {
   readonly property string symbols: envOr("QS_STOCKS", "AAPL,MSFT,NVDA,GOOGL,BTC-USD")
   readonly property string feeds: envOr("QS_NEWS_FEEDS", "https://feeds.bbci.co.uk/news/world/rss.xml|https://news.ycombinator.com/rss")
 
+  // "topic:url" pairs. Every one of these was checked to actually parse; InfoQ,
+  // blog.flutter.dev and Reddit's RSS were dropped because they 404 or block us.
+  // dev.to's tag feeds are deliberately absent — they publish constantly and are
+  // full of affiliate spam, which buried the .NET Blog and V8 entirely. Add them
+  // back through QS_DEV_FEEDS if you want the volume.
+  readonly property string devFeeds: envOr("QS_DEV_FEEDS", ["dotnet:https://devblogs.microsoft.com/dotnet/feed/", "dotnet:https://andrewlock.net/rss.xml", "dotnet:https://blog.jetbrains.com/dotnet/feed/", "dotnet:https://devblogs.microsoft.com/visualstudio/feed/", "flutter:https://medium.com/feed/flutter", "flutter:https://medium.com/feed/tag/flutter", "flutter:https://iirokrankka.com/feed.xml", "node:https://nodejs.org/en/feed/blog.xml", "node:https://medium.com/feed/tag/nodejs", "node:https://blog.logrocket.com/feed/", "js:https://v8.dev/blog.atom", "js:https://developer.chrome.com/static/blog/feed.xml", "js:https://react.dev/rss.xml", "js:https://github.blog/feed/", "js:https://css-tricks.com/feed/", "ai:https://openai.com/news/rss.xml", "ai:https://huggingface.co/blog/feed.xml", "ai:https://deepmind.google/blog/rss.xml", "ai:https://simonwillison.net/atom/everything/", "ai:https://blog.google/technology/ai/rss/", "general:https://news.ycombinator.com/rss", "general:https://lobste.rs/rss", "general:https://changelog.com/feed"].join("|"))
+
   property bool open: false
-  property string tab: "stocks"          // "stocks" | "news"
+  property string tab: "stocks"          // "stocks" | "news" | "dev"
+
+  readonly property var tabs: ["stocks", "news", "dev"]
 
   property var stocks: []
   property var news: []
+  property var dev: []
   property bool loadingStocks: false
   property bool loadingNews: false
+  property bool loadingDev: false
   property string stocksError: ""
   property string newsError: ""
+  property string devError: ""
+
+  // "" means everything; otherwise one of the topic ids the fetcher tags with.
+  property string devTopic: ""
+
+  readonly property var devTopics: [
+    {
+      id: "",
+      label: "All"
+    },
+    {
+      id: "dotnet",
+      label: ".NET"
+    },
+    {
+      id: "flutter",
+      label: "Flutter"
+    },
+    {
+      id: "node",
+      label: "Node"
+    },
+    {
+      id: "js",
+      label: "JS"
+    },
+    {
+      id: "ai",
+      label: "AI"
+    }
+  ]
+
+  readonly property var devFiltered: {
+    if (root.devTopic.length === 0)
+      return root.dev;
+    return root.dev.filter(item => (item.topics ?? []).indexOf(root.devTopic) >= 0);
+  }
 
   function toggle() {
     root.open = !root.open;
@@ -55,6 +103,8 @@ Singleton {
       root.refreshStocks();
     if (root.news.length === 0)
       root.refreshNews();
+    if (root.dev.length === 0)
+      root.refreshDev();
   }
 
   // ------------------------------------------------------------------ quotes
@@ -109,9 +159,36 @@ Singleton {
     newsProc.running = true;
   }
 
+  // ---------------------------------------------------------------- dev feed
+  Process {
+    id: devProc
+    command: ["python3", Quickshell.shellPath("scripts/devnews.py"), root.devFeeds]
+
+    stdout: StdioCollector {
+      onStreamFinished: {
+        try {
+          root.dev = JSON.parse(text);
+          root.devError = "";
+        } catch (e) {
+          root.devError = "Couldn't read tech headlines.";
+        }
+      }
+    }
+
+    onExited: root.loadingDev = false
+  }
+
+  function refreshDev() {
+    if (devProc.running)
+      return;
+    root.loadingDev = true;
+    devProc.running = true;
+  }
+
   function refresh() {
     root.refreshStocks();
     root.refreshNews();
+    root.refreshDev();
   }
 
   // Markets move faster than headlines, and both only tick while you're looking.
@@ -127,6 +204,14 @@ Singleton {
     interval: 15 * 60 * 1000
     repeat: true
     onTriggered: root.refreshNews()
+  }
+
+  // Blogs and release notes move slower still.
+  Timer {
+    running: root.open
+    interval: 30 * 60 * 1000
+    repeat: true
+    onTriggered: root.refreshDev()
   }
 
   Process {

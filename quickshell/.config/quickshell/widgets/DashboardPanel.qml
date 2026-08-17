@@ -183,6 +183,11 @@ PanelWindow {
             id: "news",
             label: "News",
             glyph: Icons.newspaper
+          },
+          {
+            id: "dev",
+            label: "Dev",
+            glyph: Icons.devFeed
           }
         ]
 
@@ -192,7 +197,7 @@ PanelWindow {
           required property var modelData
           readonly property bool current: Dashboard.tab === modelData.id
 
-          width: (tabs.width - tabs.spacing) / 2
+          width: (tabs.width - tabs.spacing * 2) / 3
           height: 32
           radius: 9
           color: current ? Theme.accentSoft : tabHover.containsMouse ? Theme.hover : Theme.raised
@@ -474,6 +479,190 @@ PanelWindow {
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSize
             color: Theme.fgDim
+          }
+        }
+      }
+
+      // ------------------------------------------------------------- dev
+      Item {
+        anchors.fill: parent
+        visible: Dashboard.tab === "dev"
+
+        // Six sources publish AI daily and Flutter publishes weekly, so a plain
+        // date sort reads as an AI feed. These narrow it to one stack.
+        Flow {
+          id: topicChips
+
+          anchors.top: parent.top
+          anchors.left: parent.left
+          anchors.right: parent.right
+          spacing: 5
+
+          Repeater {
+            model: Dashboard.devTopics
+
+            delegate: Rectangle {
+              id: chip
+
+              required property var modelData
+              readonly property bool current: Dashboard.devTopic === modelData.id
+
+              height: 22
+              width: chipLabel.implicitWidth + 18
+              radius: 11
+              color: current ? Theme.accent : chipHover.containsMouse ? Theme.hover : Theme.raised
+
+              Behavior on color {
+                ColorAnimation {
+                  duration: Theme.animFast
+                }
+              }
+
+              Text {
+                id: chipLabel
+                anchors.centerIn: parent
+                text: chip.modelData.label
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.smallSize
+                font.bold: chip.current
+                color: chip.current ? Theme.base : Theme.fgDim
+              }
+
+              MouseArea {
+                id: chipHover
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: Dashboard.devTopic = chip.modelData.id
+              }
+            }
+          }
+        }
+
+        Flickable {
+          anchors.top: topicChips.bottom
+          anchors.topMargin: 9
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.bottom: parent.bottom
+
+          contentHeight: devList.implicitHeight
+          clip: true
+          boundsBehavior: Flickable.StopAtBounds
+
+          Column {
+            id: devList
+            width: parent.width
+            spacing: 3
+
+            Repeater {
+              model: Dashboard.devFiltered
+
+              delegate: Rectangle {
+                id: post
+
+                required property var modelData
+
+                width: devList.width
+                implicitHeight: postText.implicitHeight + 18
+                height: implicitHeight
+                radius: 10
+                color: postHover.containsMouse ? Theme.hover : "transparent"
+
+                Behavior on color {
+                  ColorAnimation {
+                    duration: Theme.animFast
+                  }
+                }
+
+                Column {
+                  id: postText
+
+                  anchors.left: parent.left
+                  anchors.right: parent.right
+                  anchors.leftMargin: 11
+                  anchors.rightMargin: 11
+                  anchors.verticalCenter: parent.verticalCenter
+                  spacing: 4
+
+                  Text {
+                    width: parent.width
+                    text: post.modelData.title
+                    wrapMode: Text.WordWrap
+                    maximumLineCount: 3
+                    elide: Text.ElideRight
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.fontSize
+                    color: Theme.fg
+                  }
+
+                  Row {
+                    width: parent.width
+                    spacing: 6
+
+                    Text {
+                      anchors.verticalCenter: parent.verticalCenter
+                      text: post.modelData.source
+                      elide: Text.ElideRight
+                      font.family: Theme.fontFamily
+                      font.pixelSize: Theme.smallSize
+                      color: Theme.accent
+                    }
+
+                    Text {
+                      anchors.verticalCenter: parent.verticalCenter
+                      visible: Dashboard.relativeDate(post.modelData.date).length > 0
+                      text: "·  " + Dashboard.relativeDate(post.modelData.date)
+                      font.family: Theme.fontFamily
+                      font.pixelSize: Theme.smallSize
+                      color: Theme.fgDim
+                    }
+
+                    // Which of your stacks this touches, at a glance.
+                    Repeater {
+                      model: post.modelData.topics ?? []
+
+                      delegate: Rectangle {
+                        required property var modelData
+
+                        anchors.verticalCenter: parent.verticalCenter
+                        height: 15
+                        width: badge.implicitWidth + 12
+                        radius: 7
+                        color: Theme.accentSoft
+
+                        Text {
+                          id: badge
+                          anchors.centerIn: parent
+                          text: parent.modelData
+                          font.family: Theme.fontFamily
+                          font.pixelSize: Theme.smallSize - 2
+                          color: Theme.accent
+                        }
+                      }
+                    }
+                  }
+                }
+
+                MouseArea {
+                  id: postHover
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: Dashboard.openLink(post.modelData.link)
+                }
+              }
+            }
+
+            Text {
+              width: parent.width
+              visible: Dashboard.devFiltered.length === 0
+              text: Dashboard.loadingDev ? "Fetching tech headlines…" : Dashboard.devError.length > 0 ? Dashboard.devError : Dashboard.dev.length > 0 ? "Nothing tagged with that yet." : "No feeds configured."
+              wrapMode: Text.WordWrap
+              font.family: Theme.fontFamily
+              font.pixelSize: Theme.fontSize
+              color: Theme.fgDim
+            }
           }
         }
       }
