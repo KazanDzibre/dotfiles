@@ -1,0 +1,14 @@
+(deflisten workspaces_info
+  "~/.config/eww/scripts/workspaces.sh")
+
+(defwidget workspaces []
+    (box 
+        :class "island" 
+        :halign "start"
+        :space-evenly false
+        (literal 
+            :content workspaces_info
+        )
+    )
+)
+

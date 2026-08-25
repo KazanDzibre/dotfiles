@@ -1,0 +1,23 @@
+/* GTK3 renders a scale as `scale > trough > {highlight, slider}`. As with the
+   progress bar, `* { all: unset }` means every node needs explicit geometry. */
+.vol-scale {
+  trough {
+    min-height: 6px;
+    border-radius: 3px;
+    background-color: rgba($foreground, 0.16);
+  }
+
+  highlight {
+    min-height: 6px;
+    border-radius: 3px;
+    background-color: $color5;
+  }
+
+  slider {
+    min-width: 13px;
+    min-height: 13px;
+    border-radius: 8px;
+    background-color: $foreground;
+    margin: -4px;
+  }
+}

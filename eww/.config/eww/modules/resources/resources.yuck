@@ -1,0 +1,33 @@
+;; System resources: tray icon, expanding to CPU / RAM / disk usage.
+
+(deflisten resources
+  :initial `{"cpu":0,"ram_pct":0,"ram_used":"-","ram_total":"-","disk_pct":0,"disk_used":"-","disk_total":"-"}`
+  "~/.config/eww/scripts/resources.sh")
+
+(defwidget resources_button []
+  (eventbox
+    :cursor "pointer"
+    :tooltip "System resources"
+    :onclick "~/.config/eww/scripts/toggle-popup.sh resources_popup"
+    (label :class "tray-icon icon-res" :text "󰍛")))
+
+(defwidget res_row [icon name pct used total]
+  (box :orientation "v" :space-evenly false :spacing 3
+    (box :orientation "h" :space-evenly false
+      (label :class "list-icon" :text icon)
+      (label :class "res-name" :text name :halign "start" :hexpand true)
+      (label :class "res-value" :text "${used} / ${total}"))
+    (progress :class "res-bar" :orientation "h" :value pct)))
+
+(defwindow resources_popup
+  :monitor "eDP-1"
+  :stacking "overlay"
+  :geometry (geometry :anchor "top right" :x "10px" :y "6px" :width "300px")
+  (box :class "popup" :orientation "v" :space-evenly false :spacing 14
+    (label :class "popup-title" :text "System" :halign "start")
+    (res_row :icon "󰻠" :name "CPU"     :pct {resources.cpu}
+             :used "${resources.cpu}%" :total "100%")
+    (res_row :icon "󰍛" :name "Memory"  :pct {resources.ram_pct}
+             :used {resources.ram_used} :total {resources.ram_total})
+    (res_row :icon "󰋊" :name "Storage" :pct {resources.disk_pct}
+             :used {resources.disk_used} :total {resources.disk_total})))

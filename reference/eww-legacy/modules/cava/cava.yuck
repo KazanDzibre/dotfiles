@@ -1,0 +1,6 @@
+(deflisten cava :initial "" `~/.config/eww/scripts/cava.sh`)
+
+(defwidget cava []
+	(eventbox :cursor "pointer" :onclick "~/.config/eww/scripts/toggle-music.sh"
+(label :text "${cava}" :class "cava")
+))

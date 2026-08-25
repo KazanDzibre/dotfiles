@@ -1,0 +1,69 @@
+$bg-alt: rgba($background, 0.85);
+$bg-bar: rgba($background, 0.5); 
+
+.music-container {
+  box-shadow: 0 2px 3px 2px $color0;
+  background-color: $bg-alt;
+  margin: 5.5px;
+  border-radius: 20px;
+  padding: 5px;
+  min-width: 300px;
+}
+
+.music-title {
+  margin: 7px;
+  color: $foreground; // Use the theme's text color
+}
+
+.music-thumbnail {
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  min-height: 7rem;
+  min-width: 7rem;
+  border-radius: 5rem;
+}
+
+.artist {
+  color: $color8; // Using a muted color from your palette
+  font-size: 13px;
+  margin-left: 15px;
+}
+
+.music-slider trough {
+  background-color: $color1; // Use color1 for the trough
+  border: 1px solid rgba($color2, 0.5);
+  border-radius: 50px;
+  min-height: 5px;
+  min-width: 270px;
+  margin: 0 20px 0 20px;
+}
+
+.music-slider trough > slider {
+  background-color: $foreground;
+  border-radius: 100%;
+  border: 3px solid rgba($color3, 0.9); // Accent border
+  min-width: 10px;
+  min-height: 10px;
+  margin: -10px;
+}
+
+.music-slider trough highlight {
+  background-image: linear-gradient(to right, $color3, $color4); // Smooth gradient
+  border-radius: 10px;
+}
+
+.music-timer {
+  margin: 0.5rem;
+  color: $foreground;
+}
+
+.mico {
+  color: $foreground;
+  font-size: 30px;
+  margin-left: 10px;
+  transition: color 0.2s;
+  &:hover {
+    color: $color3; // Highlight on hover
+  }
+}

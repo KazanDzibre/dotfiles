@@ -1,0 +1,16 @@
+;; The workspace list is shared by every bar instance; each bar filters it down
+;; to the output it lives on, using the `output` window argument that
+;; scripts/launch_bar.sh passes with --arg.
+(deflisten workspaces_json :initial "[]"
+  "~/.config/eww/scripts/workspaces.sh")
+
+(defwidget workspaces [output]
+  (box :class "island workspaces" :space-evenly false :spacing 2
+    (for ws in workspaces_json
+      (eventbox
+        :visible {ws.output == output}
+        :cursor "pointer"
+        :onclick "swaymsg workspace ${ws.name}"
+        (label
+          :class {ws.focused ? "ws ws-focused" : (ws.urgent ? "ws ws-urgent" : "ws")}
+          :text {ws.name})))))

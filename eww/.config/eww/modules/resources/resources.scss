@@ -1,0 +1,25 @@
+.res-name {
+  color: rgba($foreground, 0.85);
+}
+
+.res-value {
+  font-size: 11px;
+  color: rgba($foreground, 0.55);
+}
+
+/* GTK3 renders a progressbar as `progressbar > trough > progress`. The global
+   `* { all: unset }` strips its theming, so both nodes need explicit sizes --
+   without a min-height the bar collapses to nothing. */
+.res-bar {
+  trough {
+    min-height: 7px;
+    border-radius: 4px;
+    background-color: rgba($foreground, 0.14);
+  }
+
+  progress {
+    min-height: 7px;
+    border-radius: 4px;
+    background-color: $color5;
+  }
+}

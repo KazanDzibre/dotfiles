@@ -1,0 +1,30 @@
+;; Power menu: a button on the right of the bar, and a popup with the four
+;; session actions. Actions fire immediately -- there is no confirmation step.
+
+(defwidget power_button []
+  (eventbox
+    :cursor "pointer"
+    :tooltip "Session"
+    :onclick "~/.config/eww/scripts/toggle-popup.sh power_menu"
+    (box :class "island power-button"
+      (label :class "power-icon" :text "⏻"))))
+
+(defwindow power_menu
+  :monitor "eDP-1"
+  :stacking "overlay"
+  :geometry (geometry :anchor "top right" :x "10px" :y "6px" :width "190px")
+  ;; A bare string child gets centred by GTK, so each label is explicit about
+  ;; filling the row and aligning its text left.
+  (box :class "popup power-popup" :orientation "v" :space-evenly false :spacing 2
+    (button :class "power-item"
+            :onclick "~/.config/eww/scripts/power.sh lock"
+      (label :text "󰌾   Lock" :halign "start" :hexpand true :xalign 0))
+    (button :class "power-item"
+            :onclick "~/.config/eww/scripts/power.sh logout"
+      (label :text "󰗽   Log out" :halign "start" :hexpand true :xalign 0))
+    (button :class "power-item"
+            :onclick "~/.config/eww/scripts/power.sh reboot"
+      (label :text "󰜉   Reboot" :halign "start" :hexpand true :xalign 0))
+    (button :class "power-item power-danger"
+            :onclick "~/.config/eww/scripts/power.sh shutdown"
+      (label :text "⏻   Shut down" :halign "start" :hexpand true :xalign 0))))

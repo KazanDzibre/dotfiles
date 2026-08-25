@@ -1,0 +1,29 @@
+.power-button {
+  padding: 4px 13px;
+}
+
+.power-icon {
+  font-size: 14px;
+  color: $icon-power;
+  transition: color 200ms ease;
+}
+
+.power-button:hover .power-icon {
+  color: $foreground;
+}
+
+.power-item {
+  color: rgba($foreground, 0.85);
+  padding: 8px 14px;
+  border-radius: 10px;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+.power-item:hover {
+  color: $background;
+  background-color: $color5;
+}
+
+.power-danger:hover {
+  background-color: $color1;
+}

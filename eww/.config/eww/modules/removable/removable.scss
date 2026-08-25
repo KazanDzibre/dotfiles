@@ -1,0 +1,22 @@
+.usb-name {
+  font-size: 13px;
+  color: $foreground;
+}
+
+.usb-detail {
+  font-size: 11px;
+  color: rgba($foreground, 0.5);
+}
+
+.usb-eject {
+  font-size: 15px;
+  color: rgba($foreground, 0.75);
+  padding: 6px 10px;
+  border-radius: 10px;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+.usb-eject:hover {
+  color: $background;
+  background-color: $icon-usb;
+}

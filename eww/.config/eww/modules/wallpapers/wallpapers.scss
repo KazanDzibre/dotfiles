@@ -1,0 +1,28 @@
+.wp-button {
+  padding: 4px 12px;
+}
+
+.wp-icon {
+  font-size: 15px;
+  color: $icon-wp;
+  transition: color 200ms ease;
+}
+
+.wp-button:hover .wp-icon {
+  color: $foreground;
+}
+
+.wp-item {
+  border-radius: 10px;
+  padding: 3px;
+  transition: background-color 200ms ease;
+}
+
+.wp-item:hover {
+  background-color: rgba($foreground, 0.18);
+}
+
+/* the wallpaper currently applied */
+.wp-current {
+  background-color: $color5;
+}

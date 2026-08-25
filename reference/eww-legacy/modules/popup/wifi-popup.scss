@@ -1,0 +1,27 @@
+/* Popup specific styles */
+.popup {
+  background-color: rgba($background, 0.98); 
+  border: 2px solid $color4;
+  padding: 20px;
+}
+
+.popup-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: $color4;
+}
+
+.wifi-item {
+  padding: 10px;
+  border-radius: 8px;
+  background-color: rgba($foreground, 0.05);
+  &:hover {
+    background-color: rgba($color4, 0.2);
+  }
+}
+
+.popup-close {
+  color: $color1;
+  font-weight: bold;
+  margin-top: 5px;
+}

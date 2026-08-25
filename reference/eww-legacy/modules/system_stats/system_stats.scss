@@ -1,0 +1,15 @@
+.bat-low, .bat-med, .bat-high {
+  color: $color3;
+}
+
+.icon, .ram-icon, .storage-icon, .vol-muted, .vol-icon, .wifi-icon{
+  color: $color3; // Or any accent color
+  font-size: 12px;
+}
+
+/* Optional: Make the separators slightly transparent for a cleaner look */
+.sep {
+  color: rgba($color7, 0.3);
+  margin: 0 2px;
+  font-size: 13px
+}

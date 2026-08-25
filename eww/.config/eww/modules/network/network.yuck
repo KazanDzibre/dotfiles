@@ -1,0 +1,61 @@
+;; Network: tray icon that reads "LAN" on ethernet or the SSID on wifi, plus a
+;; popup listing visible networks.
+
+(defpoll network :interval "5s"
+  :initial `{"type":"none","label":"Offline","signal":0,"wifi_enabled":false}`
+  "~/.config/eww/scripts/network.sh")
+
+;; Cached scan results, so this costs almost nothing between openings.
+(defpoll wifi_networks :interval "20s" :initial "[]"
+  "~/.config/eww/scripts/wifi-list.sh")
+
+(defwidget network_button []
+  (eventbox
+    :cursor "pointer"
+    :tooltip {network.type == "ethernet" ? "Wired connection" : network.label}
+    :onclick "~/.config/eww/scripts/toggle-popup.sh network_popup"
+    (box :space-evenly false :spacing 5
+      (label
+        :class {network.type == "none" ? "tray-icon icon-net tray-off" : "tray-icon icon-net"}
+        :text {network.type == "ethernet" ? "󰈀"
+               : network.type == "none" ? "󰤭"
+               : network.signal > 75 ? "󰤨"
+               : network.signal > 50 ? "󰤥"
+               : network.signal > 25 ? "󰤢" : "󰤟"})
+      (label :class "tray-label" :text {network.label} :limit-width 12))))
+
+(defwindow network_popup
+  :monitor "eDP-1"
+  :stacking "overlay"
+  :geometry (geometry :anchor "top right" :x "10px" :y "6px" :width "320px" :height "330px")
+  ;; vexpand so the popup's surface fills the whole window. Without it the
+  ;; window still captures clicks below the drawn panel, which silently eats
+  ;; input meant for the app underneath.
+  (box :class "popup" :orientation "v" :space-evenly false :spacing 6 :vexpand true
+    (box :orientation "h" :space-evenly false
+      (label :class "popup-title" :text "Network" :hexpand true :halign "start")
+      (button :class {network.wifi_enabled ? "pill pill-on" : "pill"}
+              :onclick "~/.config/eww/scripts/wifi-action.sh toggle"
+              {network.wifi_enabled ? "Wi-Fi on" : "Wi-Fi off"}))
+
+    (box :class "net-current" :orientation "h" :space-evenly false :spacing 8
+      (label :class "list-icon" :text {network.type == "ethernet" ? "󰈀" : "󰤨"})
+      (label :halign "start" :hexpand true
+             :text {network.type == "ethernet" ? "Wired connection"
+                    : network.type == "wifi" ? network.label : "Not connected"}))
+
+    (label :class "list-empty"
+           :visible {!network.wifi_enabled}
+           :text "Wi-Fi is off")
+
+    (scroll :vscroll true :hscroll false :vexpand true :visible {network.wifi_enabled}
+      (box :orientation "v" :space-evenly false :spacing 2 :valign "start"
+        (for n in wifi_networks
+          (button :class {n.active ? "list-item list-item-active" : "list-item"}
+                  :onclick "~/.config/eww/scripts/wifi-action.sh connect '${n.ssid}'"
+            (box :orientation "h" :space-evenly false
+              (label :class "list-icon"
+                     :text {n.signal > 75 ? "󰤨" : n.signal > 50 ? "󰤥"
+                            : n.signal > 25 ? "󰤢" : "󰤟"})
+              (label :text {n.ssid} :halign "start" :hexpand true :limit-width 20)
+              (label :class "list-note" :text {n.open ? "open" : "󰌾"}))))))))

@@ -1,0 +1,5 @@
+/* Deliberately invisible: it exists only to catch clicks outside a popup.
+   A transparent GTK surface still receives input, which is the whole point. */
+.backdrop {
+  background-color: transparent;
+}

@@ -1,0 +1,80 @@
+;; Variables (Polling for data)
+;; NOTE: the clock lives in modules/clock, centred in the bar. Do not add a
+;; second time poll here.
+
+;; Smaller RAM (Just showing 'Used', e.g., 2.4G)
+(defpoll ram :interval "5s"
+  "free -h | awk '/^Mem:/ {print $3}'")
+
+;; Smaller Storage (Just showing 'Used', e.g., 140G)
+(defpoll storage :interval "60s"
+  "df -h / | awk 'NR==2 {print $3}'")
+
+(defpoll E_STAT :interval "5s"
+  `cat /sys/class/net/e*/operstate 2>/dev/null | grep -q "up" && echo "up" || echo "down"`)
+
+(deflisten current_volume
+  "~/.config/eww/scripts/volume.sh")
+
+;; :initial matters here -- `battery` is compared numerically below, and a poll
+;; without an initial value is an empty string until its first tick, which logs
+;; "Failed to turn `` into a value of type f64" once per bar at startup.
+(defpoll battery :interval "15s" :initial "0"
+  "cat /sys/class/power_supply/BAT0/capacity")
+
+(defpoll battery_status :interval "1s" :initial "Unknown"
+  "cat /sys/class/power_supply/BAT0/status")
+
+(defpoll ssid :interval "5s"
+  "nmcli -t -f active,ssid dev wifi | grep '^yes' | cut -d: -f2")
+
+(defwidget system_stats []
+  (box :class "island" 
+       :halign "end" 
+       :space-evenly false 
+       :spacing 8  ;; Reduced spacing
+
+    ;; Grouped RAM & Storage
+    (box :space-evenly false :spacing 4
+      (label :text "󰍛" :class "ram-icon")
+      (label :text ram)
+      (label :text "󰋊" :class "storage-icon" :style "margin-left: 4px")
+      (label :text storage))
+
+    (label :text "|" :class "sep")
+
+    ;; Volume
+    (eventbox :onscroll "[[ \"{}\" == \"up\" ]] && pactl set-sink-volume @DEFAULT_SINK@ +5% || pactl set-sink-volume @DEFAULT_SINK@ -5%"
+              :onclick "pactl set-sink-mute @DEFAULT_SINK@ toggle"
+      (box :space-evenly false :spacing 3
+        (label :text {current_volume == "muted" ? "󰝟 " : "󰕾 "} 
+               :class {current_volume == "muted" ? "vol-muted" : "vol-icon"})
+        (label :text {current_volume == "muted" ? "M" : current_volume})))
+
+    (label :text "|" :class "sep")  
+
+    ;; Wi-Fi (Icons only if disconnected, SSID if connected)
+    (eventbox :onclick "eww open --toggle wifi_popup" :cursor "pointer"
+      (box :space-evenly false :spacing 3
+        ;; Icon: Shows Wi-Fi icon if SSID exists, otherwise shows Ethernet icon
+        (label :text {ssid != "" ? "󰖩 " : "󰈀 "} :class "icon")
+
+        ;; Text Logic:
+        ;; 1. If SSID is not empty -> Show SSID
+        ;; 2. Else if LAN is connected -> Show "Lan"
+        ;; 3. Otherwise -> Show "N/A"
+        (label :text {ssid != "" ? ssid : (E_STAT == "up" ? "Lan" : "N/A")} 
+               :limit-width 8)))
+    
+    (label :text "|" :class "sep")
+
+    (box :space-evenly false :spacing 4 
+        (label :text {battery_status == "Charging" ? "󱐋" :
+                  battery > 85 ? " " :
+                  battery > 60 ? " " :
+                  battery > 35 ? " " :
+                  battery > 15 ? " " : " "}
+           :class {battery > 70 ? "bat-high" : 
+                   battery > 30 ? "bat-med" : "bat-low"})   
+        (label :text "${battery}%")
+    )))

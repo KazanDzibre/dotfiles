@@ -1,0 +1,54 @@
+;; Removable storage: a button that exists only while something is plugged in,
+;; opening a list with a safe-eject action per device.
+
+;; Polled rather than driven by `udevadm monitor`: lsblk costs a few ms, and a
+;; udev burst on plug-in would need debouncing for no real gain.
+(defpoll removable :interval "3s" :initial "[]"
+  "~/.config/eww/scripts/removable.sh")
+
+(defwidget removable_button []
+  ;; The whole button disappears when nothing is connected -- there is no idle
+  ;; state to show, and a permanent dead icon would just be noise.
+  (eventbox
+    :visible {arraylength(removable) > 0}
+    :cursor "pointer"
+    :tooltip {arraylength(removable) == 1
+              ? "1 removable device"
+              : "${arraylength(removable)} removable devices"}
+    :onclick "~/.config/eww/scripts/toggle-popup.sh removable_popup"
+    (label :class "tray-icon icon-usb" :text "󱊚")))
+
+(defwindow removable_popup
+  :monitor "eDP-1"
+  :stacking "overlay"
+  :geometry (geometry :anchor "top right" :x "10px" :y "6px" :width "340px")
+  (box :class "popup" :orientation "v" :space-evenly false :spacing 6
+    (label :class "popup-title" :text "Removable media" :halign "start")
+
+    (label :class "list-empty"
+           :visible {arraylength(removable) == 0}
+           :text "Nothing connected")
+
+    (box :orientation "v" :space-evenly false :spacing 2
+      (for d in removable
+        (box :orientation "h" :space-evenly false :spacing 4
+          ;; Body: mounts the device when it is not mounted, since nothing
+          ;; automounts in this session.
+          (button :class "list-item" :hexpand true
+                  :onclick {d.mounted
+                            ? "true"
+                            : "~/.config/eww/scripts/usb-action.sh mount '${d.path}'"}
+            (box :orientation "h" :space-evenly false
+              (label :class "list-icon" :text "󰋊")
+              (box :orientation "v" :space-evenly false :halign "start" :hexpand true
+                (label :class "usb-name" :text {d.label}
+                       :halign "start" :xalign 0 :limit-width 22)
+                (label :class "usb-detail"
+                       :text {d.mounted ? "${d.size} · ${d.mount}" : "${d.size} · tap to mount"}
+                       :halign "start" :xalign 0 :limit-width 30))))
+
+          ;; Safe removal: unmounts everything on the disk, then powers it down.
+          (button :class "usb-eject"
+                  :tooltip "Safely remove"
+                  :onclick "~/.config/eww/scripts/usb-action.sh eject '${d.disk}'"
+            (label :text "󰆃")))))))

@@ -1,0 +1,58 @@
+;; Audio: tray icon with the output level, expanding to output/input sliders
+;; and a picker for which device the sound goes to.
+
+(deflisten audio
+  :initial `{"sink_vol":0,"sink_muted":false,"source_vol":0,"source_muted":false,"sinks":[]}`
+  "~/.config/eww/scripts/audio.sh")
+
+(defwidget audio_button []
+  (eventbox
+    :cursor "pointer"
+    :tooltip "Sound"
+    ;; Scrolling straight on the bar icon is quicker than opening the popup.
+    :onscroll "[[ {} == up ]] && pactl set-sink-volume @DEFAULT_SINK@ +5% || pactl set-sink-volume @DEFAULT_SINK@ -5%"
+    :onclick "~/.config/eww/scripts/toggle-popup.sh audio_popup"
+    (box :space-evenly false :spacing 5
+      (label :class {audio.sink_muted ? "tray-icon icon-audio tray-off" : "tray-icon icon-audio"}
+             :text {audio.sink_muted ? "󰝟"
+                    : audio.sink_vol > 66 ? "󰕾"
+                    : audio.sink_vol > 33 ? "󰖀" : "󰕿"})
+      (label :class "tray-label" :text {audio.sink_muted ? "M" : "${audio.sink_vol}%"}))))
+
+(defwindow audio_popup
+  :monitor "eDP-1"
+  :stacking "overlay"
+  :geometry (geometry :anchor "top right" :x "10px" :y "6px" :width "320px")
+  (box :class "popup" :orientation "v" :space-evenly false :spacing 12
+    (label :class "popup-title" :text "Sound" :halign "start")
+
+    ;; Output level -- clicking the icon mutes.
+    (box :orientation "h" :space-evenly false :spacing 10
+      (eventbox :cursor "pointer"
+                :onclick "pactl set-sink-mute @DEFAULT_SINK@ toggle"
+        (label :class {audio.sink_muted ? "list-icon icon-muted" : "list-icon"}
+               :text {audio.sink_muted ? "󰝟" : "󰕾"}))
+      (scale :class "vol-scale" :hexpand true
+             :min 0 :max 101 :value {audio.sink_vol}
+             :onchange "pactl set-sink-volume @DEFAULT_SINK@ {}%")
+      (label :class "res-value" :text "${audio.sink_vol}%"))
+
+    ;; Microphone level.
+    (box :orientation "h" :space-evenly false :spacing 10
+      (eventbox :cursor "pointer"
+                :onclick "pactl set-source-mute @DEFAULT_SOURCE@ toggle"
+        (label :class {audio.source_muted ? "list-icon icon-muted" : "list-icon"}
+               :text {audio.source_muted ? "󰍭" : "󰍬"}))
+      (scale :class "vol-scale" :hexpand true
+             :min 0 :max 101 :value {audio.source_vol}
+             :onchange "pactl set-source-volume @DEFAULT_SOURCE@ {}%")
+      (label :class "res-value" :text "${audio.source_vol}%"))
+
+    (label :class "popup-subtitle" :text "Output" :halign "start")
+    (box :orientation "v" :space-evenly false :spacing 2
+      (for s in {audio.sinks}
+        (button :class {s.default ? "list-item list-item-active" : "list-item"}
+                :onclick "pactl set-default-sink '${s.name}'"
+          (box :orientation "h" :space-evenly false
+            (label :class "list-icon" :text {s.default ? "󰄬" : "󰓃"})
+            (label :text {s.desc} :halign "start" :hexpand true :limit-width 26)))))))

@@ -1,0 +1,26 @@
+;; Renamed variable to updates_data to avoid conflict with widget name
+(deflisten updates_data :initial "{\"icon\": \"\", \"ghost\": \"󰊠\", \"count\": \"\", \"tooltip\": \"\"}" 
+  "~/.config/eww/scripts/updator.sh")
+
+(defwidget updates []
+    (eventbox 
+        :cursor "pointer" 
+        ;; Access JSON properties directly without ${}
+        :tooltip {updates_data.tooltip} 
+        (box  
+            :class "island"
+            :space-evenly false 
+            :orientation "h"
+            :spacing 5
+            (label 
+                :class "up-i"
+                ;; Check if count is empty or 0 to swap icons
+                :text {updates_data.count != "" && updates_data.count != "0" ? updates_data.icon : updates_data.ghost} 
+            )
+            (label 
+                :visible {updates_data.count != "" && updates_data.count != "0"}
+                :text {updates_data.count} 
+            )
+        )
+    )
+)

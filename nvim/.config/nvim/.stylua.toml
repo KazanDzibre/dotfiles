@@ -1,0 +1,10 @@
+# stylua defaults to tabs; every Lua file in this config is 4 spaces, so without
+# this file the first format-on-save reindents the whole file and turns a
+# one-line change into a whole-file diff.
+#
+# conform runs stylua with the file's directory as the starting point and stylua
+# walks upwards looking for this file, so it applies to lua/core and lua/plugins
+# as well -- through ~/.config/nvim (the symlink) or the repo path, either way.
+indent_type = "Spaces"
+indent_width = 4
+column_width = 120
