@@ -1,0 +1,36 @@
+/* The level classes must stay after `.icon-bat`: same specificity, so source
+   order is what lets a low battery override the resting colour -- the same
+   rule that makes `.tray-off` work in eww.scss. */
+.bat-normal   { color: $icon-bat; }
+.bat-low      { color: $icon-bat-low; }
+.bat-critical { color: $icon-bat-critical; }
+
+/* Oversized readout at the top of the popup. */
+.bat-glyph {
+  font-size: 30px;
+}
+
+.bat-pct {
+  font-size: 20px;
+  color: $foreground;
+}
+
+/* Same two-node treatment as `.res-bar` -- `* { all: unset }` strips GTK's
+   progressbar theming, so trough and progress both need an explicit size or
+   the widget draws nothing at all. */
+.bat-bar {
+  trough {
+    min-height: 7px;
+    border-radius: 4px;
+    background-color: rgba($foreground, 0.14);
+  }
+
+  progress {
+    min-height: 7px;
+    border-radius: 4px;
+    background-color: $icon-bat;
+  }
+}
+
+.bat-bar-low      progress { background-color: $icon-bat-low; }
+.bat-bar-critical progress { background-color: $icon-bat-critical; }

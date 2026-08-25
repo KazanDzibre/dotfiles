@@ -1,0 +1,72 @@
+;; Media: an equalizer that dances while something is playing, opening into a
+;; player with artwork and transport controls.
+
+(deflisten media
+  :initial `{"status":"Stopped","title":"","artist":"","album":"","art":"","position":0,"length":0,"position_str":"0:00","length_str":"0:00","progress":0,"player":""}`
+  "~/.config/eww/scripts/media.sh")
+
+;; The spectrum comes from the audio output itself, so it reacts to whatever is
+;; making noise rather than to one specific player.
+(deflisten cava :initial "▁▁▁▁▁▁▁▁"
+  "~/.config/eww/scripts/cava.sh")
+
+(defwidget media_button []
+  (eventbox
+    :cursor "pointer"
+    :tooltip {media.status == "Stopped" ? "Nothing playing"
+              : "${media.title}${media.artist != "" ? " — " : ""}${media.artist}"}
+    :onclick "~/.config/eww/scripts/toggle-popup.sh media_popup"
+    ;; The button is only ever the spectrum -- track details live in the popup.
+    ;;
+    ;; It keys off the audio output rather than MPRIS on purpose: playerctl
+    ;; cannot see every player (snap-confined Spotify, some browsers), and
+    ;; gating the bars on `status == "Playing"` left the button dead while
+    ;; sound was clearly coming out.
+    ;;
+    ;; Exactly ONE widget, always visible. Swapping between the bars and an
+    ;; idle glyph made the island resize every time the audio dipped to silence
+    ;; for a frame, which reads as flicker. Silence is simply eight bars at the
+    ;; lowest step, which is a perfectly good idle state.
+    (box :class "island media-button" :space-evenly false
+      (label :class "media-eq" :text cava))))
+
+(defwindow media_popup
+  :monitor "eDP-1"
+  :stacking "overlay"
+  :geometry (geometry :anchor "top right" :x "10px" :y "6px" :width "360px")
+  (box :class "popup" :orientation "v" :space-evenly false :spacing 10
+
+    (label :class "list-empty" :visible {media.status == "Stopped"}
+           :text "Nothing is playing")
+
+    (box :orientation "v" :space-evenly false :spacing 10
+         :visible {media.status != "Stopped"}
+
+      (box :orientation "h" :space-evenly false :spacing 12
+        ;; Artwork when the player gives us one, a glyph when it does not.
+        (box :class "media-art" :visible {media.art != ""}
+          (image :path {media.art} :image-width 84 :image-height 84))
+        (box :class "media-art media-art-empty" :visible {media.art == ""}
+          (label :class "media-art-glyph" :text "󰎈"))
+
+        (box :orientation "v" :space-evenly false :spacing 3 :valign "center" :hexpand true
+          (label :class "media-title" :text {media.title}
+                 :halign "start" :limit-width 24 :xalign 0)
+          (label :class "media-artist" :text {media.artist}
+                 :halign "start" :limit-width 26 :xalign 0
+                 :visible {media.artist != ""})
+          (label :class "media-player" :text {media.player}
+                 :halign "start" :xalign 0 :visible {media.player != ""})))
+
+      (box :orientation "v" :space-evenly false :spacing 3
+        (progress :class "media-bar" :orientation "h" :value {media.progress})
+        (box :orientation "h" :space-evenly false
+          (label :class "media-time" :text {media.position_str} :halign "start" :hexpand true)
+          (label :class "media-time" :text {media.length_str} :halign "end")))
+
+      (box :orientation "h" :space-evenly false :halign "center" :spacing 24
+        (button :class "media-ctl" :onclick "playerctl previous" "󰒮")
+        (button :class "media-ctl media-play"
+                :onclick "playerctl play-pause"
+                {media.status == "Playing" ? "󰏤" : "󰐊"})
+        (button :class "media-ctl" :onclick "playerctl next" "󰒭")))))

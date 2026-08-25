@@ -1,0 +1,16 @@
+(deflisten active_window :initial "Desktop"
+  "~/.config/eww/scripts/active_window.sh")
+
+(defwidget active_info []
+  (box :class "active-window-box" 
+       :halign "center"
+    (box :class "island" 
+         :space-evenly false 
+         :spacing 10
+         ;; Hide the whole island if it's just the Desktop (optional)
+         :visible {active_window != ""}
+      (label :text {active_window == "Desktop" || active_window == "" ? "󰇄 " : "󱂬 "} 
+             :class "active-icon")
+      (label :text {active_window} 
+             :class "active-text"
+             :limit-width 40))))

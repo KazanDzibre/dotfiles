@@ -1,0 +1,26 @@
+.workspaces {
+  padding: 4px 8px;
+}
+
+.ws {
+  color: rgba($foreground, 0.5);
+  padding: 1px 8px;
+  border-radius: 10px;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+.ws:hover {
+  color: $foreground;
+  background-color: rgba($foreground, 0.1);
+}
+
+.ws-focused {
+  color: $background;
+  background-color: $color5;
+  font-weight: bold;
+}
+
+.ws-urgent {
+  color: $color1;
+  font-weight: bold;
+}

@@ -1,0 +1,39 @@
+;; Wallpaper picker: a button in the bar, and a popup grid of thumbnails.
+;; Selecting one goes through waypaper, so the pywal palette (and therefore the
+;; bar's own colours) follow the new wallpaper.
+
+(defpoll wallpapers :interval "5m" :initial "[]"
+  "~/.config/eww/scripts/wallpapers.sh")
+
+;; Marks which thumbnail is currently applied. Cheap enough to poll; it also
+;; refreshes right after a change, since eww reloads when the palette updates.
+(defpoll current_wallpaper :interval "5s" :initial ""
+  "~/.config/eww/scripts/current-wallpaper.sh")
+
+(defwidget wallpaper_button []
+  (eventbox
+    :cursor "pointer"
+    :tooltip "Wallpapers"
+    :onclick "~/.config/eww/scripts/toggle-popup.sh wallpaper_picker"
+    (box :class "island wp-button"
+      (label :class "wp-icon" :text "󰸉"))))
+
+(defwindow wallpaper_picker
+  :monitor "eDP-1"
+  :stacking "overlay"
+  :geometry (geometry :anchor "top center" :y "6px" :width "1060px" :height "540px")
+  (box :class "popup wp-popup" :orientation "v" :space-evenly false :spacing 10
+    (label :class "popup-title" :text "Wallpapers" :halign "start")
+    (scroll :vscroll true :hscroll false :vexpand true
+      ;; eww has no grid widget, so wallpapers.sh emits rows and this nests two
+      ;; `for` loops instead.
+      (box :orientation "v" :space-evenly false :spacing 10 :valign "start"
+        (for row in wallpapers
+          (box :orientation "h" :space-evenly false :spacing 10 :halign "start"
+            (for wp in row
+              (eventbox
+                :cursor "pointer"
+                :tooltip {wp.name}
+                :onclick "~/.config/eww/scripts/set-wallpaper.sh '${wp.path}'"
+                (box :class {wp.path == current_wallpaper ? "wp-item wp-current" : "wp-item"}
+                  (image :path {wp.thumb} :image-width 240 :image-height 135))))))))))

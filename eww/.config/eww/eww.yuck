@@ -1,0 +1,63 @@
+;; Modules
+(include "./modules/backdrop/backdrop.yuck")
+(include "./modules/workspaces/workspaces.yuck")
+(include "./modules/media/media.yuck")
+(include "./modules/wallpapers/wallpapers.yuck")
+(include "./modules/clock/clock.yuck")
+(include "./modules/removable/removable.yuck")
+(include "./modules/bluetooth/bluetooth.yuck")
+(include "./modules/network/network.yuck")
+(include "./modules/battery/battery.yuck")
+(include "./modules/resources/resources.yuck")
+(include "./modules/audio/audio.yuck")
+(include "./modules/power/power.yuck")
+
+;; ---------------------------------------------------------------------------
+;; The bar is defined ONCE and opened once per connected output by
+;; scripts/launch_bar.sh, as:
+;;     eww open bar --id bar-<output> --screen <output> --arg output=<output>
+;;
+;; Do not add a defwindow per monitor. A window naming an absent monitor is a
+;; hard error (laptop-only would break), and numeric :monitor indices are
+;; reordered by GTK on every hotplug.
+;;
+;; The `output` argument is what lets each bar show only its own workspaces --
+;; sway pins workspaces to outputs, so every bar listing all of them is noise.
+;;
+;; :monitor here is only the fallback for a bare `eww open bar`; --screen wins.
+;; eDP-1 is the only output that is always present.
+;; ---------------------------------------------------------------------------
+(defwindow bar [output]
+    :monitor "eDP-1"
+    :windowtype "dock"
+    :geometry (geometry :width "100%" :height "34px" :anchor "top center")
+    :exclusive true
+    (bar_layout :output output))
+
+;; centerbox keeps the middle child truly centred on screen, independent of how
+;; wide the left and right groups grow.
+(defwidget bar_layout [output]
+    (centerbox
+        :orientation "h"
+        :class "main_bar"
+        (box :halign "start" :space-evenly false
+            (workspaces :output output))
+        (box :halign "center" :space-evenly false
+            (wallpaper_button)
+            (clock))
+        ;; The four status controls share one island, so the right-hand side
+        ;; reads as a single cluster rather than a row of separate pills.
+        ;; Media and power sit in islands of their own.
+        (box :halign "end" :space-evenly false :spacing 6
+            (media_button)
+            (box :class "island tray" :space-evenly false :spacing 12
+                ;; Only rendered while something removable is connected.
+                (removable_button)
+                (bluetooth_button)
+                (network_button)
+                (battery_button)
+                (resources_button)
+                (audio_button))
+            (power_button))
+    )
+)

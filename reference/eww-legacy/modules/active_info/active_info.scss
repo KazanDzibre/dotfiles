@@ -1,0 +1,16 @@
+.active-icon {
+  color: $color3; /* A different Pywal accent for the center */
+  font-size: $font13;
+}
+
+.active-text {
+  color: $foreground;
+  font-weight: 500;
+  min-width: 50px; 
+}
+
+/* Middle Side: Active Window */
+.active-window-text {
+  color: $color3;
+  font-weight: 500;
+}

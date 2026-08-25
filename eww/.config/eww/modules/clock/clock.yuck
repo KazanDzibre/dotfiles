@@ -1,0 +1,26 @@
+;; Centre clock: 24-hour time, European date. Click toggles the calendar popup.
+
+(defpoll clock_time :interval "1s"
+  "date +%H:%M")
+
+(defpoll clock_date :interval "60s"
+  "date +%d.%m.%Y")
+
+(defwidget clock []
+  (eventbox
+    :cursor "pointer"
+    :onclick "~/.config/eww/scripts/toggle-popup.sh calendar_popup"
+    (box :class "island clock" :space-evenly false :spacing 8
+      (label :class "clock-time" :text clock_time)
+      (label :class "clock-date" :text clock_date))))
+
+;; ---------------------------------------------------------------------------
+;; Calendar popup. Opened per-output by scripts/toggle-popup.sh with
+;; --id calendar_popup-<output> --screen <output>, same pattern as the bar.
+;; ---------------------------------------------------------------------------
+(defwindow calendar_popup
+  :monitor "eDP-1"
+  :stacking "overlay"
+  :geometry (geometry :anchor "top center" :y "6px" :width "280px")
+  (box :class "popup cal-popup" :orientation "v" :space-evenly false
+    (calendar :class "cal")))

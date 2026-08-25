@@ -1,0 +1,24 @@
+
+.ws-container {
+  padding-left: 0px;
+}
+//
+.ws-active {
+  color: $color5;      /* Your primary Pywal accent */
+  font-weight: bold;
+  background-color: rgba($color4, 0.2); /* Subtle glow background */
+  border-radius: 4px;
+  padding: 0px 4px;      /* Tighten up the space */
+}
+//
+.ws-occupied {
+  color: $foreground;
+  opacity: 0.6;
+  padding: 0px 4px;      /* Less padding than active */
+}
+
+.ws-text {
+  color: $foreground;
+  font-weight: bold;
+  letter-spacing: 2px;
+}

@@ -1,0 +1,48 @@
+;; Bluetooth: tray icon plus a popup to power the adapter, scan, and
+;; connect/disconnect known devices.
+
+(defpoll bluetooth :interval "5s"
+  :initial `{"powered":false,"devices":[],"connected":0}`
+  "~/.config/eww/scripts/bluetooth.sh")
+
+(defwidget bluetooth_button []
+  (eventbox
+    :cursor "pointer"
+    :tooltip {bluetooth.powered ? "Bluetooth on" : "Bluetooth off"}
+    :onclick "~/.config/eww/scripts/toggle-popup.sh bluetooth_popup"
+    (label
+      :class {bluetooth.powered ? "tray-icon icon-bt" : "tray-icon icon-bt tray-off"}
+      :text {!bluetooth.powered ? "󰂲" : (bluetooth.connected > 0 ? "󰂱" : "󰂯")})))
+
+(defwindow bluetooth_popup
+  :monitor "eDP-1"
+  :stacking "overlay"
+  :geometry (geometry :anchor "top right" :x "10px" :y "6px" :width "300px")
+  (box :class "popup" :orientation "v" :space-evenly false :spacing 6
+    (box :orientation "h" :space-evenly false
+      (label :class "popup-title" :text "Bluetooth" :hexpand true :halign "start")
+      (button :class {bluetooth.powered ? "pill pill-on" : "pill"}
+              :onclick "~/.config/eww/scripts/bt-action.sh toggle"
+              {bluetooth.powered ? "On" : "Off"}))
+
+    (button :class "list-item"
+            :visible {bluetooth.powered}
+            :onclick "~/.config/eww/scripts/bt-action.sh scan"
+            "󰑐   Scan for devices")
+
+    (label :class "list-empty"
+           :visible {!bluetooth.powered}
+           :text "Adapter is off")
+
+    (label :class "list-empty"
+           :visible {bluetooth.powered && arraylength(bluetooth.devices) == 0}
+           :text "No devices yet — try a scan")
+
+    (box :orientation "v" :space-evenly false :spacing 2
+      (for d in {bluetooth.devices}
+        (button :class {d.connected ? "list-item list-item-active" : "list-item"}
+                :onclick "~/.config/eww/scripts/bt-action.sh device '${d.mac}'"
+          (box :orientation "h" :space-evenly false
+            (label :text {d.connected ? "󰂱" : "󰂯"} :class "list-icon")
+            (label :text {d.name} :halign "start" :hexpand true :limit-width 24)
+            (label :class "list-note" :text {d.connected ? "Connected" : ""})))))))

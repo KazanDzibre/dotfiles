@@ -1,0 +1,19 @@
+;; A full-screen, fully transparent window that sits behind whichever popup is
+;; open and closes everything when clicked. This is how "click outside to
+;; dismiss" is done -- layer-shell windows get no such behaviour for free.
+;;
+;; Opened once per output by scripts/toggle-popup.sh.
+;;
+;; The layer matters and creation order does NOT: this sits on "foreground"
+;; (layer-shell's TOP) while every popup is on "overlay", which is above TOP.
+;; Putting both on the same layer and relying on which was opened last is a
+;; race -- when the backdrop wins it covers the popup and swallows every click
+;; meant for it, so the popup looks dead.
+
+(defwindow popup_backdrop
+  :monitor "eDP-1"
+  :stacking "foreground"
+  :focusable false
+  :geometry (geometry :width "100%" :height "100%" :anchor "center")
+  (eventbox :onclick "~/.config/eww/scripts/close-popups.sh"
+    (box :class "backdrop")))

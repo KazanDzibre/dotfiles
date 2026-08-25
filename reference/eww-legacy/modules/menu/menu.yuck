@@ -1,0 +1,10 @@
+(defwidget menu []
+  (box :class "island"
+       :orientation "h"
+       :valign "center"
+       :halign "center"
+    (button :class "menu-dot"
+            :onclick "notify-send 'Menu' 'You clicked the dot!'"
+      "󰪥") ; This is a circular Nerd Font icon (nf-md-record)
+  )
+)

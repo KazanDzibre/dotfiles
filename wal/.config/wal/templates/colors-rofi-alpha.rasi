@@ -1,0 +1,16 @@
+/*
+ * Rendered by pywal to ~/.cache/wal/colors-rofi-alpha.rasi on every wallpaper
+ * change, alongside its own colors-rofi-dark.rasi.
+ *
+ * rofi 1.7.5 has no alpha() / colour-arithmetic on variables, so a translucent
+ * surface cannot be derived inside a .rasi from @background. The alpha byte is
+ * baked in here instead (#RRGGBBAA), which is why this file has to be a pywal
+ * template rather than a static theme.
+ */
+
+* {{
+    wal-surface:  #{background.strip}ad;   /* background @ 68% — matches the eww islands */
+    wal-elevated: #{background.strip}f2;   /* background @ 95% */
+    wal-accent:   {color4};
+    wal-dim:      #{foreground.strip}8c;   /* foreground @ 55% */
+}}

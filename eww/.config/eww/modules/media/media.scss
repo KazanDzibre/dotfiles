@@ -1,0 +1,78 @@
+.media-button {
+  padding: 4px 12px;
+}
+
+/* Monospace so the bars do not jitter horizontally as they change height. */
+.media-eq {
+  font-family: "JetBrainsMono Nerd Font", monospace;
+  font-size: 13px;
+  color: $icon-media;
+}
+
+.media-art {
+  border-radius: 10px;
+}
+
+.media-art-empty {
+  background-color: rgba($foreground, 0.1);
+  min-width: 84px;
+  min-height: 84px;
+}
+
+.media-art-glyph {
+  font-size: 34px;
+  color: rgba($foreground, 0.4);
+}
+
+.media-title {
+  font-size: 14px;
+  font-weight: bold;
+  color: $foreground;
+}
+
+.media-artist {
+  font-size: 12px;
+  color: rgba($foreground, 0.7);
+}
+
+.media-player {
+  font-size: 11px;
+  color: rgba($foreground, 0.4);
+}
+
+.media-time {
+  font-size: 11px;
+  color: rgba($foreground, 0.5);
+}
+
+/* Same GTK3 node dance as the resource bars -- see eww skill. */
+.media-bar {
+  trough {
+    min-height: 5px;
+    border-radius: 3px;
+    background-color: rgba($foreground, 0.16);
+  }
+
+  progress {
+    min-height: 5px;
+    border-radius: 3px;
+    background-color: $icon-media;
+  }
+}
+
+.media-ctl {
+  font-size: 17px;
+  color: rgba($foreground, 0.8);
+  padding: 6px 10px;
+  border-radius: 20px;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+.media-ctl:hover {
+  color: $background;
+  background-color: $icon-media;
+}
+
+.media-play {
+  font-size: 21px;
+}

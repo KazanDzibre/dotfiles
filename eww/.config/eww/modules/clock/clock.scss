@@ -1,0 +1,49 @@
+.clock {
+  padding: 4px 16px;
+}
+
+.clock-time {
+  font-size: 13px;
+  font-weight: bold;
+  color: $foreground;
+}
+
+/* Date sits back so the time reads first, without making the time oversized. */
+.clock-date {
+  font-size: 12px;
+  color: rgba($foreground, 0.62);
+}
+
+/* surface styling comes from the shared .popup class in eww.scss */
+.cal-popup {
+  padding: 10px;
+}
+
+.cal {
+  color: $foreground;
+  font-size: 13px;
+  padding: 6px;
+
+  &.header {
+    color: $color5;
+    font-weight: bold;
+  }
+
+  &.button {
+    color: rgba($foreground, 0.75);
+
+    &:hover {
+      color: $color5;
+    }
+  }
+
+  /* days spilling in from the neighbouring months */
+  &:indeterminate {
+    color: rgba($foreground, 0.25);
+  }
+
+  &:selected {
+    color: $color5;
+    font-weight: bold;
+  }
+}

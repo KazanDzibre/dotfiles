@@ -1,0 +1,55 @@
+;; Battery: tray icon + charge percentage, expanding to a popup with time
+;; remaining, draw, and pack health.
+
+;; A defpoll rather than a deflisten -- nothing pushes battery state, and
+;; upower's dbus signals would need a listener process for a value that moves
+;; a percent every few minutes. :initial matters: `pct` is compared
+;; numerically, and an unset poll is an empty string until its first tick.
+(defpoll battery :interval "10s"
+  :initial `{"present":false,"pct":0,"status":"Unknown","charging":false,"plugged":false,"level":"normal","icon":"󰂑","time":"","time_label":"","rate":"","health":0,"energy":"","energy_full":"","cycles":0}`
+  "~/.config/eww/scripts/battery.sh")
+
+(defwidget battery_button []
+  ;; Hidden outright with no battery, so the same config works docked to a
+  ;; desktop or on a machine whose pack has been pulled.
+  (eventbox
+    :visible {battery.present}
+    :cursor "pointer"
+    :tooltip {battery.time != "" ? "${battery.pct}% — ${battery.time} ${battery.time_label}"
+              : "${battery.pct}% — ${battery.status}"}
+    :onclick "~/.config/eww/scripts/toggle-popup.sh battery_popup"
+    (box :space-evenly false :spacing 5
+      (label :class "tray-icon icon-bat bat-${battery.level}" :text {battery.icon})
+      (label :class "tray-label" :text "${battery.pct}%"))))
+
+(defwidget bat_row [name value]
+  (box :orientation "h" :space-evenly false
+    (label :class "res-name" :text name :halign "start" :hexpand true)
+    (label :class "res-value" :text value)))
+
+(defwindow battery_popup
+  :monitor "eDP-1"
+  :stacking "overlay"
+  :geometry (geometry :anchor "top right" :x "10px" :y "6px" :width "300px")
+  (box :class "popup" :orientation "v" :space-evenly false :spacing 10
+    (label :class "popup-title" :text "Battery" :halign "start")
+
+    (box :orientation "h" :space-evenly false :spacing 10
+      (label :class "bat-glyph bat-${battery.level}" :text {battery.icon})
+      (box :orientation "v" :space-evenly false :halign "start" :hexpand true
+        (label :class "bat-pct" :text "${battery.pct}%" :halign "start")
+        (label :class "res-value" :halign "start"
+               :text {battery.time != "" ? "${battery.time} ${battery.time_label}"
+                      : battery.status})))
+
+    (progress :class "bat-bar bat-bar-${battery.level}" :orientation "h" :value {battery.pct})
+
+    (box :orientation "v" :space-evenly false :spacing 5
+      (bat_row :name "Status" :value {battery.status})
+      ;; Blank while power_now is still settling after a plug/unplug, or when
+      ;; the pack is full and neither direction applies.
+      (bat_row :name {battery.charging ? "Charging at" : "Draining at"}
+               :value {battery.rate != "" ? battery.rate : "—"})
+      (bat_row :name "Charge" :value "${battery.energy} / ${battery.energy_full}")
+      (bat_row :name "Health" :value "${battery.health}% of design")
+      (bat_row :name "Cycles" :value "${battery.cycles}"))))

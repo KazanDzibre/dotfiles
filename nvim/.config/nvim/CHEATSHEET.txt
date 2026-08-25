@@ -1,0 +1,437 @@
+===============================================================================
+ NUKETOWN NEOVIM -- KEY REFERENCE
+ Open any time with  :Cheatsheet   or   <leader>H
+ Live searchable list of every mapping:  <leader>?   or   <leader>fk
+===============================================================================
+
+ LEADER is the SPACE bar. "<leader>ff" means: press Space, then f, then f.
+ Modes: (n) normal  (i) insert  (v) visual
+
+
+-------------------------------------------------------------------------------
+ SURVIVAL -- if you only remember five things
+-------------------------------------------------------------------------------
+  <C-p>            Find file by name                     (the VS Code Ctrl+P)
+  <leader>fg       Search text across the whole project
+  <C-b>            Toggle the file tree
+  gd               Jump to definition            (<C-o> jumps back)
+  <leader>ca       Code action / quick fix       (the VS Code lightbulb)
+
+  :q   quit window     :w   save     :qa!  quit everything, discard changes
+  <Esc>              clear search highlight
+  u                  undo            <C-r>  redo
+
+
+-------------------------------------------------------------------------------
+ FILES & SEARCH  (Telescope)
+-------------------------------------------------------------------------------
+  <C-p>            Find files
+  <leader>ff       Find files
+  <leader>fg       Live grep -- search file contents project-wide
+  <leader>fw       Grep the word under the cursor
+  <leader>fb       Switch between open buffers
+  <leader>fr       Recently opened files
+  <leader>fh       Search the help docs
+  <leader>fk       Search all keymaps
+  <leader>fd       All diagnostics in the project
+  <leader>fs       Symbols in this file
+  <leader>fS       Symbols across the workspace
+  <leader>fc       Preview and pick a colourscheme
+
+  Inside a picker:
+  <C-j> / <C-k>    Move down / up the results
+  <CR>             Open the selection
+  <C-x> / <C-v>    Open in a horizontal / vertical split
+  <Esc>            Close the picker
+
+
+-------------------------------------------------------------------------------
+ FILE TREE  (neo-tree)
+-------------------------------------------------------------------------------
+  <C-b>            Toggle the tree
+  <leader>e        Toggle the tree
+  <leader>o        Jump into the tree
+  <leader>ge       Same sidebar, listing only what git changed
+
+  Inside the tree:
+  l  or  <CR>      Open file / expand folder
+  h                Collapse folder
+  a                Add a file  (end the name with / to make a folder)
+  d                Delete          r   Rename          c  Copy      x  Cut
+  p                Paste
+  H                Toggle hidden files
+  ?                Full list of tree mappings
+  <C-b>            Close the tree
+
+
+-------------------------------------------------------------------------------
+ SEARCH & REPLACE ACROSS THE PROJECT  (grug-far -- VS Code's Ctrl+Shift+H)
+-------------------------------------------------------------------------------
+  Telescope finds text; this rewrites it. Each key opens a buffer with a
+  Search field, a Replace field and every match listed underneath.
+
+  <leader>sr       Search / replace across the project
+  <leader>sw       ...pre-filled with the word under the cursor
+  <leader>sv       ...pre-filled with the selection                     (v)
+  <leader>sf       ...limited to the current file
+
+  Inside that buffer the keys hang off LOCALLEADER, which is BACKSLASH here,
+  not Space. Type in the Search line to see matches update as you go, fill in
+  the Replace line, then:
+
+  \r               Apply the replacement to every match
+  \s               Sync your hand-edits in the results back to the files
+  \v               Sync just the file under the cursor
+  \q               Send the results to the quickfix list
+  \i               Preview the match under the cursor
+  \b               Abort a search that is still running
+  \c               Close the whole thing
+  <Enter>          Jump to the match under the cursor
+  <Tab> / <S-Tab>  Move between the Search / Replace / Filter / Flags lines
+  g?               Full list of its mappings
+
+  The Files Filter line narrows by path; the Flags line takes ripgrep flags
+  such as -i for case-insensitive or --hidden to include dotfiles.
+
+
+-------------------------------------------------------------------------------
+ EDITING
+-------------------------------------------------------------------------------
+  gcc              Toggle comment on this line              (n)
+  gc               Toggle comment on a motion, e.g. gc3j    (n)
+  gc               Toggle comment on the selection          (v)
+  <C-/>            Same as gcc / gc -- VS Code muscle memory  (n, v)
+
+  <C-s>            Save                                     (n, i)
+  <leader>w        Write            <leader>q   Close window
+
+  J  /  K          Move the selected lines down / up        (v)
+  <  /  >          Indent left / right, keeping selection   (v)
+
+  <C-space>        Expand selection to the next syntax node
+  <BS>             Shrink that selection back
+
+  Brackets and quotes close themselves as you type them. An HTML or JSX tag
+  closes itself too, and renaming the opening tag rewrites the closing one.
+  <M-e>            Wrap the rest of the line in the pair you are typing   (i)
+
+  TODO / FIXME / HACK / NOTE / PERF / WARN comments are highlighted.
+  ]t  /  [t        Jump to the next / previous one
+  <leader>ft       List every one in the project
+  <leader>fT       Same, but TODO / FIX / FIXME / BUG only
+
+  Colours written in a file (#1e1e2e, rgb(), hsl(), bg-red-500) are painted
+  in the colour they name -- scss, css, yuck, rasi, json, lua and more.
+  <leader>uc       Turn the swatches off / on
+
+
+-------------------------------------------------------------------------------
+ CODE INTELLIGENCE  (LSP -- only on files with a language server)
+-------------------------------------------------------------------------------
+  gd               Go to definition
+  gD               Go to declaration
+  gr               List references
+  gI               List implementations
+  gy               Go to type definition
+  K                Hover documentation
+  <C-o> / <C-i>    Jump back / forward through where you have been
+
+  <leader>rn       Rename symbol everywhere
+  <leader>ca       Code action / quick fix                  (n, v)
+  <leader>cd       Show the diagnostic on this line
+  <leader>cs       Document symbols
+  [d  /  ]d        Previous / next diagnostic
+
+  <leader>ce       ESLint: fix everything auto-fixable in this file
+                   (only in a project with an ESLint config; deliberately
+                    NOT run on save, because prettier already formats there
+                    and the two fight over the same lines)
+
+  Servers running: lua, typescript/javascript, c#, rust, python,
+                   bash, c/c++, json, yaml, html, css,
+                   eslint, dockerfile, toml, markdown
+
+  package.json, tsconfig.json, appsettings.json, docker-compose.yml and the
+  GitHub Actions workflow files complete and validate against their real
+  schemas -- 1400+ of them, from SchemaStore, the same source VS Code uses.
+
+  :Mason           Install or remove more servers
+  :LspInfo         What is attached to this buffer
+  :checkhealth     Diagnose a broken setup
+
+
+-------------------------------------------------------------------------------
+ COMPLETION  (blink.cmp -- appears as you type)
+-------------------------------------------------------------------------------
+  <Tab>            Accept the selected item
+                   (inside a snippet, jump to the next placeholder instead)
+  <S-Tab>          Jump to the previous snippet placeholder
+  <Up> / <Down>    Move through the list
+  <C-n> / <C-p>    Move through the list
+  <C-space>        Open the menu / show documentation
+  <C-e>            Dismiss the menu
+  <C-b> / <C-f>    Scroll the documentation popup
+  <C-k>            Toggle the signature-help popup
+
+
+-------------------------------------------------------------------------------
+ REFACTORING  (refactoring.nvim -- what the LSP lightbulb does not offer)
+-------------------------------------------------------------------------------
+  These are OPERATORS, not commands. In normal mode they wait for a motion,
+  the way d does. In visual mode they act on the selection straight away.
+
+  <leader>re       Extract a function      (n: + motion, v: the selection)
+  <leader>rE       Extract a function into a new file
+  <leader>rv       Extract a variable
+  <leader>ri       Inline a variable
+  <leader>rI       Inline a function
+  <leader>rr       Menu of whatever is valid right here
+
+  In normal mode, follow the key with a motion:
+  <leader>re_      ...the current line          <leader>reap  ...a paragraph
+  <leader>rei{     ...inside the braces         <leader>re3j  ...three lines
+
+  You are prompted for the new name, then the code is rewritten in place.
+
+  Works in: C, C#, C++, Go, Java, JS/TS/JSX/TSX, Lua, PHP, Powershell,
+            Python, Ruby, Vimscript
+  <leader>rn is separate -- that is the LSP's rename, and it is the better
+  choice for renaming because it follows the symbol across files.
+
+
+-------------------------------------------------------------------------------
+ TERMINAL  (snacks -- VS Code's Ctrl+`)
+-------------------------------------------------------------------------------
+  <C-t>            Open the terminal / hide it again      (works from inside)
+  <leader>tt       Same, spelled out
+  <leader>tf       A floating terminal instead of a split
+  <leader>tn       A brand new terminal
+
+  Inside a terminal you are in TERMINAL mode -- keys go to the shell.
+  <Esc><Esc>       Back to normal mode, terminal still open
+  <C-\><C-n>       The same thing, the vim way
+  <C-t>            Hide the terminal and go back to the code
+  Once in normal mode, scroll and copy as in any buffer; i returns to typing.
+
+  The split and the float are two independent shells, not one window that
+  changes shape.
+
+
+-------------------------------------------------------------------------------
+ FORMATTING  (conform)
+-------------------------------------------------------------------------------
+  Files are formatted automatically every time you save.
+
+  <leader>cf       Format now                               (n, v)
+  <leader>uf       Turn format-on-save off / on for this session
+  :FormatDisable   Turn it off        :FormatDisable!  this buffer only
+  :FormatEnable    Turn it back on
+  :ConformInfo     Which formatter is used for this filetype
+
+  lua=stylua  js/ts/json/yaml/html/css/md=prettierd  python=ruff
+  rust=rustfmt  c#=csharpier  sh/bash=shfmt
+  Anything else falls back to the language server.
+
+
+-------------------------------------------------------------------------------
+ GIT
+-------------------------------------------------------------------------------
+  IN THE BUFFER  (gitsigns -- the GitLens half)
+
+  The line the cursor is on shows, greyed out at its end, who last changed it,
+  how long ago, the short commit, and that commit's subject. The left gutter
+  marks every added / changed / deleted line since the last commit.
+
+  <leader>gb       Blame this line in full -- author, date, message, hash
+  <leader>gB       Blame the whole file in a pane beside it
+                   (inside that pane: <CR> reblames at that commit, s shows it)
+  <leader>gt       Turn the end-of-line blame off / on
+  <leader>gp       Preview the hunk under the cursor
+  <leader>gv       Diff this file against the index, side by side
+
+  ]c  /  [c        Next / previous change in this file
+  <leader>gs       Stage the hunk under the cursor      (v: the selection)
+  <leader>gr       Undo the hunk under the cursor       (v: the selection)
+  <leader>gS       Stage the whole file
+  <leader>gR       Undo every change in the file
+  dih / vih        Delete / select the hunk as a text object
+
+  THE PANEL  (neogit -- stage, commit, push)
+
+  <C-g>            Open the git panel                (VS Code's Ctrl+Shift+G)
+  <leader>gg       Same thing
+  <leader>gc       Commit           <leader>gP  Push        <leader>gl  Pull
+
+  Inside the panel:
+  <Tab>            Fold / unfold a file to see its diff
+  s  /  u          Stage / unstage what is under the cursor
+  x                Discard it
+  c c              Write a commit message, then <C-c><C-c> to commit
+  d                Diff menu -- opens the selection in the diff viewer
+  b  /  p  /  P    Branch / pull / push menus
+  ?                Every key the panel has
+  q                Close
+
+  THE DIFF VIEWER  (diffview)
+
+  <leader>gd       Every change in the working tree, file list on the left
+  <leader>gf       History of THIS file -- every commit that touched it
+  <leader>gF       History of the branch
+  <leader>gq       Close it        (q does the same from inside)
+
+  Inside the viewer:
+  j / k  then <CR> Move through the file list and open one
+  <Tab>            Next file        <S-Tab>  previous file
+  -                Stage / unstage the file under the cursor
+  X                Discard its changes
+  <leader>e        Jump back to the file list   (inside the viewer only)
+  <leader>b        Hide / show the file list    (inside the viewer only)
+  g?               Every key the viewer has
+
+  The panel and the viewer are the same window group as the file tree: 34
+  columns on the left, diff on the right.
+
+
+-------------------------------------------------------------------------------
+ CLAUDE CODE  (claudecode.nvim)
+-------------------------------------------------------------------------------
+  The CLI runs in a terminal split on the right, but it is wired into this
+  Neovim: it sees the file you are in and what you have selected, opens files
+  here, and proposes edits as a real diff you can edit before accepting.
+
+  <leader>ac       Open / close Claude in a split on the right
+  <leader>af       Jump into the Claude split (opens it if closed)
+  <leader>ar       Pick an old session to resume
+  <leader>aC       Continue the last session in this directory
+  <leader>am       Pick the model
+  <leader>ax       Shut the integration down
+
+  GIVING IT CONTEXT
+
+  <leader>ab       Hand it the whole file you are in
+  <leader>as  (v)  Hand it the selected lines
+  <leader>as       On a file in the tree: @-mention that file
+
+  WHEN IT PROPOSES A CHANGE
+
+  It opens side by side, old on the left, new on the right. Edit the right
+  side first if you want something different, then:
+
+  :w  or  <leader>aa   Accept and write it
+  :q  or  <leader>ad   Throw it away
+  :ClaudeCodeCloseAllDiffs  Clear every pending proposal at once
+
+  IN THE TERMINAL
+
+  <C-\><C-n>       Back to normal mode (then <C-h/j/k/l> moves out of it)
+  q                Hide the split, from normal mode
+  Everything else goes to Claude, including a plain and a double <Esc>.
+
+
+-------------------------------------------------------------------------------
+ WINDOWS & BUFFERS
+-------------------------------------------------------------------------------
+  <C-h/j/k/l>      Move to the window left / down / up / right
+  <C-Up/Down>      Make the window taller / shorter
+  <C-Left/Right>   Make the window narrower / wider
+  :sp  /  :vs      Split horizontally / vertically
+
+  <S-l>            Next buffer
+  <S-h>            Previous buffer
+  <leader>bd       Close the current buffer
+
+
+-------------------------------------------------------------------------------
+ NODE / EXPRESS  --  package.json
+-------------------------------------------------------------------------------
+  Open a package.json and each dependency shows its installed version and
+  whether a newer one exists, as greyed-out text at the end of the line.
+  These keys only exist in that file.
+
+  <leader>nt       Show / hide the versions
+  <leader>ns       Show them        <leader>nh   Hide them
+  <leader>nu       Update the package on this line to latest
+  <leader>nc       Pick a different version for the package on this line
+  <leader>ni       Install a new package
+  <leader>nd       Delete the package on this line
+
+  It shells out to npm, so the change lands in package.json and the lockfile
+  exactly as if you had typed the command yourself.
+
+
+-------------------------------------------------------------------------------
+ REST CLIENT  (kulala -- .http files, like VS Code's REST Client)
+-------------------------------------------------------------------------------
+  Write requests in a plain .http file and run them without leaving the
+  editor. The format is the same one VS Code and JetBrains use, so a .http
+  file committed next to an Express or ASP.NET project works in all three.
+
+      GET https://localhost:5001/api/items
+      Authorization: Bearer {{token}}
+
+      ###
+
+      POST https://localhost:5001/api/items
+      Content-Type: application/json
+
+      { "name": "example" }
+
+  <leader>Rs       Open a scratch .http buffer          (works anywhere)
+
+  Inside a .http file:
+  <leader>Rr       Run the request under the cursor
+  <leader>Ra       Run every request in the file
+  <leader>Rp       Replay the last request
+  <leader>Rt       Switch the response pane between body and headers
+  <leader>Rc       Copy the request as a curl command line
+  <leader>Rq       Close the response pane
+  ]r  /  [r        Jump to the next / previous request
+
+  ### on its own line separates one request from the next.
+
+
+-------------------------------------------------------------------------------
+ APPEARANCE
+-------------------------------------------------------------------------------
+  <leader>ut       Cycle to the next colourscheme
+  <leader>uT       Pick a colourscheme from a list
+  :Theme <name>    Set one directly (Tab completes)
+  The choice is remembered between sessions.
+
+  Available: catppuccin-mocha / -macchiato / -frappe,
+             tokyonight-night / -storm, gruvbox, kanagawa
+
+  <leader>um       Turn the minimap off / on
+  <leader>uM       Jump the cursor into the minimap (again to come back)
+  The minimap is the code preview down the right edge of every window:
+  treesitter colours, diagnostics, git signs and search hits. Click a spot
+  to scroll there; the cursor stays in the code.
+
+
+-------------------------------------------------------------------------------
+ HOUSEKEEPING
+-------------------------------------------------------------------------------
+  :Lazy            Plugin manager -- install, update, clean, profile startup
+  :Mason           Language server / formatter installer
+  :checkhealth     Check that everything is wired up correctly
+  <leader>?        which-key: browse every mapping there is
+
+  Config lives in  ~/.config/nvim  (a symlink into ~/Nuketown/dotfiles/nvim)
+
+
+-------------------------------------------------------------------------------
+ VIM BASICS worth knowing while switching from VS Code
+-------------------------------------------------------------------------------
+  i / a            Insert before / after the cursor
+  o / O            Open a new line below / above
+  <Esc>            Back to normal mode
+  dd / yy / p      Delete line / copy line / paste
+  ciw              Change the word under the cursor
+  ci" ci( ci{      Change inside quotes / parens / braces
+  0 / ^ / $        Start of line / first non-blank / end of line
+  gg / G           Top / bottom of file
+  {  /  }          Jump paragraph up / down
+  %                Jump to the matching bracket
+  /text  then  n   Search forwards, then next match
+  :%s/old/new/g    Replace everywhere in the file
+  v / V / <C-v>    Select by character / line / block
