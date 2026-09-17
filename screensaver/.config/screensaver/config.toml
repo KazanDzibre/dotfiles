@@ -1,0 +1,67 @@
+# config.toml — effects for ~/.config/screensaver/screensaver.
+#
+# Only cmatrix is enabled right now. To rotate through several again, uncomment
+# their blocks below; enabled effects take turns in random order. Any whose
+# program isn't installed is skipped without complaint, so install one later and
+# it simply joins the rotation. Check what's live with:
+#   ~/.config/screensaver/screensaver list
+
+# How long one effect runs before the next takes over. Rotating is burn-in
+# protection in itself: nothing gets to sit in the same place for long.
+rotate_seconds = 180
+
+# After a start from the power menu, input is ignored for this long, so the
+# click that launched it doesn't close it again straight away.
+grace_seconds = 1.5
+
+[terminal]
+font_size = 13.0
+# On OLED a black pixel is a pixel that's switched off. Keep this #000000.
+background = "#000000"
+foreground = "#9aa5ce"
+
+[[effect]]
+# Matrix rain in a dim blue rather than the default searing green, across the
+# whole screen. As the only effect it runs uninterrupted, never restarted.
+name = "matrix"
+command = ["cmatrix", "-b", "-a", "-u", "5", "-C", "blue"]
+
+# ------------------------------------------------------------------ disabled
+
+# ----------------------------------------------------------------- built in
+
+# [[effect]]
+# Big dim digits that move to a new random spot every minute. Needs nothing.
+# name = "clock"
+# builtin = "clock"
+
+# ---------------------------------------------------------------- installed
+
+# [[effect]]
+# TerminalTextEffects — a different random animation over the time and date
+# each round. Mostly black screen, which is exactly what OLED wants.
+# name = "text-effects"
+# requires = ["tte"]
+# command = ["sh", "-c", "while :; do date '+%H:%M%n%A, %d %B' | tte --anchor-canvas c --anchor-text c --random-effect; sleep 6; printf '\\033[2J'; done"]
+
+# ------------------------------------------------- install these to add them
+#   sudo pacman -S asciiquarium
+#   paru -S cbonsai pipes.sh unimatrix-git
+
+# [[effect]]
+# A bonsai that grows, slowly, one branch at a time — then another.
+# name = "bonsai"
+# command = ["cbonsai", "--live", "--infinite", "--time", "0.05", "--wait", "6", "--life", "40", "--multiplier", "6"]
+
+# [[effect]]
+# name = "pipes"
+# command = ["pipes.sh", "-p", "3", "-t", "1", "-R", "-f", "40", "-r", "2500"]
+
+# [[effect]]
+# name = "aquarium"
+# command = ["asciiquarium"]
+
+# [[effect]]
+# Katakana rain with flickering "flasher" characters, no status line.
+# name = "unimatrix"
+# command = ["unimatrix", "-a", "-f", "-o", "-s", "94", "-c", "cyan"]

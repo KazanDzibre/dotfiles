@@ -8,6 +8,9 @@
 return {
     "nvim-treesitter/nvim-treesitter",
     branch = "master",
+    -- master is archived upstream and origin/HEAD points at `main`, whose API
+    -- dropped `nvim-treesitter.configs`. Pin so `:Lazy update` cannot drift.
+    pin = true,
     build = ":TSUpdate",
     event = { "BufReadPost", "BufNewFile" },
     main = "nvim-treesitter.configs",

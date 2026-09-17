@@ -20,6 +20,19 @@ Popup {
   // Which action is waiting for its confirming second click.
   property string armed: ""
 
+  // What the screensaver row says about starting by itself. Worded around
+  // keep awake on purpose: the two rows are one system seen from either end.
+  readonly property bool saverAutomatic: Screensaver.daemonRunning && Screensaver.idleSeconds > 0
+  readonly property string saverStatus: {
+    if (!Screensaver.daemonRunning)
+      return "Not on idle: hypridle isn't running";
+    if (Screensaver.idleSeconds === 0)
+      return "Not set to start on idle";
+    if (IdleInhibit.enabled)
+      return "Paused while keep awake is on";
+    return "Starts after " + Screensaver.describe(Screensaver.idleSeconds) + " idle";
+  }
+
   readonly property var actions: [
     {
       id: "lock",
@@ -70,7 +83,9 @@ Popup {
   }
 
   onOpenedChanged: {
-    if (!opened)
+    if (opened)
+      Screensaver.refresh();
+    else
       root.armed = "";
   }
 
@@ -250,7 +265,7 @@ Popup {
 
       Text {
         width: parent.width
-        text: IdleInhibit.enabled ? "Screen won't lock or sleep" : "Idle timeout is active"
+        text: IdleInhibit.enabled ? "Screensaver and screen off are paused" : "Screensaver starts when idle"
         elide: Text.ElideRight
         font.family: Theme.fontFamily
         font.pixelSize: Theme.smallSize - 1
@@ -298,6 +313,103 @@ Popup {
       hoverEnabled: true
       cursorShape: Qt.PointingHandCursor
       onClicked: IdleInhibit.toggle()
+    }
+  }
+
+  Rectangle {
+    width: parent.width
+    height: 34
+    radius: 9
+    color: saverMouse.containsMouse ? Theme.hover : "transparent"
+
+    Behavior on color {
+      ColorAnimation {
+        duration: Theme.animFast
+      }
+    }
+
+    Text {
+      id: saverGlyph
+      anchors.left: parent.left
+      anchors.leftMargin: 9
+      anchors.verticalCenter: parent.verticalCenter
+      text: Icons.screensaver
+      font.family: Theme.fontFamily
+      font.pixelSize: Theme.iconSize + 2
+      color: saverMouse.containsMouse ? Theme.accent : Theme.fgDim
+
+      Behavior on color {
+        ColorAnimation {
+          duration: Theme.animFast
+        }
+      }
+    }
+
+    Column {
+      anchors.left: saverGlyph.right
+      anchors.leftMargin: 10
+      anchors.right: saverStart.left
+      anchors.rightMargin: 8
+      anchors.verticalCenter: parent.verticalCenter
+      spacing: 0
+
+      Text {
+        width: parent.width
+        text: "Screensaver"
+        elide: Text.ElideRight
+        font.family: Theme.fontFamily
+        font.pixelSize: Theme.fontSize
+        color: Theme.fg
+      }
+
+      Text {
+        width: parent.width
+        text: root.saverStatus
+        elide: Text.ElideRight
+        font.family: Theme.fontFamily
+        font.pixelSize: Theme.smallSize - 1
+        color: !root.saverAutomatic ? Theme.warn : IdleInhibit.enabled ? Theme.accent : Theme.fgDim
+      }
+    }
+
+    Rectangle {
+      id: saverStart
+      anchors.right: parent.right
+      anchors.rightMargin: 9
+      anchors.verticalCenter: parent.verticalCenter
+      width: saverLabel.implicitWidth + 18
+      height: 20
+      radius: 10
+      color: saverMouse.containsMouse ? Theme.accent : Theme.raised
+
+      Behavior on color {
+        ColorAnimation {
+          duration: Theme.animFast
+        }
+      }
+
+      Text {
+        id: saverLabel
+        anchors.centerIn: parent
+        text: "Start"
+        font.family: Theme.fontFamily
+        font.pixelSize: Theme.smallSize
+        font.bold: true
+        color: saverMouse.containsMouse ? Theme.base : Theme.fg
+      }
+    }
+
+    MouseArea {
+      id: saverMouse
+      anchors.fill: parent
+      hoverEnabled: true
+      cursorShape: Qt.PointingHandCursor
+      // Close first, so the card isn't the last thing on screen as the
+      // screensaver comes up over it.
+      onClicked: {
+        root.close();
+        Screensaver.start();
+      }
     }
   }
 }

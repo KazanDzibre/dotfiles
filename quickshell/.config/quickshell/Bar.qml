@@ -141,6 +141,8 @@ Scope {
         WindowsButton {}
 
         DashboardButton {}
+
+        TonesButton {}
       }
 
       // --------------------------------------------------------------- right
@@ -156,14 +158,17 @@ Scope {
           }
         }
 
+        // Only while a USB drive is plugged in.
+        Island {
+          shown: Drives.hasDrives
+
+          DrivesButton {}
+        }
+
         Island {
           shown: Media.hasPlayer
 
           MediaButton {}
-        }
-
-        Island {
-          SysInfoIsland {}
         }
 
         Island {

@@ -59,6 +59,17 @@ Singleton {
   readonly property string trendDown: String.fromCodePoint(0xf0533)
   readonly property string openExternal: String.fromCodePoint(0xf03cc)
 
+  // ------------------------------------------------------ healing frequencies
+  readonly property string sineWave: String.fromCodePoint(0xf095b)
+  readonly property string waveform: String.fromCodePoint(0xf1970)
+
+  // ------------------------------------------------------------ screensaver
+  readonly property string screensaver: String.fromCodePoint(0xf1104)   // md-monitor_shimmer
+
+  // ----------------------------------------------------------------- drives
+  readonly property string usbDrive: String.fromCodePoint(0xf129e)       // md-usb_flash_drive
+  readonly property string eject: String.fromCodePoint(0xf01ea)
+
   // ------------------------------------------------------------------ tools
   readonly property string camera: String.fromCodePoint(0xf0100)
   readonly property string crop: String.fromCodePoint(0xf019e)

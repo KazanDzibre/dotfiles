@@ -1,0 +1,379 @@
+#!/usr/bin/env python3
+"""screensaver — a terminal screensaver for Hyprland, tuned for OLED panels.
+
+    screensaver start [--manual]   open it fullscreen (does nothing if it's already up)
+    screensaver stop               close it
+    screensaver list               show which effects from config.toml are installed
+
+hypridle starts it after the idle timeout (~/.config/hypr/hypridle.conf), and
+the Quickshell power menu starts it by hand.
+
+Effects are ordinary terminal programs listed in config.toml. Each one runs on
+a pty that this script owns, so no effect ever sees the keyboard or the mouse:
+the first key press or mouse movement ends the screensaver, whatever the effect
+itself would have done with it. That is why effects don't need a "screensaver
+mode" of their own, and why several of them can take turns.
+"""
+
+import fcntl
+import os
+import pty
+import random
+import re
+import select
+import shutil
+import signal
+import subprocess
+import sys
+import termios
+import time
+import tomllib
+import tty
+
+SELF = os.path.abspath(__file__)
+CONFIG = os.path.join(os.path.dirname(SELF), "config.toml")
+PIDFILE = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or "/tmp", "screensaver.pid")
+
+CLOCK = {"name": "clock", "builtin": "clock"}
+DEFAULTS = {
+    "rotate_seconds": 180,
+    "grace_seconds": 1.5,
+    "terminal": {"font_size": 13.0, "background": "#000000", "foreground": "#9aa5ce"},
+    "effect": [CLOCK],
+}
+
+# Mouse reporting. 1003 reports every movement rather than only clicks, and
+# 1006 is the encoding modern terminals agree on. Together they turn "the mouse
+# moved" into bytes on stdin, which is the only input this script listens for.
+MOUSE_ON = b"\x1b[?1003h\x1b[?1006h"
+MOUSE_OFF = b"\x1b[?1003l\x1b[?1006l"
+HIDE_CURSOR = b"\x1b[?25l"
+SHOW_CURSOR = b"\x1b[?25h"
+CLEAR = b"\x1b[0m\x1b[2J\x1b[H"
+
+# Effects are free to switch mouse reporting off (curses programs often do as
+# they start) or to reset the terminal outright. Either would quietly stop mouse
+# movement from ending the screensaver, so the first kind is stripped from
+# their output and the second is undone straight after.
+MOUSE_DISABLE = re.compile(rb"\x1b\[\?(?:9|100[0-6]|1015)l")
+TERMINAL_RESET = re.compile(rb"\x1bc|\x1b\[!p")
+
+# Even an idle start gets a moment's grace: a fullscreen window appearing under
+# a resting pointer can produce a motion report all by itself.
+MIN_GRACE = 0.6
+
+# An effect that dies sooner than this after starting is treated as broken and
+# dropped from the rotation, rather than restarted in a tight loop.
+MIN_LIFETIME = 3.0
+
+
+# ------------------------------------------------------------------- config
+
+
+def load_config():
+    cfg = {key: (dict(value) if isinstance(value, dict) else value) for key, value in DEFAULTS.items()}
+    try:
+        with open(CONFIG, "rb") as f:
+            user = tomllib.load(f)
+    except FileNotFoundError:
+        return cfg
+    for key, value in user.items():
+        if isinstance(value, dict) and isinstance(cfg.get(key), dict):
+            cfg[key].update(value)
+        else:
+            cfg[key] = value
+    return cfg
+
+
+def effect_argv(effect):
+    if "builtin" in effect:
+        return [sys.executable, SELF, "effect", effect["builtin"]]
+    return list(effect["command"])
+
+
+def installed(effect):
+    if "builtin" in effect:
+        return effect["builtin"] in BUILTINS
+    # An effect wrapped in `sh -c` needs whatever it pipes into, not sh — so an
+    # effect can say what it actually depends on.
+    needs = effect.get("requires") or [effect["command"][0]]
+    return all(shutil.which(name) for name in needs)
+
+
+# ------------------------------------------------------------------ process
+
+
+def running_pid():
+    try:
+        with open(PIDFILE) as f:
+            pid = int(f.read().strip())
+        with open(f"/proc/{pid}/cmdline", "rb") as f:
+            if b"screensaver" not in f.read():
+                return None
+        return pid
+    except (OSError, ValueError):
+        return None
+
+
+def start(manual):
+    if running_pid():
+        return
+    cfg = load_config()
+    term = cfg["terminal"]
+    grace = float(cfg["grace_seconds"]) if manual else 0.0
+
+    # Fully opaque and pure black whatever alacritty.toml says: on OLED a black
+    # pixel is a pixel that is switched off.
+    options = {
+        "window.opacity": "1.0",
+        "window.decorations": '"None"',
+        "window.padding": "{ x = 0, y = 0 }",
+        "window.dynamic_padding": "false",
+        "font.size": str(float(term["font_size"])),
+        "colors.primary.background": f'"{term["background"]}"',
+        "colors.primary.foreground": f'"{term["foreground"]}"',
+        "cursor.style.blinking": '"Never"',
+    }
+    argv = ["alacritty", "--class", "screensaver", "--title", "screensaver"]
+    for key, value in options.items():
+        argv += ["-o", f"{key}={value}"]
+    argv += ["-e", sys.executable, SELF, "run", "--grace", str(grace)]
+
+    subprocess.Popen(
+        argv,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+
+
+def stop():
+    pid = running_pid()
+    if pid:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+
+
+def write(fd, data):
+    view = memoryview(data)
+    while view:
+        try:
+            view = view[os.write(fd, view):]
+        except BlockingIOError:
+            select.select([], [fd], [])
+
+
+def reap(child):
+    pid, fd = child.pop("pid"), child.pop("fd")
+    # The effect is its own session leader on the pty, so signal the whole
+    # group: an effect wrapped in `sh -c` would otherwise leave its real
+    # program running after the shell is gone.
+    try:
+        os.killpg(pid, signal.SIGTERM)
+    except ProcessLookupError:
+        pass
+    for _ in range(20):
+        try:
+            if os.waitpid(pid, os.WNOHANG)[0]:
+                break
+        except ChildProcessError:
+            break
+        time.sleep(0.025)
+    else:
+        try:
+            os.killpg(pid, signal.SIGKILL)
+            os.waitpid(pid, 0)
+        except (ProcessLookupError, ChildProcessError):
+            pass
+    os.close(fd)
+
+
+def run(grace):
+    other = running_pid()
+    if other and other != os.getpid():
+        return  # a second start raced the first one up; the first keeps the screen
+    with open(PIDFILE, "w") as f:
+        f.write(str(os.getpid()))
+
+    cfg = load_config()
+    rotate = max(5.0, float(cfg["rotate_seconds"]))
+    grace = max(MIN_GRACE, grace)
+    effects = [e for e in cfg["effect"] if installed(e)] or [CLOCK]
+
+    saved = termios.tcgetattr(0)
+    tty.setraw(0)
+    write(1, b"\x1b[?1049h" + HIDE_CURSOR + MOUSE_ON + CLEAR)
+    started = time.monotonic()
+    child = {}
+
+    def resize(*_):
+        if not child:
+            return
+        size = fcntl.ioctl(0, termios.TIOCGWINSZ, b"\0" * 8)
+        fcntl.ioctl(child["fd"], termios.TIOCSWINSZ, size)
+        try:
+            os.killpg(child["pid"], signal.SIGWINCH)
+        except ProcessLookupError:
+            pass
+
+    signal.signal(signal.SIGWINCH, resize)
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
+    signal.signal(signal.SIGHUP, lambda *_: sys.exit(0))
+
+    broken = set()
+    queue = []
+    try:
+        while True:
+            pool = [e for e in effects if e["name"] not in broken] or [CLOCK]
+            if not queue:
+                queue = pool[:]
+                random.shuffle(queue)
+            effect = queue.pop()
+            argv = effect_argv(effect)
+
+            pid, fd = pty.fork()
+            if pid == 0:
+                try:
+                    os.execvp(argv[0], argv)
+                finally:
+                    os._exit(127)
+
+            child.update(pid=pid, fd=fd)
+            resize()
+            write(1, CLEAR + HIDE_CURSOR)
+            began = time.monotonic()
+
+            # With nothing to rotate to, a restart would only blank the screen
+            # for a moment, so a lone effect simply keeps running.
+            limit = rotate if len(pool) > 1 else float("inf")
+            while time.monotonic() - began < limit:
+                ready, _, _ = select.select([0, fd], [], [], 0.5)
+
+                if 0 in ready:
+                    # Anything at all — a key, a click, the mouse moving. The
+                    # bytes themselves don't matter and are never passed on.
+                    if not os.read(0, 4096) or time.monotonic() - started >= grace:
+                        return
+
+                if fd in ready:
+                    try:
+                        data = os.read(fd, 65536)
+                    except OSError:  # EIO: the effect has exited
+                        data = b""
+                    if not data:
+                        break
+                    rearm = MOUSE_DISABLE.search(data) or TERMINAL_RESET.search(data)
+                    data = MOUSE_DISABLE.sub(b"", data)
+                    write(1, data + (MOUSE_ON + HIDE_CURSOR if rearm else b""))
+
+            lived = time.monotonic() - began
+            reap(child)
+            if lived < MIN_LIFETIME:
+                if "builtin" not in effect:
+                    broken.add(effect["name"])
+                time.sleep(0.5)
+    finally:
+        if child:
+            reap(child)
+        write(1, MOUSE_OFF + CLEAR + SHOW_CURSOR + b"\x1b[?1049l")
+        termios.tcsetattr(0, termios.TCSAFLUSH, saved)
+        if running_pid() == os.getpid():
+            os.remove(PIDFILE)
+
+
+# ----------------------------------------------------------------- builtins
+
+FONT = {
+    "0": ("###", "# #", "# #", "# #", "###"),
+    "1": ("## ", " # ", " # ", " # ", "###"),
+    "2": ("###", "  #", "###", "#  ", "###"),
+    "3": ("###", "  #", "###", "  #", "###"),
+    "4": ("# #", "# #", "###", "  #", "  #"),
+    "5": ("###", "#  ", "###", "  #", "###"),
+    "6": ("###", "#  ", "###", "# #", "###"),
+    "7": ("###", "  #", "  #", "  #", "  #"),
+    "8": ("###", "# #", "###", "# #", "###"),
+    "9": ("###", "# #", "###", "  #", "###"),
+    ":": (" ", "#", " ", "#", " "),
+}
+
+
+def big(text):
+    rows = [" ".join(FONT[ch][r] for ch in text) for r in range(5)]
+    # Each font pixel is two cells wide, because a terminal cell is roughly
+    # twice as tall as it is wide.
+    return [row.replace("#", "██").replace(" ", "  ") for row in rows]
+
+
+class Redraw(Exception):
+    pass
+
+
+def clock():
+    """Big dim digits that jump to a new random spot every minute.
+
+    Deliberately the opposite of a normal clock face: small in area, low in
+    brightness, and never in the same place twice, so no pixel stays lit.
+    """
+
+    def on_resize(*_):
+        raise Redraw
+
+    signal.signal(signal.SIGWINCH, on_resize)
+    while True:
+        try:
+            cols, rows = shutil.get_terminal_size()
+            now = time.localtime()
+            digits = big(time.strftime("%H:%M", now))
+            date = time.strftime("%A, %d %B", now)
+            width = max(len(digits[0]), len(date))
+            height = len(digits) + 2
+            x = random.randint(0, max(0, cols - width))
+            y = random.randint(0, max(0, rows - height))
+
+            frame = ["\x1b[?25l\x1b[2J"]
+            for i, line in enumerate(digits):
+                frame.append(f"\x1b[{y + i + 1};{x + (width - len(line)) // 2 + 1}H\x1b[38;2;96;106;150m{line}")
+            frame.append(f"\x1b[{y + height};{x + (width - len(date)) // 2 + 1}H\x1b[38;2;64;70;96m{date}\x1b[0m")
+            sys.stdout.write("".join(frame))
+            sys.stdout.flush()
+
+            time.sleep(60.05 - time.time() % 60)
+        except Redraw:
+            continue
+
+
+BUILTINS = {"clock": clock}
+
+
+# --------------------------------------------------------------------- main
+
+
+def main():
+    args = sys.argv[1:]
+    command = args[0] if args else "start"
+
+    if command == "start":
+        start(manual="--manual" in args)
+    elif command == "stop":
+        stop()
+    elif command == "list":
+        for effect in load_config()["effect"]:
+            state = "installed" if installed(effect) else "not installed"
+            print(f"  {effect.get('name', '?'):<14} {state}")
+    elif command == "run":
+        grace = float(args[args.index("--grace") + 1]) if "--grace" in args else 0.0
+        run(grace)
+    elif command == "effect" and len(args) > 1 and args[1] in BUILTINS:
+        BUILTINS[args[1]]()
+    else:
+        print(__doc__.strip())
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
