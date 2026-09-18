@@ -1,0 +1,396 @@
+===============================================================================
+ NUKETOWN ZED -- KEY REFERENCE
+ Open any time with  <leader>H          (read-only, like the nvim one)
+ Live searchable list of every binding:  <leader>?   or   <leader>fk
+===============================================================================
+
+ Same keys as the Neovim config, as far as Zed allows. Where a key does
+ something different here, or does not exist, it says so.
+
+ LEADER is the SPACE bar. "<leader>ff" means: press Space, then f, then f.
+ Wait after Space and which-key pops up the rest.
+ Modes: (n) normal  (i) insert  (v) visual
+ <A-b> means Alt+b. Panels and finders are all on Alt -- the same keys as nvim.
+
+ Config: ~/.config/zed  (a symlink into ~/Nuketown/dotfiles/zed)
+   settings.json   options, formatters, extensions to install
+   keymap.json     every binding on this page
+
+
+-------------------------------------------------------------------------------
+ SURVIVAL -- if you only remember five things
+-------------------------------------------------------------------------------
+  <A-p>            Find file by name
+  <leader>fg       Search text across the whole project
+  <A-b>            Open / close the file tree
+  <A-a>            Open / close Claude
+  gd               Jump to definition            (<C-o> jumps back)
+  <leader>ca       Code action / quick fix
+
+  <C-S-p>          Command palette -- every command Zed has, by name
+  :w  save    :q  close tab    :wa  save all    (vim commands work)
+  u                undo            <C-r>  redo
+
+
+-------------------------------------------------------------------------------
+ FILES & SEARCH  (Telescope -> Zed's pickers)
+-------------------------------------------------------------------------------
+  <A-p>            Find files  (again inside the picker: close it)
+  <leader>ff       Find files
+  <leader>fg       Project search -- file contents, project-wide
+  <leader>fw       Same, pre-filled with the word under the cursor
+  <leader>fb       Switch between open tabs
+  <leader>fr       Recent PROJECTS  (recent files are at the top of <A-p>)
+  <leader>fh       Zed's documentation, in the browser
+  <leader>fk       Search all keymaps -- the keymap editor
+  <leader>fd       All diagnostics in the project
+  <leader>fs       Symbols in this file
+  <leader>fS       Symbols across the workspace
+  <leader>fc       Preview and pick a theme
+
+  Inside a picker:
+  <C-j> / <C-k>    Move down / up the results
+  <CR>             Open the selection
+  <Esc>            Close the picker
+
+
+-------------------------------------------------------------------------------
+ FILE TREE  (neo-tree -> project panel, docked RIGHT)
+-------------------------------------------------------------------------------
+  Every panel works like this: ONE key opens it and the same key closes it.
+
+  <A-b>            Open / close the tree
+  <leader>e        Same
+  <leader>o        Jump into the tree / back out  (leaves it open)
+  <leader>ge       Git changes -- same right sidebar  (the git panel, see GIT)
+
+  Inside the tree (netrw-style keys):
+  l  or  <CR>      Expand folder / open file
+  h                Collapse folder
+  -                Go to the parent folder
+  %                New file          d   New folder
+  R                Rename            D   Delete
+  v  /  o          Open in a vertical / horizontal split
+  /                Project search limited to this folder
+  ]c  /  [c        Next / previous file git changed
+  ]d  /  [d        Next / previous file with a diagnostic
+  <leader>as       @-mention this file to Claude
+  <Esc>  or  <C-h> Back to the editor, tree stays open
+  <A-b>            Close the tree
+
+
+-------------------------------------------------------------------------------
+ SEARCH & REPLACE ACROSS THE PROJECT  (grug-far -> project search)
+-------------------------------------------------------------------------------
+  Each key opens a search tab with a Search field, a Replace field, and every
+  match listed underneath as real, editable excerpts of each file.
+
+  <leader>sr       Search / replace across the project
+  <leader>sw       ...pre-filled with the word under the cursor
+  <leader>sv       ...pre-filled with the selection                     (v)
+  <leader>sf       Search / replace in this file only  (the buffer bar)
+
+  Inside it:
+  <CR>             In Replace: replace the next match
+  <C-A-CR>         In Replace: replace EVERY match       (this file: <C-CR>)
+  <A-C-g>          Toggle regex
+  <Esc>            Jump between the search bar and the results
+  Edit the results directly -- the change is written to the real file.
+
+  Include / exclude paths are the two fields under the search box.
+
+
+-------------------------------------------------------------------------------
+ EDITING
+-------------------------------------------------------------------------------
+  gcc              Toggle comment on this line              (n)
+  gc               Toggle comment on a motion, e.g. gc3j    (n)
+  gc               Toggle comment on the selection          (v)
+  <C-/>            Same as gcc / gc                         (n, v)
+
+  <C-s>            Save  (from insert: also back to normal) (n, i)
+  <leader>w        Write            <leader>q   Close tab
+
+  J  /  K          Move the selected lines down / up        (v)
+  <  /  >          Indent left / right, keeping selection   (v)
+
+  <C-space>        Expand selection to the next syntax node (n, v)
+  <BS>             Shrink that selection back               (v)
+
+  Brackets and quotes close themselves as you type them. An HTML or JSX tag
+  closes itself too, and editing the opening tag rewrites the closing one.
+
+  TODO / FIXME / HACK / NOTE / PERF / WARN comments are highlighted.
+  <leader>ft       List every one in the project
+  <leader>fT       Same, but TODO / FIX / FIXME / BUG only
+  (]t / [t do not exist here)
+
+  Colours written in a file (#1e1e2e, rgb(), hsl()) get a swatch.
+  (<leader>uc does not exist here)
+
+
+-------------------------------------------------------------------------------
+ CODE INTELLIGENCE  (LSP)
+-------------------------------------------------------------------------------
+  gd               Go to definition
+  gD               Go to declaration
+  gr               List references
+  gI               List implementations
+  gy               Go to type definition
+  K                Hover documentation (and the diagnostic, if any)
+  <C-o> / <C-i>    Jump back / forward through where you have been
+
+  <leader>rn       Rename symbol everywhere
+  <leader>ca       Code action / quick fix                  (n, v)
+  <leader>cd       Show the diagnostic on this line
+  <leader>cs       Document symbols (outline)
+  [d  /  ]d        Previous / next diagnostic
+
+  Errors show at the end of the line, as in nvim.
+
+  Servers: Zed downloads them itself -- no Mason. TypeScript/JS, eslint,
+  Rust, Python (basedpyright + ruff), C/C++, Go, JSON and YAML (with the
+  SchemaStore schemas), CSS, HTML, Markdown and Bash come built in; Lua,
+  C# (Roslyn), TOML, Dockerfile, SQL, QML, fish and hyprlang come from the
+  extensions in settings.json.
+
+  (<leader>ce ESLint fix-all does not exist here -- use <leader>ca on the
+   line, which offers "fix all" when eslint has something to fix)
+
+
+-------------------------------------------------------------------------------
+ .NET  (C# via Roslyn -- the language server VS Code's C# Dev Kit uses)
+-------------------------------------------------------------------------------
+  Compile errors show as you type: red underline, the message at the end of
+  the line, a count in the status bar. Every error in the SOLUTION, not only
+  the open files, is in one list:
+
+  <leader>fd       All errors and warnings (VS Code's Problems panel)
+  ]d  /  [d        Next / previous one in this file
+  <leader>ca       Quick fixes and refactorings at the cursor: add using,
+                   extract method, introduce variable, generate constructor,
+                   implement interface, ...           (<C-.> too)
+  "N references"   Shown above each member; click it to list them
+
+  <leader>db       dotnet build   \
+  <leader>dt       dotnet test     |  of the project that owns this file,
+  <leader>dr       dotnet run      |  output in the terminal panel
+  <leader>dw       dotnet watch   /
+
+  <C-:>            Show / hide inlay hints (parameter names, inferred types)
+
+  Which solution Roslyn loads is set per repo, the VS Code way, in
+  <repo>/.vscode/settings.json:   { "dotnet.defaultSolution": "src/X.sln" }
+  then  <C-S-p> "editor: restart language server".  Without it Roslyn only
+  picks a .sln if the root holds exactly one.
+
+  If a file shows no errors and no completions at all, its project failed
+  to load -- usually a NuGet restore failure. Run  dotnet restore  in the
+  terminal and read the error.
+
+  NOT in Zed: debugging (no .NET debugger exists for it), Razor/.cshtml,
+  the test explorer, NuGet UI. Use Rider or VS Code for those.
+
+
+-------------------------------------------------------------------------------
+ COMPLETION  (blink.cmp -> built in, appears as you type)
+-------------------------------------------------------------------------------
+  <Tab>  or  <CR>  Accept the selected item
+                   (inside a snippet, <Tab> jumps to the next placeholder)
+  <C-n> / <C-p>    Move through the list      (<Up> / <Down> too)
+  <C-space>        Open the menu
+  <Esc>            Dismiss it
+  Signature help pops up by itself inside a call's parentheses.
+
+
+-------------------------------------------------------------------------------
+ REFACTORING  (refactoring.nvim -> the language server's code actions)
+-------------------------------------------------------------------------------
+  Zed has no treesitter refactorer. Extract function / variable and inline
+  come from the language server instead -- TypeScript, Rust and C# all
+  offer them. Select the code first, then:
+
+  <leader>re / <leader>rv / <leader>ri / <leader>rr
+                   All open the code-action menu; pick the refactoring there
+
+  These are NOT operators here: select with v first, do not add a motion.
+  <leader>rn is still the rename.
+
+
+-------------------------------------------------------------------------------
+ TERMINAL  (snacks -> terminal panel, bottom)
+-------------------------------------------------------------------------------
+  <A-t>            Open the terminal / hide it again      (works from inside)
+  <leader>tt       Same, spelled out
+  <leader>tf       A terminal as a full editor tab  (no floating ones here)
+  <leader>tn       A brand new terminal
+
+  Inside the terminal every key goes to the shell, <C-p> and <C-t> included,
+  and <A-b> / <A-f> stay the shell's word jumps. <A-t>, <A-a>, <A-p> and
+  <A-g> still work from in here.
+  <C-S-c> / <C-S-v>   Copy / paste
+  <C-S-space>      Vi mode: scroll and copy with vim keys; again to leave
+  <A-t>            Hide the terminal and go back to the code
+
+
+-------------------------------------------------------------------------------
+ FORMATTING  (conform -> format on save)
+-------------------------------------------------------------------------------
+  Files are formatted automatically every time you save.
+
+  <leader>cf       Format now                  (v: only the selection)
+  <C-k> s          Save WITHOUT formatting this once
+  (<leader>uf does not exist here -- the setting is "format_on_save")
+
+  lua=stylua (must be installed)  js/ts/json/yaml/html/css/md=prettier
+  python=ruff  everything else=its language server
+
+
+-------------------------------------------------------------------------------
+ GIT
+-------------------------------------------------------------------------------
+  IN THE BUFFER  (gitsigns)
+
+  The line the cursor is on shows, greyed out at its end, who last changed
+  it, how long ago, and the commit subject. The gutter marks every added /
+  changed / deleted line.
+
+  <leader>gb       Blame popup for this line -- author, date, message
+  <leader>gB       Blame the whole file down the left edge
+  <leader>gt       Turn the end-of-line blame off / on
+  <leader>gp       Show the hunk under the cursor inline, old vs new
+
+  ]c  /  [c        Next / previous change in this file
+  <leader>gs       Stage / unstage the hunk under the cursor (v: selection)
+  <leader>gr       Undo the hunk under the cursor            (v: selection)
+  <leader>gS       Stage the whole file
+  <leader>gR       Undo every change in the file
+
+  THE PANEL  (neogit -> git panel, docked right with the tree)
+
+  <A-g>            Open / close the git panel
+  <leader>gg       Same thing
+  <leader>gc       Commit           <leader>gP  Push        <leader>gl  Pull
+
+  Inside the panel:
+  j / k            Move           l / h   expand / collapse a folder
+  <Space>  or  x   Stage / unstage what is under the cursor
+  X                Stage everything          U   Unstage everything
+  <BS>             Discard the file's changes (asks first)
+  <CR>             Open that file's diff
+  i  or  <Tab>     Jump into the commit message
+  <C-CR>           Commit          (<C-S-CR> amends)
+  <A-l>            Write the commit message for me (AI)
+  <C-1> / <C-2>    Changes tab / History tab
+  q  or  <A-g>     Close the panel
+  <C-h>            Back to the code, panel stays open
+
+  THE DIFF VIEWER  (diffview)
+
+  <leader>gd       Every change in the working tree, one scrolling view
+  <leader>gv       Same
+  <leader>gf       History of THIS file -- every commit that touched it
+  <leader>gq       Close it (closes the tab)
+  (<leader>gF, branch history, is the History tab of the git panel)
+
+
+-------------------------------------------------------------------------------
+ CLAUDE CODE  (claudecode.nvim -> the agent panel, docked LEFT)
+-------------------------------------------------------------------------------
+  Claude Code runs over ACP inside the agent panel. First time: open it and
+  pick "Claude Agent" from the new-thread menu; Zed remembers the choice.
+  It sees your project, opens files here, and shows edits as a reviewable
+  diff.
+
+  <A-a>            Open / close the agent panel -- works from anywhere,
+                   even while typing to Claude or in the terminal
+  <leader>ac       Same
+  <leader>af       Jump into it / back out  (leaves it open)
+  (<leader>ax does not exist here -- stop it with the Stop button)
+  <C-n>            New thread               (inside the panel)
+  <C-A-/>          Pick the model           (inside the panel)
+  <S-Tab>          Cycle the mode (plan / edit / ...)
+
+  GIVING IT CONTEXT
+
+  <leader>ab       Hand it the selection
+  <leader>as  (v)  Hand it the selected lines
+  <leader>as       On a file in the tree: @-mention that file
+  @                In the message box: mention a file, symbol or thread
+
+  WHEN IT PROPOSES A CHANGE
+
+  <leader>aa       Accept every change          (<S-A-y> too)
+  <leader>ad       Reject every change          (<S-A-z> too)
+  <A-y> / <C-A-z>  Accept / reject just the hunk under the cursor
+  <C-S-r>          Review all of its changes in one diff
+  <S-A-a>          Allow a tool call once   <S-A-q>  always allow it
+
+
+-------------------------------------------------------------------------------
+ WINDOWS & TABS
+-------------------------------------------------------------------------------
+  <C-h/j/k/l>      Move to the split left / down / up / right
+                   (into the side panels too: <C-l> from the rightmost
+                    split lands in the tree, <C-h> from the leftmost in
+                    Claude)
+  <C-Up/Down>      Make the split taller / shorter
+  <C-Left/Right>   Make the split narrower / wider
+  :sp  /  :vs      Split horizontally / vertically   (<C-w> v / s too)
+
+  <S-l>            Next tab
+  <S-h>            Previous tab
+  <leader>bd       Close the current tab
+
+
+-------------------------------------------------------------------------------
+ REST CLIENT  (kulala -> the http + kulala-http extensions)
+-------------------------------------------------------------------------------
+  .http files are highlighted (http extension) and kulala-http brings
+  kulala's language server for them. Running a request is not bound to a
+  key: look for it under <leader>ca on the request. The <leader>R keys and
+  ]r / [r do not exist here.
+
+  (<leader>n npm versions in package.json do not exist here either)
+
+
+-------------------------------------------------------------------------------
+ APPEARANCE
+-------------------------------------------------------------------------------
+  <leader>ut       Pick a theme        (Zed cannot cycle; this is a list)
+  <leader>uT       Same
+  The choice is written back into settings.json -- in the repo, so it shows
+  up in git diff.
+
+  Installed: Catppuccin (Mocha / Macchiato / Frappé / Latte), Tokyo Night,
+             Gruvbox (built in), Kanagawa, Nightfox, Dracula, macOS Classic
+
+  <leader>um       Turn the minimap off / on
+  <leader>uM       Same
+
+
+-------------------------------------------------------------------------------
+ HOUSEKEEPING
+-------------------------------------------------------------------------------
+  <C-S-x>          Extensions -- install, remove
+  <C-,>            Settings UI (writes into settings.json)
+  <leader>?        The keymap editor: every binding, searchable
+  <C-S-p> then "zed: open log"   When something does not work
+
+
+-------------------------------------------------------------------------------
+ VIM BASICS
+-------------------------------------------------------------------------------
+  i / a            Insert before / after the cursor
+  o / O            Open a new line below / above
+  <Esc>            Back to normal mode
+  dd / yy / p      Delete line / copy line / paste
+  ciw              Change the word under the cursor
+  ci" ci( ci{      Change inside quotes / parens / braces
+  0 / ^ / $        Start of line / first non-blank / end of line
+  gg / G           Top / bottom of file
+  {  /  }          Jump paragraph up / down
+  %                Jump to the matching bracket
+  /text  then  n   Search forwards, then next match
+  :%s/old/new/g    Replace everywhere in the file
+  v / V / <C-v>    Select by character / line / block

@@ -31,7 +31,7 @@ FONT_DIR="$HOME/.local/share/fonts"
 
 # Packages that are stow packages in this repo. `reference` and `bootstrap` are
 # not -- the first is frozen prior art, the second is this script.
-STOW_PACKAGES=(hypr quickshell nvim rofi wal waypaper ptyxis env screensaver fish starship)
+STOW_PACKAGES=(hypr quickshell nvim zed rofi wal waypaper ptyxis env screensaver fish starship)
 
 say()  { printf '\n\033[1;36m==>\033[0m %s\n' "$*"; }
 note() { printf '    %s\n' "$*"; }
@@ -365,7 +365,7 @@ phase_check() {
 
     local c
     for c in hyprland quickshell qs rofi nvim stow wal waypaper brave-browser \
-             wl-copy cliphist grim slurp brightnessctl playerctl pamixer ptyxis; do
+             wl-copy cliphist grim slurp brightnessctl playerctl pamixer ptyxis zed; do
         printf '    %-14s %s\n' "$c" "$(command -v "$c" || echo '-- missing')"
     done
 

@@ -1,0 +1,311 @@
+// Zed, set up to behave like the Neovim config in nvim/.config/nvim.
+//
+// The whole ~/.config/zed directory is stowed as ONE symlink, not file by file.
+// Zed rewrites settings.json whenever something is changed through its UI (the
+// theme picker, the settings editor), and it writes by replace-and-rename; a
+// per-file symlink would be swapped for a plain file on the first such save and
+// silently stop tracking the repo. With the directory linked, the rewrite lands
+// in the repo, where it shows up in `git diff` like any other edit.
+//
+// Where a Neovim plugin maps onto something Zed has built in, the built-in is
+// used rather than an extension:
+//
+//   neo-tree        project panel (docked right -- moved, by preference)
+//   telescope       file finder, project search, tab switcher, symbol pickers
+//   gitsigns        git gutter + inline blame (below) + hunk actions in keymap
+//   neogit/diffview git panel, project diff, file history
+//   blink.cmp       completion menu, signature help
+//   nvim-autopairs  use_autoclose (on by default)
+//   ts-autotag      jsx_tag_auto_close + linked_edits (on by default)
+//   neominimap      minimap (below)
+//   which-key       which_key (below)
+//   snacks terminal terminal panel
+//   claudecode      the agent panel, running Claude Code over ACP
+//   grug-far        project search with replace
+//   conform         format_on_save + per-language formatters (below)
+//   mason           Zed downloads language servers itself, per extension
+//
+// Keys live in keymap.json.
+{
+  // ── Vim ────────────────────────────────────────────────────────────────
+  "agent_servers": {
+    "claude-acp": {
+      "default_config_options": {
+        "model": "opus[1m]"
+      },
+      "type": "registry"
+    }
+  },
+  "disable_ai": false,
+  "vim_mode": true,
+  "vim": {
+    // clipboard = "unnamedplus"
+    "use_system_clipboard": "always",
+    "use_smartcase_find": true,
+    "highlight_on_yank_duration": 200,
+  },
+  // ignorecase + smartcase for / and project search
+  "use_smartcase_search": true,
+
+  // which-key. timeoutlen is 400 in nvim; the popup waits the same.
+  "which_key": {
+    "enabled": true,
+    "delay_ms": 400,
+  },
+
+  // ── Appearance ─────────────────────────────────────────────────────────
+  // FantasqueSansM is the terminal's font (ptyxis-theme.sh), which is what
+  // Neovim renders in, and the Nerd Font build has the icon glyphs.
+  "buffer_font_family": "FantasqueSansM Nerd Font Mono",
+  "buffer_font_size": 15,
+  "ui_font_size": 16,
+  "theme": {
+    "mode": "system",
+    "light": "One Light",
+    "dark": "Gruvbox Dark Hard",
+  },
+  // number + relativenumber
+  "relative_line_numbers": "enabled",
+  "current_line_highlight": "all",
+  // listchars: trail and tab. Zed has no nbsp marker.
+  "show_whitespaces": "trailing",
+  // scrolloff / sidescrolloff
+  "vertical_scroll_margin": 8,
+  "horizontal_scroll_margin": 8,
+  "soft_wrap": "none",
+
+  // neominimap, auto-enabled. <leader>um toggles it.
+  "minimap": {
+    "show": "always",
+  },
+
+  // ── Indentation ────────────────────────────────────────────────────────
+  "tab_size": 4,
+  "hard_tabs": false,
+
+  // ── Panels: tree right, Claude left ────────────────────────────────────
+  // The mirror of the nvim layout, by preference. Tree, git and outline share
+  // the right dock the way neo-tree's git_status shared its sidebar. Claude
+  // gets the other side because a dock shows one panel at a time: sharing the
+  // right one, <C-b> would swap Claude out instead of opening beside it.
+  "project_panel": {
+    "dock": "right",
+    // neo-tree: dotfiles shown (this is a dotfiles repo), gitignored hidden,
+    // and the open buffer revealed in the tree.
+    "hide_gitignore": true,
+    "auto_reveal_entries": true,
+  },
+  "git_panel": {
+    "dock": "right",
+  },
+  "outline_panel": {
+    "dock": "right",
+  },
+  "agent": {
+    "dock": "left",
+  },
+  "terminal": {
+    "dock": "bottom",
+    // The terminal does not inherit buffer_font_family. Without a Nerd Font
+    // here, starship's prompt glyphs render as boxes. Same face as Ptyxis.
+    "font_family": "FantasqueSansM Nerd Font Mono",
+    "font_size": 15,
+    "line_height": "standard",
+  },
+
+  // ── Git (gitsigns) ─────────────────────────────────────────────────────
+  "git": {
+    "git_gutter": "tracked_files",
+    // current_line_blame: on, after 300ms, with the commit subject.
+    "inline_blame": {
+      "enabled": true,
+      "delay_ms": 300,
+      "show_commit_summary": true,
+    },
+  },
+
+  // ── Diagnostics (vim.diagnostic.config) ────────────────────────────────
+  "diagnostics": {
+    // virtual_text
+    "inline": {
+      "enabled": true,
+    },
+  },
+
+  // ── Completion (blink.cmp) ─────────────────────────────────────────────
+  "show_completions_on_input": true,
+  "show_completion_documentation": true,
+  // signature = { enabled = true }
+  "auto_signature_help": true,
+  // Language-server code lenses above code, as VS Code shows them: for C#,
+  // "N references" on each member. Not a per-language setting in Zed.
+  "code_lens": "on",
+
+  // ── Formatting (conform) ───────────────────────────────────────────────
+  // Anything not listed under "languages" formats through its language
+  // server, which is conform's lsp_format = "fallback". JS/TS/JSON/YAML/HTML/
+  // CSS/Markdown go through Zed's bundled Prettier by default, which is what
+  // conform's prettierd -> prettier chain did.
+  "format_on_save": "on",
+  "languages": {
+    "Lua": {
+      // stylua, so the repo's .stylua.toml is honoured. It walks up from the
+      // file for the config, same as conform's stylua does.
+      "formatter": {
+        "external": {
+          "command": "stylua",
+          "arguments": ["--search-parent-directories", "--stdin-filepath", "{buffer_path}", "-"],
+        },
+      },
+    },
+    // Python needs no entry: Zed 1.20 already runs basedpyright + ruff and
+    // formats with ruff, which is conform's ruff_format.
+    "Shell Script": {
+      // bash-language-server formats with shfmt when shfmt is on PATH.
+      "formatter": "language_server",
+    },
+    // Roslyn, via the csharp extension -- the same server VS Code's C# Dev
+    // Kit runs. It reads .editorconfig itself.
+    "C#": {
+      "formatter": "language_server",
+      // VS Code's C# colouring: Roslyn's semantic classification on top of
+      // tree-sitter. The extension ships the token rules for it.
+      "semantic_tokens": "combined",
+      // #region / #endregion fold, which tree-sitter alone does not know.
+      "document_folding_ranges": "on",
+    },
+  },
+
+  // ── Language servers (lsp.lua) ─────────────────────────────────────────
+  // Only the differences from Zed's defaults, same rule as vim.lsp.config.
+  "lsp": {
+    // Roslyn's options, in the flat "csharp|section.key" form the csharp
+    // extension sends. The extension has defaults for the code-lens and
+    // inlay keys; they are all spelled out here in case these replace
+    // rather than merge with them.
+    "roslyn": {
+      "settings": {
+        // Compile errors for the whole solution, not just open files -- so
+        // <leader>fd lists every error the way VS Code's Problems panel does
+        // with this option set. Analyzer warnings stay open-files-only: on a
+        // solution this size running them everywhere is slow.
+        "csharp|background_analysis.dotnet_compiler_diagnostics_scope": "fullSolution",
+        "csharp|background_analysis.dotnet_analyzer_diagnostics_scope": "openFiles",
+        "csharp|code_lens.dotnet_enable_references_code_lens": true,
+        // Off: its "Run Test" lenses call a VS Code-side command that Zed
+        // does not have, so they would be dead buttons. <leader>dt runs tests.
+        "csharp|code_lens.dotnet_enable_tests_code_lens": false,
+        // Inlay hints stay off (inlay_hints.enabled) as in VS Code; these
+        // decide what shows when they are toggled on.
+        "csharp|inlay_hints.dotnet_enable_inlay_hints_for_parameters": true,
+        "csharp|inlay_hints.dotnet_enable_inlay_hints_for_literal_parameters": true,
+        "csharp|inlay_hints.dotnet_enable_inlay_hints_for_indexer_parameters": true,
+        "csharp|inlay_hints.dotnet_enable_inlay_hints_for_object_creation_parameters": true,
+        "csharp|inlay_hints.dotnet_enable_inlay_hints_for_other_parameters": true,
+        "csharp|inlay_hints.csharp_enable_inlay_hints_for_types": true,
+        "csharp|inlay_hints.csharp_enable_inlay_hints_for_implicit_variable_types": true,
+        "csharp|inlay_hints.csharp_enable_inlay_hints_for_lambda_parameter_types": true,
+        "csharp|inlay_hints.csharp_enable_inlay_hints_for_implicit_object_creation": true,
+        "csharp|inlay_hints.csharp_enable_inlay_hints_for_collection_expressions": true,
+      },
+    },
+    "rust-analyzer": {
+      "initialization_options": {
+        "cargo": { "allFeatures": true },
+        "check": { "command": "clippy" },
+      },
+    },
+    "basedpyright": {
+      "settings": {
+        "basedpyright.analysis": {
+          "typeCheckingMode": "basic",
+          "autoSearchPaths": true,
+          "useLibraryCodeForTypes": true,
+        },
+      },
+    },
+    "lua-language-server": {
+      "settings": {
+        "Lua": {
+          "runtime": { "version": "LuaJIT" },
+          // Stop it complaining that `vim` is undefined in the nvim config.
+          "diagnostics": { "globals": ["vim"] },
+          "workspace": { "checkThirdParty": false },
+          "telemetry": { "enable": false },
+        },
+      },
+    },
+  },
+
+  // The cheatsheet opens read-only, as :Cheatsheet does in nvim -- trying a
+  // key out in it must not edit it. Edit it from nvim, or comment this out.
+  "read_only_files": ["**/zed/CHEATSHEET.txt"],
+
+  // ── Extensions ─────────────────────────────────────────────────────────
+  // Installed on first launch. Built into Zed and so not listed: TypeScript/
+  // JavaScript (+ eslint, tailwind), Rust, Python, C/C++, Go, JSON, YAML (both
+  // with SchemaStore schemas), CSS, Markdown, Bash (bash-language-server),
+  // Python (basedpyright + ruff), diff, and the Gruvbox theme. Listing the
+  // extensions that used to provide those (basher, ruff) does nothing: Zed
+  // skips them as superseded.
+  "auto_install_extensions": {
+    // colorscheme.lua
+    "catppuccin": true,
+    "tokyo-night": true,
+    "kanagawa-themes": true,
+    // picked in Zed directly, not from nvim
+    "macos-classic": true,
+    "dracula": true,
+    "nvim-nightfox": true,
+    // nvim-web-devicons -> matching file icons
+    "catppuccin-icons": true,
+
+    // lsp.lua servers / treesitter.lua parsers Zed does not ship
+    "lua": true, // lua_ls
+    "csharp": true, // omnisharp (Roslyn in Zed)
+    "html": true, // html
+    "toml": true, // taplo
+    "dockerfile": true, // dockerls
+    "docker-compose": true,
+    "marksman": true, // marksman
+    "sql": true,
+    "scss": true,
+    "git-firefly": true, // gitcommit / gitignore / diff parsers
+
+    // .NET. csharp (Roslyn) is above; it also covers .csproj, MSBuild and
+    // .slnx. F#; XML for .props/.resx/.xaml/.config; .editorconfig files.
+    // There is NO .NET debugger for Zed (no netcoredbg/vsdbg adapter exists,
+    // built in or as an extension) and no Razor support -- the two things
+    // that still need VS Code or Rider.
+    "fsharp": true,
+    "xml": true,
+    "editorconfig": true,
+    // Flutter / Dart: `dart language-server` from the SDK on PATH
+    // (~/development/flutter/bin), plus the usual widget snippets.
+    "dart": true,
+    "flutter-snippets": true,
+    // Python beyond the built-in basedpyright + ruff
+    "python-requirements": true,
+    // C / C++ builds, and the files every project ends up with
+    "make": true,
+    "neocmake": true,
+    "csv": true,
+    "log": true,
+
+    // nvim-colorizer.lua
+    "colorizer": true,
+    // todo-comments.nvim
+    "todo-highlight-language-server": true,
+    // kulala.nvim: .http files, and a runner for them
+    "http": true,
+    "kulala-http": true,
+
+    // This repo's own file types, which nvim picks up with auto_install
+    "fish": true,
+    "qml": true,
+    "hyprlang": true,
+    "yuck": true,
+    "ini": true,
+    "env": true,
+  },
+}

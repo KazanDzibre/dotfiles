@@ -8,9 +8,10 @@
 -- Only snacks' `terminal` module is enabled. Every other snacks module stays
 -- off -- listing a module in `opts` is what turns it on.
 --
--- <C-t> is the toggle in both directions: normal mode opens or restores it,
--- terminal mode hides it again. In stock Neovim <C-t> pops the tag stack, which
--- nothing in this config uses now that gd goes through the LSP.
+-- <M-t> is the toggle in both directions: normal mode opens or restores it,
+-- terminal mode hides it again. Alt like the other panels, and like Zed's
+-- alt-t; it used to be <C-t>, which is vim's tag-stack pop and is left alone
+-- now.
 --
 -- Leaving terminal mode without hiding the window is <C-\><C-n>, or a double
 -- <Esc> -- snacks' own mapping. claude.lua turns that double-<Esc> off for
@@ -24,7 +25,7 @@ return {
             win = {
                 keys = {
                     nuketown_hide_term = {
-                        "<C-t>",
+                        "<M-t>",
                         function(self)
                             self:hide()
                         end,
@@ -37,7 +38,7 @@ return {
     },
     keys = {
         {
-            "<C-t>",
+            "<M-t>",
             function()
                 require("snacks").terminal.toggle()
             end,

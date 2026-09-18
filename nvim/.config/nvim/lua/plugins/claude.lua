@@ -37,6 +37,9 @@ return {
         },
 
         keys = {
+            -- One chord from anywhere, even mid-sentence or from inside the
+            -- Claude split itself -- Zed's alt-a does the same.
+            { "<M-a>", "<cmd>ClaudeCode<CR>", mode = { "n", "i", "t" }, desc = "Toggle Claude" },
             { "<leader>ac", "<cmd>ClaudeCode<CR>", desc = "Toggle Claude" },
             { "<leader>af", "<cmd>ClaudeCodeFocus<CR>", desc = "Focus Claude" },
             { "<leader>ar", "<cmd>ClaudeCode --resume<CR>", desc = "Resume a session" },

@@ -1,0 +1,275 @@
+// Neovim's keys in Zed. Same leader (space), same groups, same letters -- see
+// nvim/.config/nvim/lua/core/keymaps.lua and the `keys = {}` of each plugin.
+//
+// Zed's vim mode already does most of the LSP half out of the box, so these are
+// NOT rebound here: gd gD gy gI K ]d [d ]c [c gcc/gc, and ctrl-w h/j/k/l.
+//
+// Context rules that matter:
+//   "VimControl && !menu"          normal/visual/operator in an editor
+//   "... || ProjectPanel && ..."   so <leader> keeps working inside the tree,
+//                                  as neo-tree's `["<space>"] = "none"` did
+//   "Workspace"                    lowest precedence; anywhere nothing
+//                                  more specific claims the key
+//
+// Panel keys use each panel's own Toggle, which opens it (focused) and closes
+// it again -- one key for both, as in nvim. NOT workspace::ToggleLeftDock or
+// ToggleRightDock (those reopen whichever panel that dock showed last) and NOT
+// *::ToggleFocus (that only moves focus in and out; the panel stays open).
+//
+// Nvim keys with no Zed equivalent are left out, not faked: ]t/[t (TODO
+// jump), <leader>uf (format-on-save toggle), <leader>ce (eslint fix all),
+// <leader>n* (package-info), the `ih` hunk text object, <leader>ax (Zed
+// has no action that stops a running agent turn -- use the Stop button).
+[
+  // ── Anywhere ──────────────────────────────────────────────────────────
+  {
+    // Panels and finders are on ALT, the same keys as in nvim. They used to be
+    // ctrl-b/g/t/p, and in an editor those lost to vim mode's own ctrl-b
+    // (page up), ctrl-g (file info) and ctrl-t (tag pop), which sit in a more
+    // specific context than this one -- so they mostly did nothing. Alt is
+    // free: vim mode binds none of these, and Hyprland's modifier is SUPER.
+    "context": "Workspace",
+    "bindings": {
+      "alt-b": "project_panel::Toggle", // neo-tree toggle
+      "alt-p": "file_finder::Toggle", // telescope find_files
+      "alt-g": "git_panel::Toggle", // neogit
+      "alt-t": "terminal_panel::Toggle", // snacks terminal (was task::Rerun)
+      "alt-a": "agent::Toggle", // claudecode
+      // Zed's own ctrl-b toggles the LEFT dock, which is Claude's now, so
+      // outside an editor it would open Claude. Freed instead.
+      "ctrl-b": null,
+    },
+  },
+  {
+    // alt-t from inside the terminal hides it again (Zed binds it to rerun
+    // task there). alt-b and alt-f stay the shell's word jumps, as they would
+    // in an nvim terminal. ctrl-p and ctrl-t are Zed's file finder and symbol
+    // picker at the Workspace level, so they are handed to the shell here --
+    // fish's history is on ctrl-p.
+    "context": "Terminal",
+    "bindings": {
+      "alt-t": "terminal_panel::Toggle",
+      "ctrl-p": ["terminal::SendKeystroke", "ctrl-p"],
+      "ctrl-t": ["terminal::SendKeystroke", "ctrl-t"],
+    },
+  },
+
+  // ── core/keymaps.lua ──────────────────────────────────────────────────
+  {
+    "context": "VimControl && !menu",
+    "bindings": {
+      "ctrl-s": "workspace::Save",
+
+      // Commenting, VS Code muscle memory
+      "ctrl-/": "editor::ToggleComments",
+
+      // Window navigation. These also step into the docks, so ctrl-l from
+      // the rightmost split lands in the project panel.
+      "ctrl-h": "workspace::ActivatePaneLeft",
+      "ctrl-j": "workspace::ActivatePaneDown",
+      "ctrl-k": "workspace::ActivatePaneUp",
+      "ctrl-l": "workspace::ActivatePaneRight",
+
+      // Resize with arrows
+      "ctrl-up": "vim::ResizePaneUp",
+      "ctrl-down": "vim::ResizePaneDown",
+      "ctrl-left": "vim::ResizePaneLeft",
+      "ctrl-right": "vim::ResizePaneRight",
+
+      // Buffers are tabs
+      "shift-l": "pane::ActivateNextItem",
+      "shift-h": "pane::ActivatePreviousItem",
+
+      // treesitter incremental_selection
+      "ctrl-space": "vim::SelectLargerSyntaxNode",
+
+      // Vim's own meaning, now that the finder moved to alt-p. Otherwise
+      // Zed's defaults answer: file finder, and a new file for ctrl-n.
+      "ctrl-p": "vim::Up",
+      "ctrl-n": "vim::Down",
+    },
+  },
+  {
+    "context": "vim_mode == insert",
+    "bindings": {
+      // <Esc><cmd>write<CR>. Replaces Zed's insert-mode signature help,
+      // which pops up on its own anyway (auto_signature_help).
+      "ctrl-s": ["action::Sequence", ["vim::NormalBefore", "workspace::Save"]],
+    },
+  },
+  {
+    "context": "vim_mode == visual && !menu",
+    "bindings": {
+      "ctrl-/": "editor::ToggleComments",
+
+      // Move the selection up/down
+      "shift-j": "editor::MoveLineDown",
+      "shift-k": "editor::MoveLineUp",
+
+      // Keep the selection after shifting, so >>> is one keystroke each
+      ">": ["action::Sequence", ["vim::Indent", "vim::RestoreVisualSelection"]],
+      "<": ["action::Sequence", ["vim::Outdent", "vim::RestoreVisualSelection"]],
+
+      // incremental_selection: grow / shrink
+      "ctrl-space": "vim::SelectLargerSyntaxNode",
+      "backspace": "vim::SelectSmallerSyntaxNode",
+    },
+  },
+
+  // ── <leader>, normal mode (and the project panel) ─────────────────────
+  {
+    "context": "VimControl && !menu || ProjectPanel && not_editing",
+    "bindings": {
+      "space w": "workspace::Save",
+      "space q": "pane::CloseActiveItem",
+      "space b d": "pane::CloseActiveItem",
+      // Cheatsheet. Zed has no "open this file" action, so tasks.json runs
+      // the CLI on it; settings.json marks it read-only, as :Cheatsheet does.
+      "space shift-h": ["task::Spawn", { "task_name": "Cheatsheet" }],
+      // All keymaps: Zed's keymap editor is searchable.
+      "space ?": "zed::OpenKeymap",
+
+      // neo-tree
+      "space e": "project_panel::Toggle",
+      "space o": "project_panel::ToggleFocus",
+      "space g e": "git_panel::Toggle",
+
+      // telescope
+      "space f f": "file_finder::Toggle",
+      "space f g": "pane::DeploySearch",
+      // Project search seeds itself from the word under the cursor.
+      "space f w": "pane::DeploySearch",
+      "space f b": "tab_switcher::Toggle",
+      "space f r": "projects::OpenRecent",
+      "space f h": "zed::OpenDocs",
+      "space f k": "zed::OpenKeymap",
+      "space f d": "diagnostics::Deploy",
+      "space f s": "outline::Toggle",
+      "space f shift-s": "project_symbols::Toggle",
+      "space f c": "theme_selector::Toggle",
+      // todo-comments: a regex project search stands in for :TodoTelescope.
+      "space f t": ["pane::DeploySearch", { "query": "\\b(TODO|FIX|FIXME|HACK|NOTE|BUG|WARN|PERF)\\b", "regex": true }],
+      "space f shift-t": ["pane::DeploySearch", { "query": "\\b(TODO|FIX|FIXME|BUG)\\b", "regex": true }],
+
+      // grug-far
+      "space s r": ["pane::DeploySearch", { "replace_enabled": true }],
+      "space s w": ["pane::DeploySearch", { "replace_enabled": true }],
+      "space s f": "buffer_search::DeployReplace",
+
+      // LSP (lsp.lua LspAttach) and conform
+      "g r": "editor::FindAllReferences",
+      "space r n": "editor::Rename",
+      "space c a": "editor::ToggleCodeActions",
+      "space c f": "editor::Format",
+      "space c d": "editor::Hover",
+      "space c s": "outline::Toggle",
+
+      // refactoring.nvim. Zed has no treesitter refactorer; extract
+      // function/variable and inline come from the language server's code
+      // actions instead (ts_ls, rust-analyzer, omnisharp all offer them), so
+      // every <leader>r refactor key opens that menu.
+      "space r r": "editor::ToggleCodeActions",
+      "space r e": "editor::ToggleCodeActions",
+      "space r v": "editor::ToggleCodeActions",
+      "space r i": "editor::ToggleCodeActions",
+
+      // gitsigns
+      "space g s": "git::ToggleStaged",
+      "space g r": "git::Restore",
+      "space g shift-s": "git::StageFile",
+      "space g shift-r": "git::RestoreFile",
+      "space g p": "editor::ToggleSelectedDiffHunks",
+      "space g b": "editor::BlameHover",
+      "space g shift-b": "git::Blame",
+      "space g t": "editor::ToggleGitBlameInline",
+      "space g v": "git::Diff",
+
+      // diffview
+      "space g d": "git::Diff",
+      "space g f": "git::FileHistory",
+      "space g q": "pane::CloseActiveItem",
+
+      // neogit
+      "space g g": "git_panel::Toggle",
+      "space g c": "git::Commit",
+      "space g shift-p": "git::Push",
+      "space g l": "git::Pull",
+
+      // terminal.lua. Zed has no floating terminal; <leader>tf opens one as
+      // an editor tab instead, which is the closest to a big, separate shell.
+      "space t t": "terminal_panel::Toggle",
+      "space t f": "workspace::NewCenterTerminal",
+      "space t n": "workspace::NewTerminal",
+
+      // claude.lua. Claude Code runs in the agent panel (docked left). Pick
+      // "Claude Agent" in the panel once; Zed remembers.
+      "space a c": "agent::Toggle",
+      "space a f": "agent::ToggleFocus",
+      "space a b": "agent::AddSelectionToThread",
+      "space a a": "agent::KeepAll",
+      "space a d": "agent::RejectAll",
+
+      // .NET build / test / run (tasks.json + dotnet-task.sh). Zed-only: nvim
+      // has no <leader>d. Output lands in the terminal panel; the compile
+      // errors themselves already show in the editor, from Roslyn.
+      "space d b": ["task::Spawn", { "task_name": "dotnet: build" }],
+      "space d t": ["task::Spawn", { "task_name": "dotnet: test" }],
+      "space d r": ["task::Spawn", { "task_name": "dotnet: run" }],
+      "space d w": ["task::Spawn", { "task_name": "dotnet: watch" }],
+
+      // ui toggles
+      "space u t": "theme_selector::Toggle",
+      "space u shift-t": "theme_selector::Toggle",
+      "space u m": "editor::ToggleMinimap",
+      "space u shift-m": "editor::ToggleMinimap",
+    },
+  },
+
+  // ── <leader>, visual mode ─────────────────────────────────────────────
+  {
+    "context": "vim_mode == visual && !menu",
+    "bindings": {
+      "space a s": "agent::AddSelectionToThread", // ClaudeCodeSend
+      "space g s": "git::StageRange",
+      "space g r": "git::Restore",
+      "space s v": ["pane::DeploySearch", { "replace_enabled": true }],
+      "space c a": "editor::ToggleCodeActions",
+      "space c f": "editor::FormatSelections",
+      "space r r": "editor::ToggleCodeActions",
+      "space r e": "editor::ToggleCodeActions",
+      "space r v": "editor::ToggleCodeActions",
+    },
+  },
+
+  // ── The file tree (neo-tree's window.mappings) ────────────────────────
+  {
+    "context": "ProjectPanel && not_editing",
+    "bindings": {
+      "l": "project_panel::ExpandSelectedEntry",
+      "h": "project_panel::CollapseSelectedEntry",
+      // Back to the code, which is to the left now.
+      "ctrl-h": "workspace::ActivatePaneLeft",
+      // Same key as in an editor: @-mention this file to Claude.
+      "space a s": "agent::AddSelectionToThread",
+    },
+  },
+
+  // ── The git panel (neogit's q) ────────────────────────────────────────
+  {
+    // q closes it like neogit's; alt-g does too, from anywhere.
+    "context": "GitPanel && ChangesList && !GitBranchSelector && !GitRepositorySelector",
+    "bindings": {
+      "q": "git_panel::Toggle",
+      "ctrl-h": "workspace::ActivatePaneLeft",
+    },
+  },
+
+  // ── Pickers (telescope mappings) ──────────────────────────────────────
+  {
+    "context": "Picker > Editor",
+    "bindings": {
+      "ctrl-j": "menu::SelectNext",
+      "ctrl-k": "menu::SelectPrevious",
+    },
+  },
+]

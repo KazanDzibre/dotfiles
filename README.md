@@ -9,7 +9,7 @@ up at `~/.config/hypr/hyprland.conf`.
 ```sh
 git clone <this repo> ~/Nuketown/dotfiles
 cd ~/Nuketown/dotfiles
-stow -t ~ hypr quickshell screensaver nvim
+stow -t ~ hypr quickshell screensaver nvim zed
 ```
 
 Stow refuses to overwrite files that already exist. If a package reports a
@@ -27,6 +27,7 @@ because adopting replaces the repo's version with the one on disk).
 | `quickshell`  | the bar                                                             |
 | `screensaver` | fullscreen terminal screensaver started by hypridle and the bar     |
 | `nvim`        | Neovim                                                              |
+| `zed`         | Zed, with the Neovim keys; `Space H` opens its cheatsheet. Stow it before Zed's first launch, or `~/.config/zed` exists and conflicts |
 | `rofi`, `wal`, `waypaper` | launcher, pywal templates, wallpaper picker             |
 
 ## Things stow can't install

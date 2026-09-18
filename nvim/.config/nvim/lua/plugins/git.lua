@@ -12,6 +12,17 @@
 -- gitsigns is the only one that loads at startup; the other two are behind
 -- their commands.
 
+-- :Neogit only opens (or re-focuses) the status tab; it has no toggle. The
+-- status buffer knows whether it is showing, so close it when it is.
+local function toggle_neogit()
+    local status = require("neogit.buffers.status")
+    if status.is_open() then
+        status.instance():close()
+    else
+        require("neogit").open()
+    end
+end
+
 return {
     -- ── gitsigns: signs, inline blame, hunk actions ─────────────────────────
     {
@@ -146,12 +157,10 @@ return {
         },
         cmd = "Neogit",
         keys = {
-            -- VS Code opens source control with Ctrl+Shift+G; a terminal cannot
-            -- tell Ctrl+G from Ctrl+Shift+G, so this is plain <C-g>. It costs
-            -- the builtin "show file info", which <leader>fb and the statusline
-            -- already cover.
-            { "<C-g>", "<cmd>Neogit<CR>", desc = "Git panel" },
-            { "<leader>gg", "<cmd>Neogit<CR>", desc = "Git panel" },
+            -- One key opens and closes it. Alt, like the other panels and like
+            -- Zed's; it used to be <C-g>, which is vim's "show file info".
+            { "<M-g>", toggle_neogit, desc = "Toggle git panel" },
+            { "<leader>gg", toggle_neogit, desc = "Toggle git panel" },
             { "<leader>gc", "<cmd>Neogit commit<CR>", desc = "Commit" },
             { "<leader>gP", "<cmd>Neogit push<CR>", desc = "Push" },
             { "<leader>gl", "<cmd>Neogit pull<CR>", desc = "Pull" },

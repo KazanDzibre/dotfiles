@@ -6,14 +6,16 @@
 
  LEADER is the SPACE bar. "<leader>ff" means: press Space, then f, then f.
  Modes: (n) normal  (i) insert  (v) visual
+ <M-b> means Alt+b. Panels and finders are all on Alt -- the same keys as Zed.
 
 
 -------------------------------------------------------------------------------
  SURVIVAL -- if you only remember five things
 -------------------------------------------------------------------------------
-  <C-p>            Find file by name                     (the VS Code Ctrl+P)
+  <M-p>            Find file by name
   <leader>fg       Search text across the whole project
-  <C-b>            Toggle the file tree
+  <M-b>            Open / close the file tree
+  <M-a>            Open / close Claude             (from anywhere, any mode)
   gd               Jump to definition            (<C-o> jumps back)
   <leader>ca       Code action / quick fix       (the VS Code lightbulb)
 
@@ -25,7 +27,7 @@
 -------------------------------------------------------------------------------
  FILES & SEARCH  (Telescope)
 -------------------------------------------------------------------------------
-  <C-p>            Find files
+  <M-p>            Find files  (again inside the picker: close it)
   <leader>ff       Find files
   <leader>fg       Live grep -- search file contents project-wide
   <leader>fw       Grep the word under the cursor
@@ -48,7 +50,7 @@
 -------------------------------------------------------------------------------
  FILE TREE  (neo-tree)
 -------------------------------------------------------------------------------
-  <C-b>            Toggle the tree
+  <M-b>            Open / close the tree
   <leader>e        Toggle the tree
   <leader>o        Jump into the tree
   <leader>ge       Same sidebar, listing only what git changed
@@ -61,7 +63,7 @@
   p                Paste
   H                Toggle hidden files
   ?                Full list of tree mappings
-  <C-b>            Close the tree
+  <M-b>            Close the tree
 
 
 -------------------------------------------------------------------------------
@@ -202,7 +204,7 @@
 -------------------------------------------------------------------------------
  TERMINAL  (snacks -- VS Code's Ctrl+`)
 -------------------------------------------------------------------------------
-  <C-t>            Open the terminal / hide it again      (works from inside)
+  <M-t>            Open the terminal / hide it again      (works from inside)
   <leader>tt       Same, spelled out
   <leader>tf       A floating terminal instead of a split
   <leader>tn       A brand new terminal
@@ -210,7 +212,7 @@
   Inside a terminal you are in TERMINAL mode -- keys go to the shell.
   <Esc><Esc>       Back to normal mode, terminal still open
   <C-\><C-n>       The same thing, the vim way
-  <C-t>            Hide the terminal and go back to the code
+  <M-t>            Hide the terminal and go back to the code
   Once in normal mode, scroll and copy as in any buffer; i returns to typing.
 
   The split and the float are two independent shells, not one window that
@@ -258,7 +260,7 @@
 
   THE PANEL  (neogit -- stage, commit, push)
 
-  <C-g>            Open the git panel                (VS Code's Ctrl+Shift+G)
+  <M-g>            Open / close the git panel
   <leader>gg       Same thing
   <leader>gc       Commit           <leader>gP  Push        <leader>gl  Pull
 
@@ -299,7 +301,9 @@
   Neovim: it sees the file you are in and what you have selected, opens files
   here, and proposes edits as a real diff you can edit before accepting.
 
-  <leader>ac       Open / close Claude in a split on the right
+  <M-a>            Open / close Claude in a split on the right -- also from
+                   insert mode and from inside a terminal
+  <leader>ac       Same
   <leader>af       Jump into the Claude split (opens it if closed)
   <leader>ar       Pick an old session to resume
   <leader>aC       Continue the last session in this directory
