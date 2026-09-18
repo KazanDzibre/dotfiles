@@ -1,2 +1,13 @@
-1. Check col.inactive_border and col.active_border for better themeing
+1. DONE - col.inactive_border / col.active_border now follow pywal. The colours
+   come from ~/.cache/wal/colors-hyprland.conf, which waypaper's hook generates
+   on every wallpaper change using the SAME accent-scoring Theme.qml uses, so
+   the borders and the bar always agree. See wallpaper_update.sh.
 
+2. Wallpapers live in ~/Pictures/Wallpapers (waypaper's configured folder) and
+   it is currently empty - put some images there before first login, or the
+   palette never gets generated and everything falls back to Catppuccin.
+
+3. Untested on real hardware: the four `global` binds that dispatch to the bar
+   (screenshot x2, clipboard, keep-awake). They depend on quickshell having
+   registered appid "quickshell"; if a key does nothing, check `hyprctl binds`
+   and the bar's log - a name mismatch fails silently on both sides.

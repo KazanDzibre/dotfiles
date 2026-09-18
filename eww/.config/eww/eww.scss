@@ -4,7 +4,7 @@
    path, and ~/.config/eww is a stow symlink into the repo -- so "../../.cache"
    resolves to <repo>/eww/.cache, which does not exist. eww reports a failed
    scss import silently and simply renders unstyled (GTK default light theme). */
-@import "/home/marko-ruzic/.cache/wal/colors.scss";
+@import "/home/markoruzic997/.cache/wal/colors.scss";
 
 * {
   all: unset; /* Reset GTK defaults */

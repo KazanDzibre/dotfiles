@@ -1,3 +1,9 @@
 .claude
 CLAUDE.*
 .qmlls.ini
+__pycache__/
+*.pyc
+
+# Generated state that apps write back through the stow symlinks. Config lives
+# in the repo; state does not, or every session dirties the tree.
+fish/.config/fish/fish_variables

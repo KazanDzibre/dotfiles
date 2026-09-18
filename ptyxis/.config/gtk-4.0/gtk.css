@@ -1,0 +1,75 @@
+/* GTK4 overrides. Scoped to Ptyxis only — every rule is under
+ * `window.ptyxis-window`, so nautilus and every other GTK4 app keeps its normal
+ * chrome. The file lives in the `ptyxis` stow package because that is the only
+ * thing it styles; if other GTK4 apps ever need rules, move it to its own
+ * package rather than widening these selectors.
+ *
+ * Why CSS at all: Ptyxis keeps its settings in dconf and has no option to hide
+ * the header bar. The structure being targeted here comes from its own UI
+ * definition:
+ *
+ *   gresource extract /usr/bin/ptyxis /org/gnome/Ptyxis/ptyxis-window.ui
+ *
+ * which shows `PtyxisWindow` carrying the style class `ptyxis-window`, and an
+ * `AdwHeaderBar id="header_bar"` carrying `main-header-bar`.
+ *
+ * GTK4 CSS has no `display: none` and no `max-height`, so a header bar cannot
+ * simply be switched off. It is collapsed instead: the bar's own min-height
+ * goes to zero and it is pulled off the top of the window with a negative
+ * margin, while every child is faded out. Both halves are needed — fading
+ * alone leaves a full-height invisible strip that still eats 115px, and
+ * collapsing alone leaves the buttons drawn over the terminal.
+ *
+ * Do NOT add `-gtk-icon-size: 0` to shrink the buttons. GTK asserts on it:
+ *   Gtk-CRITICAL gtk_icon_theme_lookup_by_gicon: assertion 'size > 0' failed
+ * repeated for every icon, on every window open.
+ */
+
+window.ptyxis-window headerbar.main-header-bar {
+  min-height: 0;
+  padding: 0;
+  margin-top: -60px;
+  margin-bottom: 0;
+  margin-left: 0;
+  margin-right: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+
+  /* The collapse above only gets the bar down to ~37px: min-height:0 does not
+   * help while the buttons inside still request their natural height. Pulling
+   * it off the top of the window with a negative margin is what actually
+   * reclaims the space. Verified by temporarily setting `background: red` and
+   * screenshotting -- without this the red band is still 37px tall. */
+  margin-top: -60px;
+}
+
+/* The children are what actually request height, so they have to go too. */
+window.ptyxis-window headerbar.main-header-bar > *,
+window.ptyxis-window headerbar.main-header-bar windowcontrols,
+window.ptyxis-window headerbar.main-header-bar button,
+window.ptyxis-window headerbar.main-header-bar label,
+window.ptyxis-window headerbar.main-header-bar separator {
+  opacity: 0;
+  min-height: 0;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+}
+
+/* Reclaim the rounded bottom corners the header bar used to balance, so the
+ * window reads as one rectangle of terminal rather than a card missing its top.
+ * Hyprland is already rounding the window itself (decoration:rounding). */
+window.ptyxis-window,
+window.ptyxis-window .window-contents {
+  border-radius: 0;
+}
+
+/* Without a header bar there is no visual gap at the top, so give the terminal
+ * back a little breathing room. Ptyxis's own style.css sets 7px 6px 3px 6px. */
+window.ptyxis-window vte-terminal.padded {
+  padding: 6px 8px 4px 8px;
+}
