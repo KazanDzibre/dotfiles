@@ -336,10 +336,11 @@
                     Claude)
   <C-Up/Down>      Make the split taller / shorter
   <C-Left/Right>   Make the split narrower / wider
-  :sp  /  :vs      Split horizontally / vertically   (<C-w> v / s too)
+  :sp  /  :vs      Split horizontally / vertically
 
   <S-l>            Next tab
   <S-h>            Previous tab
+  <C-w>            Close the current tab
   <leader>bd       Close the current tab
 
 
