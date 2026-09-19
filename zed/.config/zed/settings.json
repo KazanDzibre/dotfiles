@@ -28,6 +28,7 @@
 // Keys live in keymap.json.
 {
   // ── Vim ────────────────────────────────────────────────────────────────
+  "icon_theme": "Material Icon Theme",
   "agent_servers": {
     "claude-acp": {
       "default_config_options": {
@@ -62,7 +63,7 @@
   "theme": {
     "mode": "system",
     "light": "One Light",
-    "dark": "Gruvbox Dark Hard",
+    "dark": "The Dark Side",
   },
   // number + relativenumber
   "relative_line_numbers": "enabled",
