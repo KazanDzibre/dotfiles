@@ -28,11 +28,13 @@
 // Keys live in keymap.json.
 {
   // ── Vim ────────────────────────────────────────────────────────────────
+  "cli_default_open_behavior": "existing_window",
   "icon_theme": "Material Icon Theme",
   "agent_servers": {
     "claude-acp": {
       "default_config_options": {
-        "model": "opus[1m]"
+        "mode": "plan",
+        "model": "opus"
       },
       "type": "registry"
     }
@@ -63,7 +65,7 @@
   "theme": {
     "mode": "system",
     "light": "One Light",
-    "dark": "The Dark Side",
+    "dark": "Gruvbox Dark Hard",
   },
   // number + relativenumber
   "relative_line_numbers": "enabled",
@@ -165,6 +167,20 @@
       // bash-language-server formats with shfmt when shfmt is on PATH.
       "formatter": "language_server",
     },
+    // YAML is 2 spaces everywhere; the global tab_size of 4 made Prettier
+    // re-indent whole files on save.
+    "YAML": {
+      "tab_size": 2,
+    },
+    // Flutter: `dart format` through the Dart language server, at the line
+    // length set under lsp.dart below. dart format always indents by 2.
+    "Dart": {
+      "formatter": "language_server",
+      "tab_size": 2,
+      // Wrap guide at the same column the formatter wraps at.
+      "preferred_line_length": 180,
+      "show_wrap_guides": true,
+    },
     // Roslyn, via the csharp extension -- the same server VS Code's C# Dev
     // Kit runs. It reads .editorconfig itself.
     "C#": {
@@ -174,7 +190,22 @@
       "semantic_tokens": "combined",
       // #region / #endregion fold, which tree-sitter alone does not know.
       "document_folding_ranges": "on",
+      // Wrap guide only: Roslyn's formatter never wraps or joins lines by length.
+      "preferred_line_length": 180,
+      "show_wrap_guides": true,
     },
+  },
+
+  // An empty rule for "comment" turns semantic styling off for comments only,
+  // so the "comment" extension's tag colours survive where a server also
+  // classifies comments -- C# above is "semantic_tokens": "combined", and
+  // Roslyn would otherwise repaint every comment one flat colour.
+  "global_lsp_settings": {
+    "semantic_token_rules": [
+      {
+        "token_type": "comment",
+      },
+    ],
   },
 
   // ── Language servers (lsp.lua) ─────────────────────────────────────────
@@ -208,6 +239,14 @@
         "csharp|inlay_hints.csharp_enable_inlay_hints_for_lambda_parameter_types": true,
         "csharp|inlay_hints.csharp_enable_inlay_hints_for_implicit_object_creation": true,
         "csharp|inlay_hints.csharp_enable_inlay_hints_for_collection_expressions": true,
+      },
+    },
+    // VS Code's "dart.lineLength": 180. The server reads it from the "dart"
+    // section, so the key is the same minus the prefix. A project whose
+    // analysis_options.yaml sets formatter: page_width overrides this.
+    "dart": {
+      "settings": {
+        "lineLength": 180,
       },
     },
     "rust-analyzer": {
@@ -297,6 +336,15 @@
     "colorizer": true,
     // todo-comments.nvim
     "todo-highlight-language-server": true,
+    // Better Comments, near enough: colours the tag AND the rest of the line
+    // by kind, from the theme's syntax colours.
+    //   TODO WIP MAYBE ?              -> constant
+    //   INFO NOTE XXX DOCS PERF TEST *-> string
+    //   ERROR FIXME FIX BUG DELETE !  -> property
+    //   HACK WARNING WARN SAFETY IMPORTANT # -> keyword
+    // It works by injecting a "comment" language into other grammars, so a
+    // language only lights up once its extension ships that injection.
+    "comment": true,
     // kulala.nvim: .http files, and a runner for them
     "http": true,
     "kulala-http": true,

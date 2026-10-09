@@ -78,6 +78,10 @@ hyprland hyprpaper hypridle hyprlock xdg-desktop-portal-hyprland
 xdg-desktop-portal-gtk xwayland
 
 rofi neovim ptyxis fish starship
+
+# nodejs/npm: mason installs most of the language servers in
+# nvim/.config/nvim/lua/plugins/lsp.lua through npm.
+nodejs npm
 wl-clipboard cliphist grim slurp brightnessctl playerctl pamixer cava
 network-manager-gnome blueman imagemagick
 mate-polkit
@@ -106,7 +110,7 @@ phase_apt() {
 
     require_sudo || { fail "phase_apt: no terminal for sudo"; return 1; }
     local pkgs
-    mapfile -t pkgs < <(apt_packages | tr ' ' '\n' | grep -v '^$')
+    mapfile -t pkgs < <(apt_packages | grep -v '^#' | tr ' ' '\n' | grep -v '^$')
     note "${#pkgs[@]} packages"
 
     # One transaction, so a single unavailable package is visible immediately

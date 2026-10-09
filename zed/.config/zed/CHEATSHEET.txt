@@ -20,7 +20,7 @@
 -------------------------------------------------------------------------------
  SURVIVAL -- if you only remember five things
 -------------------------------------------------------------------------------
-  <A-p>            Find file by name
+  <C-p>            Find file by name
   <leader>fg       Search text across the whole project
   <A-b>            Open / close the file tree
   <A-a>            Open / close Claude
@@ -35,12 +35,12 @@
 -------------------------------------------------------------------------------
  FILES & SEARCH  (Telescope -> Zed's pickers)
 -------------------------------------------------------------------------------
-  <A-p>            Find files  (again inside the picker: close it)
+  <C-p>            Find files  (again inside the picker: close it)
   <leader>ff       Find files
   <leader>fg       Project search -- file contents, project-wide
   <leader>fw       Same, pre-filled with the word under the cursor
   <leader>fb       Switch between open tabs
-  <leader>fr       Recent PROJECTS  (recent files are at the top of <A-p>)
+  <leader>fr       Recent PROJECTS  (recent files are at the top of <C-p>)
   <leader>fh       Zed's documentation, in the browser
   <leader>fk       Search all keymaps -- the keymap editor
   <leader>fd       All diagnostics in the project
@@ -226,8 +226,9 @@
   <leader>tn       A brand new terminal
 
   Inside the terminal every key goes to the shell, <C-p> and <C-t> included,
-  and <A-b> / <A-f> stay the shell's word jumps. <A-t>, <A-a>, <A-p> and
-  <A-g> still work from in here.
+  so the file finder is not reachable from here -- <A-t> back to the code
+  first. <A-b> / <A-f> stay the shell's word jumps. <A-t>, <A-a> and <A-g>
+  still work from in here.
   <C-S-c> / <C-S-v>   Copy / paste
   <C-S-space>      Vi mode: scroll and copy with vim keys; again to leave
   <A-t>            Hide the terminal and go back to the code

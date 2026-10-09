@@ -195,6 +195,30 @@ return {
                 "marksman", -- markdown
             }
 
+            -- mason installs these through npm. Without it every install fails
+            -- and vim.lsp.enable logs "not executable" for each one, so skip
+            -- them with a single warning until nodejs/npm is on the machine.
+            local needs_npm = {
+                ts_ls = true,
+                pyright = true,
+                bashls = true,
+                jsonls = true,
+                yamlls = true,
+                html = true,
+                cssls = true,
+                eslint = true,
+                dockerls = true,
+            }
+            if vim.fn.executable("npm") == 0 then
+                servers = vim.tbl_filter(function(name)
+                    return not needs_npm[name]
+                end, servers)
+                vim.notify(
+                    "npm not found: skipping JS/TS, Python, Bash, JSON, YAML, HTML, CSS, ESLint and Docker servers",
+                    vim.log.levels.WARN
+                )
+            end
+
             require("mason-lspconfig").setup({
                 ensure_installed = servers,
                 -- Deliberately NOT `true`. mason-lspconfig would then enable

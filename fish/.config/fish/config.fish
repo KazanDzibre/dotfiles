@@ -53,6 +53,7 @@ alias gl 'git log --oneline --graph --decorate -20'
 
 # The dotfiles themselves, since this is what the shell is mostly used for.
 alias dots 'cd ~/Nuketown/dotfiles'
+alias v nvim
 
 # -------------------------------------------------------------------- prompt
 #

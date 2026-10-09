@@ -24,15 +24,20 @@
 [
   // ── Anywhere ──────────────────────────────────────────────────────────
   {
-    // Panels and finders are on ALT, the same keys as in nvim. They used to be
-    // ctrl-b/g/t/p, and in an editor those lost to vim mode's own ctrl-b
-    // (page up), ctrl-g (file info) and ctrl-t (tag pop), which sit in a more
-    // specific context than this one -- so they mostly did nothing. Alt is
-    // free: vim mode binds none of these, and Hyprland's modifier is SUPER.
+    // Panels are on ALT, the same keys as in nvim. They used to be ctrl-b/g/t,
+    // and in an editor those lost to vim mode's own ctrl-b (page up), ctrl-g
+    // (file info) and ctrl-t (tag pop), which sit in a more specific context
+    // than this one -- so they mostly did nothing. Vim mode binds none of the
+    // ALT ones, and none of these letters is a Hyprland ALT bind.
+    //
+    // The file finder is the exception, on ctrl-p: it was alt-p until Hyprland's
+    // modifier became ALT, and ALT+P is its rustystore-rofi bind, so Hyprland
+    // took the key before Zed saw it. ctrl-p is Zed's own default for it; the
+    // editor needs it bound again below, where vim mode would otherwise win.
     "context": "Workspace",
     "bindings": {
       "alt-b": "project_panel::Toggle", // neo-tree toggle
-      "alt-p": "file_finder::Toggle", // telescope find_files
+      "ctrl-p": "file_finder::Toggle", // telescope find_files
       "alt-g": "git_panel::Toggle", // neogit
       "alt-t": "terminal_panel::Toggle", // snacks terminal (was task::Rerun)
       "alt-a": "agent::Toggle", // claudecode
@@ -84,9 +89,10 @@
       // treesitter incremental_selection
       "ctrl-space": "vim::SelectLargerSyntaxNode",
 
-      // Vim's own meaning, now that the finder moved to alt-p. Otherwise
-      // Zed's defaults answer: file finder, and a new file for ctrl-n.
-      "ctrl-p": "vim::Up",
+      // The file finder, as in the Workspace block; bound here too so the
+      // editor's own ctrl-p meanings cannot shadow it. ctrl-n keeps vim's
+      // meaning -- Zed's default there would make a new file.
+      "ctrl-p": "file_finder::Toggle",
       "ctrl-n": "vim::Down",
     },
   },
