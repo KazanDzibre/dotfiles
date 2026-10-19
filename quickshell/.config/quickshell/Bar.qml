@@ -79,7 +79,11 @@ Scope {
         Island {
           id: workspacesIsland
 
-          Workspaces {}
+          // Each bar lists only its own screen's workspaces, so the three
+          // monitors do not all show the same row.
+          Workspaces {
+            barScreen: bar.screen
+          }
         }
 
         Island {
