@@ -94,7 +94,7 @@ Singleton {
   }
 
   function reveal() {
-    Hyprland.dispatch("togglespecialworkspace " + root.workspace);
+    Hyprland.dispatch('hl.dsp.workspace.toggle_special("' + root.workspace + '")');
   }
 
   function toggle() {

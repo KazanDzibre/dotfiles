@@ -23,9 +23,9 @@ because adopting replaces the repo's version with the one on disk).
 
 | package       | what it is                                                          |
 |---------------|---------------------------------------------------------------------|
-| `hypr`        | Hyprland, hyprlock, hypridle (screensaver at 3 min idle, screen off at 10 min) |
+| `hypr`        | Hyprland, hyprlock, hypridle (screen off at 10 min idle)            |
 | `quickshell`  | the bar                                                             |
-| `screensaver` | fullscreen terminal screensaver started by hypridle and the bar     |
+| `screensaver` | fullscreen terminal screensaver, started from the bar's power menu  |
 | `nvim`        | Neovim                                                              |
 | `rofi`, `wal`, `waypaper` | launcher, pywal templates, wallpaper picker             |
 

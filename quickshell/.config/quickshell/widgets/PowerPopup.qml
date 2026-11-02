@@ -22,12 +22,14 @@ Popup {
 
   // What the screensaver row says about starting by itself. Worded around
   // keep awake on purpose: the two rows are one system seen from either end.
-  readonly property bool saverAutomatic: Screensaver.daemonRunning && Screensaver.idleSeconds > 0
+  // Button-only is the normal state now, so it reads plainly. Only a timeout
+  // configured in hypridle.conf with no daemon to act on it is worth a warning.
+  readonly property bool saverWarning: Screensaver.idleSeconds > 0 && !Screensaver.daemonRunning
   readonly property string saverStatus: {
-    if (!Screensaver.daemonRunning)
-      return "Not on idle: hypridle isn't running";
     if (Screensaver.idleSeconds === 0)
-      return "Not set to start on idle";
+      return "Starts only from here";
+    if (!Screensaver.daemonRunning)
+      return "Set for idle, but hypridle isn't running";
     if (IdleInhibit.enabled)
       return "Paused while keep awake is on";
     return "Starts after " + Screensaver.describe(Screensaver.idleSeconds) + " idle";
@@ -54,7 +56,7 @@ Popup {
       glyph: Icons.logout,
       confirm: true,
       // Mirrors the SUPER+SHIFT+E binding in hyprland.conf.
-      cmd: ["sh", "-c", "command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch exit"]
+      cmd: ["sh", "-c", "command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch 'hl.dsp.exit()'"]
     },
     {
       id: "reboot",
@@ -265,7 +267,7 @@ Popup {
 
       Text {
         width: parent.width
-        text: IdleInhibit.enabled ? "Screensaver and screen off are paused" : "Screensaver starts when idle"
+        text: IdleInhibit.enabled ? "Screen won't turn off" : "Screen turns off when idle"
         elide: Text.ElideRight
         font.family: Theme.fontFamily
         font.pixelSize: Theme.smallSize - 1
@@ -368,7 +370,7 @@ Popup {
         elide: Text.ElideRight
         font.family: Theme.fontFamily
         font.pixelSize: Theme.smallSize - 1
-        color: !root.saverAutomatic ? Theme.warn : IdleInhibit.enabled ? Theme.accent : Theme.fgDim
+        color: root.saverWarning ? Theme.warn : IdleInhibit.enabled && Screensaver.idleSeconds > 0 ? Theme.accent : Theme.fgDim
       }
     }
 

@@ -5,8 +5,8 @@
     screensaver stop               close it
     screensaver list               show which effects from config.toml are installed
 
-hypridle starts it after the idle timeout (~/.config/hypr/hypridle.conf), and
-the Quickshell power menu starts it by hand.
+Started from the Quickshell power menu. Deliberately not on an idle timer:
+a full-screen animation costs too much to run unattended.
 
 Effects are ordinary terminal programs listed in config.toml. Each one runs on
 a pty that this script owns, so no effect ever sees the keyboard or the mouse:
