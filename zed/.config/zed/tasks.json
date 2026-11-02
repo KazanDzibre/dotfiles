@@ -1,0 +1,56 @@
+// Global tasks, available in every project (task: spawn, or a key in keymap.json).
+[
+  {
+    // <leader>H. Zed has no keymap action that opens a given file, but the CLI
+    // opens one in the window it is called from. The task only exists to make
+    // that call, so its terminal is never shown and closes when it is done.
+    "label": "Cheatsheet",
+    "command": "zed",
+    "args": ["--existing", "$HOME/.config/zed/CHEATSHEET.txt"],
+    "reveal": "never",
+    "hide": "always",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": true,
+  },
+
+  // .NET: VS Code's build / test / run. dotnet-task.sh finds the project or
+  // solution that owns the current file (walking up from its directory),
+  // because the repo root usually has several .sln files and `dotnet build`
+  // there just errors. <leader>d b/t/r/w in keymap.json.
+  {
+    "label": "dotnet: build",
+    "command": "$HOME/.config/zed/dotnet-task.sh",
+    "args": ["build", "$ZED_DIRNAME"],
+    "tags": ["dotnet"],
+    "reveal": "always",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+  },
+  {
+    "label": "dotnet: test",
+    "command": "$HOME/.config/zed/dotnet-task.sh",
+    "args": ["test", "$ZED_DIRNAME"],
+    "tags": ["dotnet"],
+    "reveal": "always",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+  },
+  {
+    "label": "dotnet: run",
+    "command": "$HOME/.config/zed/dotnet-task.sh",
+    "args": ["run", "$ZED_DIRNAME"],
+    "tags": ["dotnet"],
+    "reveal": "always",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+  },
+  {
+    "label": "dotnet: watch",
+    "command": "$HOME/.config/zed/dotnet-task.sh",
+    "args": ["watch", "$ZED_DIRNAME"],
+    "tags": ["dotnet"],
+    "reveal": "always",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+  },
+]

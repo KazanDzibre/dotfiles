@@ -10,7 +10,10 @@ import qs
 Item {
   id: root
 
-  readonly property real worst: Math.max(SysInfo.cpu, SysInfo.memory, SysInfo.disk)
+  // Temperature joins the usage metrics: a thermal-throttling laptop is
+  // exactly what this glyph should be shouting about, and tempLoad is already
+  // scaled against each sensor's own trip point.
+  readonly property real worst: Math.max(SysInfo.cpu, SysInfo.memory, SysInfo.disk, SysInfo.tempLoad)
   readonly property bool alarming: worst >= 0.75
 
   implicitWidth: 18

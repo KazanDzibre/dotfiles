@@ -59,7 +59,10 @@ return {
                 { "<leader>c", group = "code" },
                 { "<leader>f", group = "find" },
                 { "<leader>g", group = "git" },
+                { "<leader>n", group = "npm packages" },
                 { "<leader>r", group = "refactor" },
+                -- Capital R, separate from <leader>r: kulala's HTTP runner.
+                { "<leader>R", group = "http requests" },
                 { "<leader>s", group = "search / replace" },
                 { "<leader>t", group = "terminal" },
                 { "<leader>u", group = "ui" },

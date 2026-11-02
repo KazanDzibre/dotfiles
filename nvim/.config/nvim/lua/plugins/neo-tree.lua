@@ -11,7 +11,9 @@ return {
     -- Loaded on the key or the command, not at startup.
     cmd = "Neotree",
     keys = {
-        { "<C-b>", "<cmd>Neotree toggle<CR>", desc = "Toggle file tree" },
+        -- Alt, not Ctrl: <C-b> is vim's page-up, and Zed uses the same Alt keys
+        -- for its panels (zed/.config/zed/keymap.json).
+        { "<M-b>", "<cmd>Neotree toggle<CR>", desc = "Toggle file tree" },
         { "<leader>e", "<cmd>Neotree toggle<CR>", desc = "Toggle file tree" },
         { "<leader>o", "<cmd>Neotree focus<CR>", desc = "Focus file tree" },
         -- Same sidebar, but listing only what git says changed -- the closest
@@ -39,7 +41,7 @@ return {
                 ["<space>"] = "none", -- keep <leader> usable inside the tree
                 ["l"] = "open",
                 ["h"] = "close_node",
-                ["<C-b>"] = "close_window",
+                ["<M-b>"] = "close_window",
             },
         },
         default_component_configs = {

@@ -9,6 +9,9 @@ Column {
   property string label
   property real value            // 0..1
   property string detail: ""
+  // Replaces the percentage at the right. A temperature row is driven by a
+  // fraction like every other bar, but "63 °C" is the number worth printing.
+  property string readout: ""
 
   readonly property color tint: value >= 0.9 ? Theme.crit : value >= 0.75 ? Theme.warn : Theme.accent
 
@@ -49,7 +52,9 @@ Column {
     Text {
       anchors.right: parent.right
       anchors.verticalCenter: parent.verticalCenter
-      text: root.detail.length > 0 ? root.detail + "   " + Math.round(root.value * 100) + "%" : Math.round(root.value * 100) + "%"
+      readonly property string figure: root.readout.length > 0 ? root.readout : Math.round(root.value * 100) + "%"
+
+      text: root.detail.length > 0 ? root.detail + "   " + figure : figure
       font.family: Theme.fontFamily
       font.pixelSize: Theme.smallSize
       color: Theme.fgDim

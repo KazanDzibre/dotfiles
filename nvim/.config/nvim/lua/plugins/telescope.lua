@@ -16,7 +16,7 @@ return {
         },
     },
     keys = {
-        { "<C-p>", "<cmd>Telescope find_files<CR>", desc = "Find files" },
+        { "<M-p>", "<cmd>Telescope find_files<CR>", desc = "Find files" },
         { "<leader>ff", "<cmd>Telescope find_files<CR>", desc = "Find files" },
         { "<leader>fg", "<cmd>Telescope live_grep<CR>", desc = "Grep in project" },
         { "<leader>fw", "<cmd>Telescope grep_string<CR>", desc = "Grep word under cursor" },
@@ -54,6 +54,10 @@ return {
                         ["<C-k>"] = actions.move_selection_previous,
                         ["<Esc>"] = actions.close, -- close from insert directly
                         ["<C-u>"] = false, -- let C-u clear the prompt instead
+                        ["<M-p>"] = actions.close, -- same key closes it again
+                    },
+                    n = {
+                        ["<M-p>"] = actions.close,
                     },
                 },
             },

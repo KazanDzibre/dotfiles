@@ -15,6 +15,17 @@ opt.softtabstop = 4
 opt.smartindent = true
 opt.breakindent = true
 
+-- ...except YAML, which is 2 spaces everywhere. Prettier (conform) follows
+-- the buffer's shiftwidth when no .editorconfig says otherwise.
+vim.api.nvim_create_autocmd("FileType", {
+    pattern = "yaml",
+    callback = function()
+        vim.opt_local.shiftwidth = 2
+        vim.opt_local.tabstop = 2
+        vim.opt_local.softtabstop = 2
+    end,
+})
+
 -- Search
 opt.ignorecase = true
 opt.smartcase = true -- ...unless the pattern contains a capital

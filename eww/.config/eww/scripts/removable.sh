@@ -2,7 +2,7 @@
 # Removable storage as JSON, for the bar's eject button.
 #
 #   [{"path":"/dev/sda1","disk":"/dev/sda","label":"KINGSTON","size":"29.8G",
-#     "mount":"/media/marko-ruzic/KINGSTON","mounted":true,"fs":"vfat"}]
+#     "mount":"/media/markoruzic997/KINGSTON","mounted":true,"fs":"vfat"}]
 #
 # A device counts as removable if the kernel says rm/hotplug, or it arrived over
 # USB -- USB SSDs often report rm=false but hotplug=true. Loop devices are

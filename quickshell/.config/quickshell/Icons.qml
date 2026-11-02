@@ -131,6 +131,24 @@ Singleton {
   readonly property string cpu: String.fromCodePoint(0xf0ee0)
   readonly property string memory: String.fromCodePoint(0xf035b)
   readonly property string disk: String.fromCodePoint(0xf02ca)
+  readonly property string thermometer: String.fromCodePoint(0xf050f)
+  readonly property string gpu: String.fromCodePoint(0xf08ae)       // md-expansion_card
+  readonly property string motherboard: String.fromCodePoint(0xf0bdc)
+
+  // A glyph per sensor key reported by scripts/temps.py.
+  function forSensor(key) {
+    if (key.startsWith("cpu"))
+      return root.cpu;
+    if (key.startsWith("gpu"))
+      return root.gpu;
+    if (key.startsWith("nvme") || key.startsWith("disk"))
+      return root.disk;
+    if (key.startsWith("battery"))
+      return root.batteryUnknown;
+    if (key.startsWith("board"))
+      return root.motherboard;
+    return root.thermometer;
+  }
 
   // --------------------------------------------------------------- updates
   readonly property string updates: String.fromCodePoint(0xf03d6)
