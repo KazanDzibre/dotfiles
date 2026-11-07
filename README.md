@@ -23,7 +23,7 @@ because adopting replaces the repo's version with the one on disk).
 
 | package       | what it is                                                          |
 |---------------|---------------------------------------------------------------------|
-| `hypr`        | Hyprland, hyprlock, hypridle (screen off at 10 min idle)            |
+| `hypr`        | Hyprland (Lua config), hyprlock, hypridle (screen off at 10 min idle), plus `.local/bin` helpers — `SUPER+W`/`SUPER+E` are the sway-style tabbed workspace, `SUPER+/` lists every bind |
 | `quickshell`  | the bar                                                             |
 | `screensaver` | fullscreen terminal screensaver, started from the bar's power menu  |
 | `nvim`        | Neovim                                                              |
@@ -34,7 +34,7 @@ because adopting replaces the repo's version with the one on disk).
 
 ```sh
 sudo pacman -S hyprland hypridle hyprlock hyprpaper quickshell alacritty \
-               stow udisks2 libnotify cmatrix asciiquarium
+               stow udisks2 libnotify cmatrix asciiquarium jq
 paru -S waypaper cbonsai pipes.sh unimatrix-git
 
 # TerminalTextEffects for the screensaver, kept out of the system Python

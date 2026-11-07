@@ -30,14 +30,30 @@
 #     pass is on the next. Repeat until nothing is left or a pass changes
 #     nothing. No assumption about layout, orientation or window order.
 #
-# Tabs are switched with SUPER+h/l, because binds:movefocus_cycles_groupfirst
+# Tabs are switched with SUPER+h/l, because binds.movefocus_cycles_groupfirst
 # makes movefocus walk the group's tabs before leaving it -- sway's behaviour.
+#
+# Every dispatch below is Lua, not the old `hyprctl dispatch togglegroup` form.
+# Hyprland 0.57 parses a dispatch as Lua and rejects the bare words outright
+# ("')' expected near ..."), so the old spelling fails silently from a bind.
+# The mapping, each call verified against a running 0.57:
+#
+#   togglegroup            -> hl.dsp.group.toggle({})
+#   moveintogroup <dir>    -> hl.dsp.window.move({ into_group = "<dir>" })
+#   moveoutofgroup         -> hl.dsp.window.move({ out_of_group = true })
+#   movegroupwindow f|b    -> hl.dsp.group.move_window({ forward = true|false })
+#   focuswindow address:X  -> hl.dsp.focus({ window = "address:X" })
+#   layoutmsg <msg>        -> hl.dsp.layout("<msg>")
+#
+# The direction literals are still the short l/r/u/d.
 
 set -uo pipefail
 
 command -v jq >/dev/null 2>&1 || { echo "hypr-stack: jq is required" >&2; exit 1; }
 
-d() { hyprctl dispatch "$@" >/dev/null; }
+# One Lua expression per call, so quoting stays in one place.
+d() { hyprctl dispatch "$1" >/dev/null; }
+focus_win() { d "hl.dsp.focus({ window = \"address:$1\" })"; }
 
 ws=$(hyprctl activeworkspace -j | jq '.id')
 orig=$(hyprctl activewindow -j | jq -r '.address // empty')
@@ -62,8 +78,8 @@ on)
     # Idempotent: a second SUPER+W must not dissolve the group, which is what
     # togglegroup on an already-grouped window would do.
     if [ "$(grouped_now "$seed")" -eq 0 ]; then
-        d focuswindow "address:$seed"
-        d togglegroup
+        focus_win "$seed"
+        d 'hl.dsp.group.toggle({})'
     fi
 
     # Converge. Bounded, so a window that genuinely cannot reach the group
@@ -76,8 +92,8 @@ on)
         progress=0
         for a in $outside; do
             for dir in l r u d; do
-                d focuswindow "address:$a"
-                d moveintogroup "$dir"
+                focus_win "$a"
+                d "hl.dsp.window.move({ into_group = \"$dir\" })"
                 if [ "$(grouped_now "$a")" -gt 0 ]; then
                     progress=1
                     break
@@ -89,7 +105,7 @@ on)
 
     # Put the window you were on back in front. Focusing a group member makes
     # it the visible tab.
-    [ -n "$orig" ] && d focuswindow "address:$orig"
+    [ -n "$orig" ] && focus_win "$orig"
     ;;
 
 off)
@@ -99,9 +115,9 @@ off)
     [ -n "$target" ] || target=$(jq -r '[.[] | select((.grouped | length) > 0)][0].address // empty' <<<"$tiled_json")
     [ -n "$target" ] || exit 0
 
-    d focuswindow "address:$target"
-    d togglegroup          # on a group, this dissolves the whole thing
-    [ -n "$orig" ] && d focuswindow "address:$orig"
+    focus_win "$target"
+    d 'hl.dsp.group.toggle({})'   # on a group, this dissolves the whole thing
+    [ -n "$orig" ] && focus_win "$orig"
     ;;
 
 move)
@@ -119,14 +135,14 @@ move)
     if [ "$n" -gt 1 ]; then
         pos=$(jq '.address as $a | .grouped | index($a)' <<<"$aw")
         case "${2:-}" in
-            l) if [ "$pos" -gt 0 ];            then d movegroupwindow b; fi ;;
-            r) if [ "$pos" -lt $((n - 1)) ];   then d movegroupwindow f; fi ;;
+            l) if [ "$pos" -gt 0 ];          then d 'hl.dsp.group.move_window({ forward = false })'; fi ;;
+            r) if [ "$pos" -lt $((n - 1)) ]; then d 'hl.dsp.group.move_window({ forward = true })';  fi ;;
             *) echo "usage: hypr-stack.sh move l|r" >&2; exit 2 ;;
         esac
     else
         case "${2:-}" in
-            l) d layoutmsg swapwithmaster ;;
-            r) d layoutmsg swapnext ;;
+            l) d 'hl.dsp.layout("swapwithmaster")' ;;
+            r) d 'hl.dsp.layout("swapnext")' ;;
             *) echo "usage: hypr-stack.sh move l|r" >&2; exit 2 ;;
         esac
     fi

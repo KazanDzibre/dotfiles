@@ -158,6 +158,37 @@ hl.animation({ leaf = "specialWorkspaceOut", enabled = true, speed = 2.6, bezier
 -- hl.window_rule({ name = "no-gaps-wtv1", match = { float = false, workspace = "w[tv1]" }, border_size = 0, rounding = 0 })
 -- hl.window_rule({ name = "no-gaps-f1",   match = { float = false, workspace = "f[1]" },   border_size = 0, rounding = 0 })
 
+-- Groups are what the sway-style tabbed workspace (SUPER+W) is built out of;
+-- see hypr-stack.sh. Hyprland has no tabbed *layout*, only groups.
+hl.config({
+    binds = {
+        -- SUPER+h/l walk a group's tabs before leaving it, the way focus moves
+        -- through a tabbed container in sway. Without this, movefocus jumps
+        -- straight past the group and the tabs need a key of their own.
+        movefocus_cycles_groupfirst = true,
+    },
+
+    group = {
+        col = {
+            -- The same tones as the window borders above, so a tabbed
+            -- workspace does not read as a different theme.
+            border_active   = "rgba(33ccffee)",
+            border_inactive = "rgba(595959aa)",
+        },
+
+        groupbar = {
+            height    = 16,
+            font_size = 11,
+            gradients = false,
+
+            col = {
+                active   = "rgba(33ccffee)",
+                inactive = "rgba(595959aa)",
+            },
+        },
+    },
+})
+
 hl.config({
     master = {
         new_status  = "slave",
@@ -187,7 +218,14 @@ hl.config({
         kb_options = "",
         kb_rules   = "",
 
-        follow_mouse = 0,
+        -- Focus follows the cursor: hovering a window focuses it, no click.
+        follow_mouse = 1,
+
+        -- ...but only when the cursor actually crosses into another window.
+        -- With this left at its default, focusing a window with SUPER+h/j/k/l
+        -- while the cursor happens to rest over a different one loses that
+        -- focus again on the next twitch of the mouse.
+        mouse_refocus = false,
 
         sensitivity = 0, -- -1.0 - 1.0, 0 means no modification.
 
@@ -215,6 +253,12 @@ hl.device({
 
 local mainMod = "SUPER"
 
+-- Absolute paths via os.getenv rather than "$HOME/...": resolved here, at
+-- config load, instead of depending on who expands the variable later. These
+-- live in the hypr stow package under .local/bin.
+local bin   = os.getenv("HOME") .. "/.local/bin"
+local stack = bin .. "/hypr-stack.sh"
+
 hl.bind(mainMod .. " + RETURN",    hl.dsp.exec_cmd(terminal))
 hl.bind(mainMod .. " + SHIFT + Q", hl.dsp.window.close())
 hl.bind(mainMod .. " + SHIFT + E", hl.dsp.exec_cmd("command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch 'hl.dsp.exit()'"))
@@ -226,6 +270,14 @@ hl.bind(mainMod .. " + SHIFT + F", hl.dsp.window.fullscreen({ mode = "fullscreen
 hl.bind(mainMod .. " + SHIFT + R", hl.dsp.reload_config())
 hl.bind(mainMod .. " + SHIFT + X", hl.dsp.exec_cmd("hyprlock"))
 
+-- Sway-style tabbed workspace. SUPER+W stacks every tiled window on the
+-- workspace into one tabbed group; SUPER+E dissolves it back to tiling;
+-- SUPER+h/l walk the tabs (see binds.movefocus_cycles_groupfirst above).
+hl.bind(mainMod .. " + W",     hl.dsp.exec_cmd(stack .. " on"))
+hl.bind(mainMod .. " + E",     hl.dsp.exec_cmd(stack .. " off"))
+-- Every bind, read from the compositor itself and shown in rofi.
+hl.bind(mainMod .. " + slash", hl.dsp.exec_cmd(bin .. "/hypr-keys.sh"))
+
 -- Move focus with mainMod + h/j/k/l
 hl.bind(mainMod .. " + h", hl.dsp.focus({ direction = "left" }))
 hl.bind(mainMod .. " + j", hl.dsp.focus({ direction = "down" }))
@@ -233,8 +285,12 @@ hl.bind(mainMod .. " + k", hl.dsp.focus({ direction = "up" }))
 hl.bind(mainMod .. " + l", hl.dsp.focus({ direction = "right" }))
 
 -- Move windows with mainMod + SHIFT + h/j/k/l
-hl.bind(mainMod .. " + SHIFT + h", hl.dsp.layout("swapwithmaster")) -- move window to master (left)
-hl.bind(mainMod .. " + SHIFT + l", hl.dsp.layout("swapnext"))       -- move window right/down in stack
+-- h/l are context-aware now the tabbed workspace exists: inside a group they
+-- move the current tab left/right, like sway; anywhere else they still swap
+-- with master / swap with next, exactly as before. A bind cannot branch on
+-- state, so hypr-stack.sh does the branching.
+hl.bind(mainMod .. " + SHIFT + h", hl.dsp.exec_cmd(stack .. " move l")) -- tab left  | else swapwithmaster
+hl.bind(mainMod .. " + SHIFT + l", hl.dsp.exec_cmd(stack .. " move r")) -- tab right | else swapnext
 hl.bind(mainMod .. " + SHIFT + j", hl.dsp.layout("swapnext"))       -- move window down in stack
 hl.bind(mainMod .. " + SHIFT + k", hl.dsp.layout("swapprev"))       -- move window up in stack
 
