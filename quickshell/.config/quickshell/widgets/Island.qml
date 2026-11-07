@@ -33,10 +33,14 @@ Rectangle {
     spacing: root.spacing
   }
 
+  // Content can be wider than the pill for a moment while it shrinks.
+  clip: true
+
   Behavior on implicitWidth {
     NumberAnimation {
-      duration: Theme.animSlow
-      easing.type: Easing.OutQuint
+      duration: 380
+      easing.type: Easing.BezierSpline
+      easing.bezierCurve: [0.16, 1, 0.3, 1, 1, 1]
     }
   }
   Behavior on opacity {

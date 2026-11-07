@@ -331,6 +331,10 @@ hl.bind("Print",                   hl.dsp.global("quickshell:screenshotRegion"))
 hl.bind("SHIFT + Print",           hl.dsp.global("quickshell:screenshotScreen"))
 hl.bind(mainMod .. " + SHIFT + V", hl.dsp.global("quickshell:clipboard"))
 hl.bind(mainMod .. " + SHIFT + A", hl.dsp.global("quickshell:keepAwake"))
+-- SUPER+W is the tiling toggle, so the wallpaper picker gets the SHIFT variant.
+hl.bind(mainMod .. " + SHIFT + W", hl.dsp.global("quickshell:wallpaperPicker"))
+-- Same region screenshot as Print, for when Print is awkward to reach.
+hl.bind(mainMod .. " + SHIFT + P", hl.dsp.global("quickshell:screenshotRegion"))
 
 
 --------------------------------
@@ -390,6 +394,59 @@ hl.window_rule({
     -- this is set per-window. If it still enters from the wrong side, the other
     -- lever is the specialWorkspaceIn/Out style above.
     animation = "slide left",
+})
+
+-- Quickshell wallpaper picker (WallpaperPicker.qml). Its scrim is only ~22%
+-- opaque, so ignore_alpha has to sit below that or nothing gets blurred.
+hl.layer_rule({
+    name  = "wallpaper-picker",
+    match = { namespace = "^quickshell:wallpaper-picker$" },
+
+    blur         = true,
+    ignore_alpha = 0.1,
+})
+
+-- The new wallpaper growing in from the middle (WallpaperReveal.qml). The
+-- animation is drawn by Quickshell, so Hyprland's own layer fade would only
+-- fight it.
+hl.layer_rule({
+    name  = "wallpaper-reveal",
+    match = { namespace = "^quickshell:wallpaper-reveal$" },
+
+    no_anim = true,
+})
+
+-- The bar (namespace "quickshell"): frosted glass behind its pills and behind
+-- every panel that drops out of it (control center, Wi-Fi, clipboard…), as in
+-- the design. ignore_alpha keeps the fully transparent gaps unblurred.
+hl.layer_rule({
+    name  = "bar-glass",
+    match = { namespace = "^quickshell$" },
+
+    blur         = true,
+    blur_popups  = true,
+    ignore_alpha = 0.3,
+})
+
+-- The control center (MorphPanel.qml) grows out of the status pill and animates
+-- itself; it gets the same frosted glass as the bar, and no layer fade.
+hl.layer_rule({
+    name  = "panel-glass",
+    match = { namespace = "^quickshell:panel$" },
+
+    blur         = true,
+    ignore_alpha = 0.3,
+    no_anim      = true,
+})
+
+-- The island in the middle of the bar (DynamicIsland.qml) is a window that is
+-- always mapped and animates itself; Hyprland's layer fade would only add a
+-- flash when Quickshell starts.
+hl.layer_rule({
+    name  = "island",
+    match = { namespace = "^quickshell:island$" },
+
+    no_anim = true,
 })
 
 -- Screensaver (~/.config/screensaver), started by hypridle and by the Quickshell

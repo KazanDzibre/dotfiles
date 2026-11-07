@@ -4,7 +4,7 @@ import Quickshell
 import Quickshell.Io
 import qs
 
-Popup {
+MorphPanel {
   id: root
 
   cardWidth: 340
@@ -257,7 +257,7 @@ Popup {
       hoverEnabled: true
       cursorShape: Qt.PointingHandCursor
       onClicked: {
-        launcher.startDetached();
+        Updates.install();
         root.close();
       }
     }

@@ -9,7 +9,7 @@ import Quickshell.Bluetooth
 import Quickshell.Widgets
 import qs
 
-Popup {
+MorphPanel {
   id: root
 
   cardWidth: 320

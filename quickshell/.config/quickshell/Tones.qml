@@ -91,6 +91,52 @@ Singleton {
   // few hundred milliseconds a fade-and-swap takes.
   property int loaded: 0
 
+  // ------------------------------------------------------------ focus timer
+  // A countdown that runs alongside (or without) a tone. Kept against a wall
+  // clock deadline rather than counted down tick by tick, so a busy shell can't
+  // make it drift. When it runs out the tone stops and `timerFinished` fires.
+  property int timerTotal: 0
+  property real timerEnd: 0
+  property int timerLeft: 0
+  readonly property bool timing: timerLeft > 0
+  readonly property real timerProgress: timerTotal > 0 ? 1 - timerLeft / timerTotal : 0
+  readonly property var timerPresets: [15, 25, 50]
+
+  signal timerFinished
+
+  function startTimer(minutes) {
+    root.timerTotal = minutes * 60;
+    root.timerEnd = Date.now() + root.timerTotal * 1000;
+    root.timerLeft = root.timerTotal;
+  }
+
+  function stopTimer() {
+    root.timerTotal = 0;
+    root.timerLeft = 0;
+  }
+
+  function formatLeft(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
+  Timer {
+    running: root.timing
+    interval: 250
+    repeat: true
+    onTriggered: {
+      const left = Math.max(0, Math.ceil((root.timerEnd - Date.now()) / 1000));
+      if (left !== root.timerLeft)
+        root.timerLeft = left;
+      if (left === 0) {
+        root.timerTotal = 0;
+        root.stop();
+        root.timerFinished();
+      }
+    }
+  }
+
   function urlFor(hz) {
     return "av://lavfi:sine=frequency=" + hz + ":sample_rate=48000";
   }

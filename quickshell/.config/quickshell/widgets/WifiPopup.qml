@@ -7,7 +7,7 @@ import Quickshell
 import Quickshell.Networking
 import qs
 
-Popup {
+MorphPanel {
   id: root
 
   cardWidth: 320

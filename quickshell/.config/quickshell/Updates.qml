@@ -17,6 +17,8 @@ Singleton {
   property var aur: []
 
   property bool busy: false
+  // True while the upgrade terminal UpdatesPopup launched is still open.
+  property bool installing: false
   property bool checkedOnce: false
 
   readonly property int count: repo.length + aur.length
@@ -88,5 +90,65 @@ Singleton {
     interval: 10 * 60 * 1000
     repeat: true
     onTriggered: root.refresh()
+  }
+
+  // ----------------------------------------------------------- installing
+  // Runs the upgrade in a terminal rather than silently: pacman and the AUR
+  // both ask questions worth reading. The island shows progress meanwhile.
+  function install() {
+    if (root.installing)
+      return;
+    if (root.count === 0) {
+      root.upToDate();
+      root.refresh();
+      return;
+    }
+    installer.startDetached();
+    root.watchInstall();
+  }
+
+  // Asked to install with nothing pending.
+  signal upToDate
+
+  Process {
+    id: installer
+    command: ["alacritty", "-e", "sh", "-c", root.aurHelper + " -Syu; printf '\\nDone — press enter to close.'; read _"]
+  }
+
+  // The upgrade runs detached (a reloading shell must never kill pacman), so
+  // whether it is still going is checked by looking for the process.
+  function watchInstall() {
+    root.installing = true;
+    installPoll.misses = 0;
+    installPoll.restart();
+  }
+
+  Timer {
+    id: installPoll
+
+    property int misses: 0
+
+    interval: 2000
+    repeat: true
+    onTriggered: installCheck.running = true
+  }
+
+  Process {
+    id: installCheck
+    command: ["pgrep", "-f", root.aurHelper + " -Syu"]
+
+    onExited: code => {
+      if (code === 0) {
+        installPoll.misses = 0;
+        return;
+      }
+      // Two misses in a row, so a slow terminal start can't end it early.
+      installPoll.misses++;
+      if (installPoll.misses >= 2) {
+        installPoll.stop();
+        root.installing = false;
+        root.refresh();
+      }
+    }
   }
 }

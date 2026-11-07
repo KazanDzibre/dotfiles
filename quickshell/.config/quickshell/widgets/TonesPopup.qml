@@ -5,7 +5,7 @@
 import QtQuick
 import qs
 
-Popup {
+MorphPanel {
   id: root
 
   readonly property int columns: 2
@@ -162,6 +162,85 @@ Popup {
       width: parent.width - 30
       value: Tones.volume
       onMoved: v => Tones.setVolume(v)
+    }
+  }
+
+  Rectangle {
+    width: parent.width
+    height: 1
+    color: Theme.border
+  }
+
+  // ------------------------------------------------------------ focus timer
+  // Presets while idle; once running, the time left and a way to stop it. The
+  // countdown also lives in the bar's island while it runs.
+  Item {
+    width: parent.width
+    height: 30
+
+    Text {
+      anchors.left: parent.left
+      anchors.verticalCenter: parent.verticalCenter
+      text: Icons.timer
+      font.family: Theme.fontFamily
+      font.pixelSize: Theme.iconSize + 2
+      color: Tones.timing ? Theme.accent : Theme.fgDim
+    }
+
+    Text {
+      anchors.left: parent.left
+      anchors.leftMargin: 26
+      anchors.verticalCenter: parent.verticalCenter
+      text: Tones.timing ? Tones.formatLeft(Tones.timerLeft) : "Focus"
+      font.family: Theme.fontFamily
+      font.pixelSize: Theme.fontSize
+      font.bold: Tones.timing
+      color: Tones.timing ? Theme.accent : Theme.fg
+    }
+
+    Row {
+      anchors.right: parent.right
+      anchors.verticalCenter: parent.verticalCenter
+      spacing: 6
+
+      Repeater {
+        model: Tones.timing ? ["stop"] : Tones.timerPresets
+
+        delegate: Rectangle {
+          id: chip
+
+          required property var modelData
+          readonly property bool isStop: modelData === "stop"
+
+          width: chipLabel.implicitWidth + 18
+          height: 24
+          radius: 12
+          color: chipHover.containsMouse ? (isStop ? Qt.rgba(Theme.crit.r, Theme.crit.g, Theme.crit.b, 0.2) : Theme.accentSoft) : Theme.raised
+
+          Behavior on color {
+            ColorAnimation {
+              duration: Theme.animFast
+            }
+          }
+
+          Text {
+            id: chipLabel
+            anchors.centerIn: parent
+            text: chip.isStop ? "Stop timer" : chip.modelData + " min"
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.smallSize + 1
+            color: chipHover.containsMouse ? (chip.isStop ? Theme.crit : Theme.accent) : Theme.fg
+          }
+
+          MouseArea {
+            id: chipHover
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: chip.isStop ? Tones.stopTimer() : Tones.startTimer(chip.modelData)
+          }
+        }
+      }
     }
   }
 

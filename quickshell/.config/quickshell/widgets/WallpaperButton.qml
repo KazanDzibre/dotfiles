@@ -1,9 +1,12 @@
-// WallpaperButton.qml — opens the wallpaper carousel.
+// WallpaperButton.qml — opens the wallpaper deck on this bar's screen.
 import QtQuick
 import qs
 
 Item {
   id: root
+
+  // The picker is fullscreen, so it needs to know which screen it belongs to.
+  property var barScreen
 
   implicitWidth: 18
   implicitHeight: 18
@@ -13,7 +16,7 @@ Item {
     text: Icons.wallpaper
     font.family: Theme.fontFamily
     font.pixelSize: Theme.iconSize
-    color: popup.opened || mouse.containsMouse ? Theme.accent : Theme.fgDim
+    color: picker.opened || mouse.containsMouse ? Theme.accent : Theme.fgDim
 
     Behavior on color {
       ColorAnimation {
@@ -45,11 +48,20 @@ Item {
     anchors.fill: parent
     hoverEnabled: true
     cursorShape: Qt.PointingHandCursor
-    onClicked: popup.toggle()
+    onClicked: picker.toggle()
   }
 
-  WallpaperPopup {
-    id: popup
-    anchorItem: root
+  WallpaperPicker {
+    id: picker
+    screen: root.barScreen
+  }
+
+  Connections {
+    target: Wallpaper
+
+    function onPickerToggleRequested(screenName) {
+      if (root.barScreen && root.barScreen.name === screenName)
+        picker.toggle();
+    }
   }
 }

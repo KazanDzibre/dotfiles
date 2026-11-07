@@ -7,7 +7,7 @@ import Quickshell
 import Quickshell.Services.Pipewire
 import qs
 
-Popup {
+MorphPanel {
   id: root
 
   cardWidth: 310

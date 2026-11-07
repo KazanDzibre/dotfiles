@@ -125,6 +125,9 @@ Singleton {
 
   // ------------------------------------------------------------- wallpaper
   readonly property string wallpaper: String.fromCodePoint(0xf0e09)
+  readonly property string palette: String.fromCodePoint(0xf03d8)
+  readonly property string timer: String.fromCodePoint(0xf051b)
+  readonly property string bolt: String.fromCodePoint(0xf140b)
   readonly property string shuffle: String.fromCodePoint(0xf049f)
 
   // ------------------------------------------------------------ system info

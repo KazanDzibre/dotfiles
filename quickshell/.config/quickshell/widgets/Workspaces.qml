@@ -1,8 +1,8 @@
 // Workspaces.qml — live Hyprland workspaces, for one screen.
 //
-// Each existing workspace is a pill; the one this screen is showing widens and
-// takes the accent colour. Click to switch, scroll anywhere on the group to
-// cycle.
+// Each existing workspace is a small dot; the one this screen is showing
+// stretches into a pill and takes the accent colour. No numbers, as in the
+// bar design. Click to switch, scroll anywhere on the group to cycle.
 //
 // A bar lists only the workspaces living on its own monitor. Listing all of
 // them put the same row on every screen, which says nothing about the screen
@@ -58,51 +58,54 @@ Item {
     Repeater {
       model: wsModel
 
-      delegate: Rectangle {
-        id: pill
+      // The hit target is the full bar height, so the 8px dots stay easy to
+      // click.
+      delegate: Item {
+        id: slot
 
         required property var modelData
         // `active` is the workspace this screen is currently showing; `focused`
         // is the one the keyboard is in, which is on exactly one screen. Both
-        // widen the pill, but only the focused one takes the full accent — so a
-        // glance at the other monitors still tells you where you are.
+        // stretch the dot, but only the focused one takes the full accent — so
+        // a glance at the other monitors still tells you where you are.
         readonly property bool active: modelData.active
         readonly property bool focused: modelData.focused
         readonly property bool urgent: modelData.urgent
 
-        implicitWidth: active ? 26 : 18
+        implicitWidth: dot.width
         implicitHeight: 18
-        radius: height / 2
 
-        color: focused ? Theme.accent : urgent ? Theme.crit : active ? Theme.accentSoft : mouse.containsMouse ? Theme.hover : Theme.raised
+        Rectangle {
+          id: dot
 
-        Text {
-          anchors.centerIn: parent
-          text: pill.modelData.name
-          font.family: Theme.fontFamily
-          font.pixelSize: Theme.smallSize
-          font.bold: pill.active
-          color: pill.focused || pill.urgent ? Theme.base : pill.active ? Theme.fg : Theme.fgDim
+          anchors.verticalCenter: parent.verticalCenter
+          width: slot.active ? 22 : 8
+          height: 8
+          radius: 4
+          color: slot.focused ? Theme.accent : slot.urgent ? Theme.crit : slot.active ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.55) : mouse.containsMouse ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.55) : Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.28)
+
+          Behavior on width {
+            NumberAnimation {
+              duration: 300
+              easing.type: Easing.BezierSpline
+              easing.bezierCurve: [0.16, 1, 0.3, 1, 1, 1]
+            }
+          }
+          Behavior on color {
+            ColorAnimation {
+              duration: 300
+            }
+          }
         }
 
         MouseArea {
           id: mouse
           anchors.fill: parent
+          anchors.leftMargin: -2
+          anchors.rightMargin: -2
           hoverEnabled: true
           cursorShape: Qt.PointingHandCursor
-          onClicked: root.focusWorkspace(pill.modelData)
-        }
-
-        Behavior on implicitWidth {
-          NumberAnimation {
-            duration: Theme.animSlow
-            easing.type: Easing.OutBack
-          }
-        }
-        Behavior on color {
-          ColorAnimation {
-            duration: Theme.animFast
-          }
+          onClicked: root.focusWorkspace(slot.modelData)
         }
       }
     }

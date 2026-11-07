@@ -2,6 +2,11 @@
 //
 // The panel itself is transparent; everything visible is an Island, so the
 // wallpaper shows through the gaps between groups.
+//
+// Deliberately sparse: workspaces and the focused window on the left, the
+// dynamic island in the middle (its own window — see DynamicIsland.qml), and on
+// the right only the tray and the status cluster. Notifications live in the
+// island; everything else in the control center the status cluster opens.
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
@@ -26,12 +31,27 @@ Scope {
       }
 
       implicitHeight: Theme.barHeight
+
+      // The island is a separate window on the same layer, and this one would
+      // otherwise swallow every click on it (transparent or not). So the bar
+      // takes input everywhere except a hole in the middle where the island sits.
+      mask: Region {
+        width: bar.width
+        height: bar.height
+
+        Region {
+          intersection: Intersection.Subtract
+          x: bar.width / 2 - 260
+          width: 520
+          height: bar.height
+        }
+      }
       color: "transparent"
 
       // Only take keyboard focus while something on the bar actually needs to
       // read keystrokes (the Wi-Fi password field, the clipboard search). The
       // rest of the time the bar must not pull focus off your windows.
-      focusable: system.wantsKeyboard || tools.wantsKeyboard
+      focusable: status.wantsKeyboard
 
       // Holds the compositor awake while IdleInhibit says so. It has to hang
       // off a real window, which is why it lives here and not in the singleton.
@@ -59,7 +79,7 @@ Scope {
         appid: "quickshell"
         name: "clipboard"
         description: "Open clipboard history"
-        onPressed: tools.toggleClipboard()
+        onPressed: status.toggleClipboard()
       }
 
       GlobalShortcut {
@@ -86,67 +106,24 @@ Scope {
           }
         }
 
+        // Its own pill, so a window switch only ever resizes this one.
         Island {
-          shown: windowTitle.hasWindow
+          shown: windowTitle.present
 
           WindowTitle {
             id: windowTitle
 
-            // The workspace island grows as you open workspaces, which used to
-            // push a long title straight through the appearance island. Rather
-            // than a fixed cap, take whatever room is actually left: the gap
-            // between where this island starts and where the appearance island
-            // begins, minus this island's own icon, spacing and padding.
-            //
-            // Derived from workspacesIsland.width rather than this island's own
-            // x, which would be a binding loop.
-            maxWidth: Math.max(60, appearanceIsland.x - (Theme.margin + workspacesIsland.width + Theme.gap) - Theme.gap - (Theme.iconSize + 7 + Theme.padding * 2))
+            // Whatever room is left before the hole the island sits in (520px
+            // around the centre), minus the workspaces pill and this pill's
+            // own icon, spacing and padding.
+            maxWidth: Math.max(60, bar.width / 2 - 270 - Theme.margin - workspacesIsland.width - Theme.gap - (Theme.iconSize + 7) - Theme.padding * 2)
           }
         }
       }
 
       // -------------------------------------------------------------- centre
-      Island {
-        id: clockIsland
-
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.verticalCenter: parent.verticalCenter
-
-        Clock {}
-      }
-
-      // Hung off the clock's left edge rather than placed in a row with it, so
-      // the clock itself stays exactly centred on the screen.
-      Island {
-        id: appearanceIsland
-
-        anchors.right: clockIsland.left
-        anchors.rightMargin: Theme.gap
-        anchors.verticalCenter: parent.verticalCenter
-        padding: 8
-        spacing: 10
-
-        WallpaperButton {}
-
-        ThemeButton {}
-
-        BrightnessButton {}
-
-        AiButton {}
-      }
-
-      Island {
-        anchors.left: clockIsland.right
-        anchors.leftMargin: Theme.gap
-        anchors.verticalCenter: parent.verticalCenter
-        padding: 8
-        spacing: 10
-
-        WindowsButton {}
-
-        DashboardButton {}
-
-        TonesButton {}
+      DynamicIsland {
+        screen: bar.screen
       }
 
       // --------------------------------------------------------------- right
@@ -156,23 +133,12 @@ Scope {
         anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.gap
 
-        Island {
-          ToolsIsland {
-            id: tools
-          }
-        }
-
         // Only while a USB drive is plugged in.
         Island {
           shown: Drives.hasDrives
+          padding: 8
 
           DrivesButton {}
-        }
-
-        Island {
-          shown: Media.hasPlayer
-
-          MediaButton {}
         }
 
         Island {
@@ -185,23 +151,20 @@ Scope {
           }
         }
 
+        // Hidden while one of its panels is out: the panel grows from this exact
+        // spot wearing the same face, so the pill is "in" the panel meanwhile.
         Island {
-          SystemIsland {
-            id: system
+          opacity: status.panelOut ? 0 : 1
+          // Keep its place in the row while invisible, or the tray would
+          // slide over into the gap.
+          visible: true
+
+          StatusCluster {
+            id: status
+            barScreen: bar.screen
           }
         }
 
-        Island {
-          padding: 8
-
-          NotificationButton {}
-        }
-
-        Island {
-          padding: 8
-
-          PowerButton {}
-        }
       }
     }
   }

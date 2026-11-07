@@ -5,6 +5,18 @@ import qs
 Item {
   id: root
 
+  // The island opens this panel when you click a notification in it.
+  property var barScreen
+
+  Connections {
+    target: Moments
+
+    function onPopupRequested(name, screenName) {
+      if (name === "notifications" && root.barScreen && root.barScreen.name === screenName)
+        popup.open();
+    }
+  }
+
   implicitWidth: row.implicitWidth
   implicitHeight: 18
 

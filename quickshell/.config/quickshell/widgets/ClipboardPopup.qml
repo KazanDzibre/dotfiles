@@ -3,11 +3,12 @@ import QtQuick
 import Quickshell
 import qs
 
-Popup {
+MorphPanel {
   id: root
 
   cardWidth: 360
   align: "right"
+  grabKeyboard: true
 
   property string query: ""
 

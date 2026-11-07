@@ -52,7 +52,11 @@ Singleton {
     id: writer
   }
 
+  // Fired when something is copied from the clipboard panel; the island shows it.
+  signal copied(string text)
+
   function copy(text) {
+    root.copied(text);
     writer.command = ["sh", "-c", "printf '%s' \"$1\" | wl-copy", "sh", text];
     writer.startDetached();
     root.record(text);

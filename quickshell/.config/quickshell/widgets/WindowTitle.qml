@@ -19,7 +19,70 @@ Row {
   readonly property string title: toplevel ? toplevel.title : ""
   readonly property string appClass: toplevel ? (toplevel.appId ?? "") : ""
   readonly property bool hasWindow: title.length > 0
-  readonly property string iconUrl: Icons.themeIconFor(appClass)
+
+  // What is actually drawn. Changes go through `swap` — fade out, change,
+  // fade in — so a new title never snaps in while the pill is still resizing.
+  property string shownTitle: title
+  property string shownClass: appClass
+  readonly property string iconUrl: Icons.themeIconFor(shownClass)
+
+  // Switching windows passes through "no window" for a frame or two; only
+  // believe it once it lasts, or the pill would collapse and reopen.
+  property bool present: hasWindow
+
+  onHasWindowChanged: {
+    if (hasWindow) {
+      absent.stop();
+      root.present = true;
+    } else {
+      absent.restart();
+    }
+  }
+
+  Timer {
+    id: absent
+    interval: 220
+    onTriggered: root.present = false
+  }
+
+  onTitleChanged: root.refresh()
+  onAppClassChanged: root.refresh()
+
+  function refresh() {
+    if (!root.hasWindow)
+      return;
+    // Same app, new title (a terminal's cwd, a browser tab): just update.
+    if (root.appClass === root.shownClass && root.opacity > 0.99 && !swap.running) {
+      root.shownTitle = root.title;
+      return;
+    }
+    swap.restart();
+  }
+
+  SequentialAnimation {
+    id: swap
+
+    NumberAnimation {
+      target: root
+      property: "opacity"
+      to: 0
+      duration: 110
+      easing.type: Easing.OutQuad
+    }
+    ScriptAction {
+      script: {
+        root.shownTitle = root.title;
+        root.shownClass = root.appClass;
+      }
+    }
+    NumberAnimation {
+      target: root
+      property: "opacity"
+      to: 1
+      duration: 220
+      easing.type: Easing.OutQuad
+    }
+  }
 
   property int maxWidth: 160
 
@@ -36,7 +99,7 @@ Row {
   Text {
     anchors.verticalCenter: parent.verticalCenter
     visible: root.iconUrl === ""
-    text: Icons.forClass(root.appClass)
+    text: Icons.forClass(root.shownClass)
     font.family: Theme.fontFamily
     font.pixelSize: Theme.iconSize
     color: Theme.accent
@@ -44,7 +107,7 @@ Row {
 
   Text {
     anchors.verticalCenter: parent.verticalCenter
-    text: root.title
+    text: root.shownTitle
     font.family: Theme.fontFamily
     font.pixelSize: Theme.fontSize
     color: Theme.fg

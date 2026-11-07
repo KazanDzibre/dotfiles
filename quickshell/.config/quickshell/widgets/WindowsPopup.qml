@@ -12,7 +12,7 @@ import Quickshell.Hyprland
 import Quickshell.Widgets
 import qs
 
-Popup {
+MorphPanel {
   id: root
 
   cardWidth: 380

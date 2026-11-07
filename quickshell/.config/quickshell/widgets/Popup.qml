@@ -136,7 +136,8 @@ PopupWindow {
     y: 0
     opacity: 0
     scale: 0.94
-    transformOrigin: Item.Top
+    // Grow out of the corner nearest the button it belongs to.
+    transformOrigin: root.align === "right" ? Item.TopRight : Item.Top
 
     states: State {
       name: "open"
@@ -153,7 +154,8 @@ PopupWindow {
     }
 
     // Asymmetric on purpose: opening is a spring you watch land, closing is a
-    // dismissal that shouldn't keep you waiting.
+    // dismissal that shouldn't keep you waiting. The curve is the island's
+    // (cubic-bezier .34,1.4,.5,1 from the design), so the whole bar moves alike.
     transitions: [
       Transition {
         to: "open"
@@ -161,15 +163,15 @@ PopupWindow {
         NumberAnimation {
           target: card
           property: "opacity"
-          duration: Theme.animFast
-          easing.type: Easing.OutCubic
+          duration: 240
+          easing.type: Easing.OutQuad
         }
         NumberAnimation {
           target: card
           properties: "y,scale"
-          duration: Theme.animSlow
-          easing.type: Easing.OutBack
-          easing.overshoot: 1.2
+          duration: 520
+          easing.type: Easing.BezierSpline
+          easing.bezierCurve: [0.34, 1.4, 0.5, 1, 1, 1]
         }
         // Content trails the card by a frame or two, so the surface arrives
         // first and fills in rather than everything blooming at once.
@@ -191,13 +193,13 @@ PopupWindow {
         NumberAnimation {
           targets: [card, inner]
           property: "opacity"
-          duration: Theme.animFast
-          easing.type: Easing.InCubic
+          duration: 200
+          easing.type: Easing.InQuad
         }
         NumberAnimation {
           target: card
           properties: "y,scale"
-          duration: Theme.animFast
+          duration: 240
           easing.type: Easing.InCubic
         }
       }

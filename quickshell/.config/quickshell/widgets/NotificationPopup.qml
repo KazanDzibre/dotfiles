@@ -3,7 +3,7 @@ import QtQuick
 import Quickshell
 import qs
 
-Popup {
+MorphPanel {
   id: root
 
   cardWidth: 350

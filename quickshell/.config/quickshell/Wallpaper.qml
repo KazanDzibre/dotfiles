@@ -13,6 +13,7 @@ pragma Singleton
 
 import Quickshell
 import Quickshell.Io
+import Quickshell.Hyprland
 import QtQuick
 
 Singleton {
@@ -26,6 +27,7 @@ Singleton {
 
   property var files: []           // absolute source paths, sorted by name
   property var thumbs: ({})        // source path -> path to load for display
+  property var palettes: ({})      // source path -> [hex, ...] dark to light
   property string current: ""      // the one waypaper currently has applied
   property bool applying: false
   property bool scanning: false
@@ -42,15 +44,55 @@ Singleton {
     return root.thumbs[path] ?? path;
   }
 
+  function paletteFor(path) {
+    return root.palettes[path] ?? [];
+  }
+
+  // The colour this wallpaper would most likely become the shell's accent:
+  // the same "liveliest swatch, forced bright" rule Theme applies to pywal's
+  // output, run on our own quantised palette so it is known before applying.
+  function accentFor(path) {
+    let best = Theme.accent;
+    let bestScore = -1;
+    for (const hex of root.paletteFor(path)) {
+      const c = Qt.color(hex);
+      const score = c.hsvSaturation * (0.4 + c.hsvValue);
+      if (score > bestScore) {
+        bestScore = score;
+        best = c;
+      }
+    }
+    if (bestScore < 0)
+      return best;
+    return Qt.hsva(Math.max(0, best.hsvHue), Math.min(1.0, best.hsvSaturation * 1.15), Math.max(0.78, best.hsvValue), 1.0);
+  }
+
   // --------------------------------------------------------------- scanning
   // Emits "<source>\t<image to display>" per wallpaper, generating any missing
   // thumbnail on the way. Nice'd because this is entirely background work.
   property var pending: []
 
+  // The script is passed $1 = cache dir, $2 = wallpaper folder, so neither path
+  // ever has to survive being spliced into shell quoting.
+  //
+  // Each line out is "<source>\t<thumbnail>\t<palette>", the palette being up to
+  // five hex colours ImageMagick quantises the thumbnail down to. Both caches
+  // persist, so this is slow only the first time an image is seen.
+  readonly property string scanScript: [
+    'CACHE="$1"; DIR="$2"; mkdir -p "$CACHE"',
+    "find \"$DIR\" -maxdepth 1 -type f \\( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' -o -iname '*.bmp' \\) | sort | while IFS= read -r f; do",
+    '  out="$CACHE/$(basename "$f").jpg"; pal="$CACHE/$(basename "$f").pal"',
+    '  if [ ! -f "$out" ] || [ "$f" -nt "$out" ]; then nice -n 19 magick "$f" -resize 720x -quality 82 "$out" >/dev/null 2>&1; fi',
+    '  [ -f "$out" ] && show="$out" || show="$f"',
+    '  if [ ! -s "$pal" ] || [ "$show" -nt "$pal" ]; then nice -n 19 magick "$show" -resize 64x -colors 5 -unique-colors txt:- 2>/dev/null | grep -o "#[0-9A-Fa-f]\\{6\\}" | tr "\\n" " " > "$pal"; fi',
+    '  printf "%s\\t%s\\t%s\\n" "$f" "$show" "$(cat "$pal" 2>/dev/null)"',
+    'done'
+  ].join("\n")
+
   Process {
     id: scanner
 
-    command: ["sh", "-c", "CACHE=\"" + root.cacheDir + "\"; mkdir -p \"$CACHE\"; find '" + root.folder + "' -maxdepth 1 -type f \\( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' -o -iname '*.bmp' \\) | sort | while IFS= read -r f; do out=\"$CACHE/$(basename \"$f\").jpg\"; if [ ! -f \"$out\" ] || [ \"$f\" -nt \"$out\" ]; then nice -n 19 magick \"$f\" -resize 720x -quality 82 \"$out\" >/dev/null 2>&1; fi; if [ -f \"$out\" ]; then printf '%s\\t%s\\n' \"$f\" \"$out\"; else printf '%s\\t%s\\n' \"$f\" \"$f\"; fi; done"]
+    command: ["sh", "-c", root.scanScript, "sh", root.cacheDir, root.folder]
 
     stdout: SplitParser {
       splitMarker: "\n"
@@ -76,10 +118,12 @@ Singleton {
     const display = parts[1].trim();
     if (source.length === 0)
       return;
+    const palette = (parts[2] ?? "").trim().split(/\s+/).filter(c => c.length === 7).sort((a, b) => Qt.color(a).hslLightness - Qt.color(b).hslLightness);
     const next = root.pending.slice();
     next.push({
       source: source,
-      display: display
+      display: display,
+      palette: palette
     });
     root.pending = next;
   }
@@ -92,13 +136,18 @@ Singleton {
 
     const sources = root.pending.map(e => e.source);
     const map = {};
-    for (const e of root.pending)
+    const pals = {};
+    for (const e of root.pending) {
       map[e.source] = e.display;
+      pals[e.source] = e.palette;
+    }
 
     if (JSON.stringify(sources) !== JSON.stringify(root.files))
       root.files = sources;
     if (JSON.stringify(map) !== JSON.stringify(root.thumbs))
       root.thumbs = map;
+    if (JSON.stringify(pals) !== JSON.stringify(root.palettes))
+      root.palettes = pals;
   }
 
   // Build the cache shortly after startup so the panel is instant when it is
@@ -140,9 +189,48 @@ Singleton {
     onExited: root.applying = false
   }
 
+  // ------------------------------------------------------------------ picker
+  // Each bar's WallpaperButton owns the picker for its own screen and opens it
+  // when this names that screen. Reachable without the mouse:
+  //   qs ipc call wallpaper picker
+  // or bound to a key via the `quickshell:wallpaperPicker` global shortcut.
+  signal pickerToggleRequested(string screenName)
+
+  function togglePicker() {
+    root.pickerToggleRequested(Hyprland.focusedMonitor?.name ?? "");
+  }
+
+  IpcHandler {
+    target: "wallpaper"
+
+    function picker(): void {
+      root.togglePicker();
+    }
+
+    // Sets a wallpaper by path, with the same reveal as picking it.
+    function set(path: string): void {
+      root.apply(path);
+    }
+  }
+
+  GlobalShortcut {
+    appid: "quickshell"
+    name: "wallpaperPicker"
+    description: "Open the wallpaper picker"
+    onPressed: root.togglePicker()
+  }
+
+  // ------------------------------------------------------------------ reveal
+  // WallpaperReveal.qml listens for this and grows the new image outward from
+  // the middle of each screen, on a layer just above hyprpaper. waypaper runs
+  // at the same time underneath it, so its delay and pywal's re-theme happen
+  // out of sight; the reveal layer unmaps once both are finished.
+  signal revealRequested(string path)
+
   function apply(path) {
     if (setter.running || path.length === 0)
       return;
+    root.revealRequested(path);
     root.applying = true;
     setter.command = ["waypaper", "--wallpaper", path];
     setter.running = true;

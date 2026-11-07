@@ -4,9 +4,9 @@ import qs.widgets
 ShellRoot {
   Bar {}
 
-  // Its own layer-shell window rather than part of the bar: toasts have to
-  // appear without anything being clicked.
-  NotificationToasts {}
+  // Notifications pop out of the bar's island now (Moments.qml), so the corner
+  // toasts are off. Put this back to have both.
+  // NotificationToasts {}
 
   // Fullscreen, and only mapped while a capture is in progress.
   ScreenshotOverlay {}
@@ -15,4 +15,8 @@ ShellRoot {
   DashboardPanel {}
 
   AiChatPanel {}
+
+  // One per screen, just above the wallpaper; only mapped while a newly
+  // applied wallpaper grows in from the middle.
+  WallpaperReveal {}
 }

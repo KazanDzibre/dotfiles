@@ -18,6 +18,10 @@ Singleton {
 
   property bool doNotDisturb: false
 
+  // Fired for every notification that is allowed to interrupt you (the same
+  // ones that toast). The island in the bar shows these.
+  signal arrived(var notification)
+
   // Currently on screen as toasts.
   property var toasts: []
 
@@ -52,8 +56,10 @@ Singleton {
 
       // Do not disturb still records history, it just doesn't interrupt you —
       // except for anything marked critical.
-      if (!root.doNotDisturb || notification.urgency === NotificationUrgency.Critical)
+      if (!root.doNotDisturb || notification.urgency === NotificationUrgency.Critical) {
         root.pushToast(notification);
+        root.arrived(notification);
+      }
     }
   }
 
