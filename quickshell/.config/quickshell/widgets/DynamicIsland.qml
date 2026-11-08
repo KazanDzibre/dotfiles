@@ -158,8 +158,12 @@ PanelWindow {
   property real nudge: 0
 
   onViewChanged: {
-    if (view !== "today")
+    if (view !== "today") {
       dayOffset = 0;
+      monthOffset = 0;
+    } else if (Dashboard.stocks.length === 0) {
+      Dashboard.refreshStocks();
+    }
     if (view !== "inbox")
       openGroup = "";
   }
@@ -252,6 +256,8 @@ PanelWindow {
   readonly property string mode: {
     if (view === "search")
       return "search";
+    if (view === "alert" && alertShown)
+      return "alertCard";
     // A volume change or toggle shouldn't fold away a card you have open.
     if (moment && !(view !== "" && (moment.kind === "level" || moment.kind === "toast")))
       return moment.kind;
@@ -276,7 +282,7 @@ PanelWindow {
 
   // The timer splits off into its own bubble whenever something else holds
   // the island.
-  readonly property bool bubbleShown: Tones.timing && mode !== "timer" && mode !== "player" && mode !== "today" && mode !== "inbox" && mode !== "search"
+  readonly property bool bubbleShown: Tones.timing && mode !== "timer" && mode !== "player" && mode !== "today" && mode !== "inbox" && mode !== "search" && mode !== "alertCard"
 
   onModeChanged: {
     root.settled = false;
@@ -307,6 +313,11 @@ PanelWindow {
   // Notifications stack by app, newest app first. A stack opens to show every
   // one in it; only one stack is open at a time.
   property string openGroup: ""
+
+  // The alert that was clicked open.
+  property var alertShown: null
+  readonly property var alertData: moment && moment.kind === "alert" ? moment : alertShown
+  readonly property color alertColor: alertData && !alertData.crit ? "#f0c674" : "#f0808f"
 
   readonly property var inboxGroups: {
     const groups = [];
@@ -394,9 +405,13 @@ PanelWindow {
     case "player":
       return [400, 154];
     case "today":
-      return [400, 168];
+      return [420, 362 + (Dashboard.stocks.length > 0 ? 38 : 0)];
     case "inbox":
       return [400, inboxHeight];
+    case "alert":
+      return [320, compactH];
+    case "alertCard":
+      return [390, 116];
     case "search":
       return [480, 60 + (results.length > 0 ? results.length * 46 + 8 : 0)];
     case "level":
@@ -430,6 +445,14 @@ PanelWindow {
     case "notification":
       Moments.dismiss();
       root.view = "inbox";
+      return;
+    case "alert":
+      root.alertShown = root.moment;
+      Moments.dismiss();
+      root.view = "alert";
+      return;
+    case "alertCard":
+      root.view = "";
       return;
     case "shot":
       if (root.moment.image)
@@ -468,7 +491,7 @@ PanelWindow {
   // Clicking anywhere else folds the island back up.
   HyprlandFocusGrab {
     windows: [root]
-    active: root.mode === "player" || root.mode === "today" || root.mode === "inbox" || root.mode === "search"
+    active: root.mode === "player" || root.mode === "today" || root.mode === "inbox" || root.mode === "search" || root.mode === "alertCard"
     onCleared: {
       root.grabClearedAt = Date.now();
       root.view = "";
@@ -491,20 +514,33 @@ PanelWindow {
     return base + " · " + (dayOffset > 0 ? "in " + n + " days" : n + " days ago");
   }
 
-  // Monday-first days of the week the Today card is showing.
-  readonly property var week: {
+  // The month grid: six Monday-first weeks. Arrows flip it; scrolling or
+  // clicking a day moves the picked day, and the month follows.
+  property int monthOffset: 0
+
+  onDayOffsetChanged: {
     const now = Time.now;
-    const shown = shownDay;
-    const monday = new Date(shown.getFullYear(), shown.getMonth(), shown.getDate() - (shown.getDay() + 6) % 7);
-    const names = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+    monthOffset = (shownDay.getFullYear() - now.getFullYear()) * 12 + shownDay.getMonth() - now.getMonth();
+  }
+
+  readonly property date shownMonth: {
+    const now = Time.now;
+    return new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+  }
+
+  readonly property var monthDays: {
+    const now = Time.now;
+    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const first = shownMonth;
     const out = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(first.getFullYear(), first.getMonth(), 1 - (first.getDay() + 6) % 7 + i);
       out.push({
-        name: names[i],
         day: d.getDate(),
+        inMonth: d.getMonth() === first.getMonth(),
         today: d.toDateString() === now.toDateString(),
-        picked: root.dayOffset !== 0 && d.toDateString() === shown.toDateString()
+        picked: root.dayOffset !== 0 && d.toDateString() === shownDay.toDateString(),
+        offset: Math.round((d.getTime() - midnight) / 86400000)
       });
     }
     return out;
@@ -671,12 +707,12 @@ PanelWindow {
   // keep-awake dot when they're out.
   // Built from the *animated* widths, so the group re-centres every frame as
   // the island grows, instead of a second animation chasing the first.
-  readonly property real groupWidth: shape.width + (bubble.width > 0.5 ? bubble.width + 6 : 0) + dot.scale * 13
+  readonly property real groupWidth: shape.width + (bubble.width > 0.5 ? bubble.width + 6 : 0) + dot.scale * 13 + micDot.scale * 14 + camDot.scale * 14
 
   // What takes input: the island and its satellites. Sized from where the
   // island is *going*, so the input region changes once per mode rather than
   // on every animation frame.
-  readonly property real targetGroupWidth: size[0] + (bubbleShown ? compactH + 6 : 0) + tailTarget + (IdleInhibit.enabled ? 13 : 0)
+  readonly property real targetGroupWidth: size[0] + (bubbleShown ? compactH + 6 : 0) + tailTarget + (IdleInhibit.enabled ? 13 : 0) + (Privacy.micInUse ? 14 : 0) + (Privacy.camInUse ? 14 : 0)
 
   // Unread notifications: the island grows a section on its right with the
   // bell and a count. They never pop open on arrival; the bell just hops.
@@ -715,7 +751,7 @@ PanelWindow {
     // Only rendered while it can be seen; otherwise it would redraw on every
     // frame of every morph for nothing.
     layer.enabled: glow.visible
-    color: root.mode === "charging" ? root.good : root.mode === "player" ? root.tint : root.hot
+    color: root.mode === "charging" ? root.good : root.mode === "player" ? root.tint : root.mode === "alert" || root.mode === "alertCard" ? root.alertColor : root.hot
   }
 
   MultiEffect {
@@ -729,7 +765,7 @@ PanelWindow {
     autoPaddingEnabled: true
     // The player's glow waits for the morph to finish; blurring a resizing
     // shape every frame is what made this stutter before.
-    opacity: root.mode === "charging" || root.mode === "thinking" ? 0.7 : root.mode === "player" && root.settled && Media.hasCoverTint ? 0.42 : 0
+    opacity: root.mode === "charging" || root.mode === "thinking" || (root.mode === "alert" && root.settled) || (root.mode === "alertCard" && root.settled) ? 0.7 : root.mode === "player" && root.settled && Media.hasCoverTint ? 0.42 : 0
 
     Behavior on opacity {
       NumberAnimation {
@@ -1612,15 +1648,153 @@ PanelWindow {
       }
     }
 
-    // ------------------------------------------------------------- today
-    // What a click on the clock opens when nothing is playing: the time large,
-    // this week, and the focus timer one click away.
+    // ------------------------------------------------------------- alert
     Layer {
+      key: "alert"
+
+      Row {
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.leftMargin: 12
+        anchors.rightMargin: 10
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: 10
+
+        Ink {
+          anchors.verticalCenter: parent.verticalCenter
+          text: root.alertData ? root.alertData.glyph : ""
+          font.pixelSize: Theme.iconSize
+          color: root.alertColor
+        }
+        Ink {
+          anchors.verticalCenter: parent.verticalCenter
+          width: parent.width - 80
+          text: root.alertData ? root.alertData.label : ""
+          font.bold: true
+        }
+        Rectangle {
+          anchors.verticalCenter: parent.verticalCenter
+          width: alertValue.implicitWidth + 16
+          height: 18
+          radius: 9
+          color: root.alertColor
+
+          Ink {
+            id: alertValue
+            anchors.centerIn: parent
+            text: root.alertData ? root.alertData.value : ""
+            font.pixelSize: Theme.smallSize
+            font.bold: true
+            color: "#140f08"
+          }
+        }
+      }
+    }
+
+    Layer {
+      key: "alertCard"
+
+      Column {
+        anchors.fill: parent
+        anchors.margins: 16
+        anchors.topMargin: 14
+        spacing: 9
+
+        Row {
+          width: parent.width
+          spacing: 10
+
+          Ink {
+            anchors.verticalCenter: parent.verticalCenter
+            text: root.alertData ? root.alertData.glyph : ""
+            font.pixelSize: Theme.iconSize + 3
+            color: root.alertColor
+          }
+          Ink {
+            anchors.verticalCenter: parent.verticalCenter
+            width: parent.width - 90
+            text: root.alertData ? root.alertData.label : ""
+            font.bold: true
+            font.pixelSize: Theme.fontSize + 1
+          }
+          Rectangle {
+            anchors.verticalCenter: parent.verticalCenter
+            width: cardValue.implicitWidth + 16
+            height: 18
+            radius: 9
+            color: root.alertColor
+
+            Ink {
+              id: cardValue
+              anchors.centerIn: parent
+              text: root.alertData ? root.alertData.value : ""
+              font.pixelSize: Theme.smallSize
+              font.bold: true
+              color: "#140f08"
+            }
+          }
+        }
+
+        Ink {
+          width: parent.width
+          text: root.alertData && root.alertData.detail ? root.alertData.detail : " "
+          color: root.inkDim
+          font.pixelSize: Theme.smallSize + 1
+        }
+
+        Row {
+          spacing: 6
+
+          Repeater {
+            model: root.alertData && root.alertData.action ? ["Open System", "Dismiss"] : ["Dismiss"]
+
+            delegate: Rectangle {
+              id: alertBtn
+
+              required property string modelData
+
+              width: alertBtnText.implicitWidth + 24
+              height: 26
+              radius: 13
+              color: alertBtnArea.containsMouse ? Qt.rgba(1, 1, 1, 0.2) : Qt.rgba(1, 1, 1, 0.1)
+
+              Ink {
+                id: alertBtnText
+                anchors.centerIn: parent
+                text: alertBtn.modelData
+                font.pixelSize: Theme.smallSize + 1
+              }
+
+              MouseArea {
+                id: alertBtnArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                  const action = alertBtn.modelData === "Dismiss" ? "" : root.alertData.action;
+                  root.view = "";
+                  if (action)
+                    Moments.popupRequested(action, root.screenName());
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // ------------------------------------------------------------- today
+    // The time, weather, a month you can flip through, your market symbols,
+    // and the focus timer. Scroll to walk through days, or click one.
+    Layer {
+      id: todayLayer
       key: "today"
 
       Item {
         anchors.fill: parent
         anchors.margins: 16
+        anchors.leftMargin: 18
+        anchors.rightMargin: 18
 
         Column {
           id: todayTime
@@ -1639,69 +1813,222 @@ PanelWindow {
           }
         }
 
-        // Battery and keep awake, at a glance.
-        Column {
+        Row {
+          visible: Weather.ready
           anchors.right: parent.right
           anchors.top: parent.top
           anchors.topMargin: 4
-          spacing: 6
+          spacing: 10
 
           Ink {
-            anchors.right: parent.right
-            text: (Moments.charging ? Icons.batteryCharging + "  " : "") + Moments.batteryPercent + "%"
-            color: Moments.charging ? root.good : root.ink
+            anchors.verticalCenter: parent.verticalCenter
+            text: Weather.glyph
+            font.pixelSize: 26
+            color: root.hot
           }
-          Ink {
-            anchors.right: parent.right
-            text: IdleInhibit.enabled ? Icons.coffee + "  awake" : Media.hasPlayer ? "" : "Nothing playing"
-            color: IdleInhibit.enabled ? root.hot : root.inkDim
-            font.pixelSize: Theme.smallSize + 1
+
+          Column {
+            anchors.verticalCenter: parent.verticalCenter
+
+            Ink {
+              anchors.right: parent.right
+              text: Weather.tempC + "°"
+              font.bold: true
+              font.pixelSize: 18
+            }
+            Ink {
+              anchors.right: parent.right
+              text: Weather.place
+              color: root.inkDim
+              font.pixelSize: Theme.smallSize
+            }
           }
         }
 
-        Row {
-          id: weekRow
+        // Month title and arrows.
+        Item {
+          id: monthBar
           anchors.left: parent.left
           anchors.right: parent.right
           anchors.top: todayTime.bottom
-          anchors.topMargin: 12
+          anchors.topMargin: 10
+          height: 26
+
+          Ink {
+            anchors.centerIn: parent
+            text: Qt.formatDateTime(root.shownMonth, "MMMM yyyy")
+            font.bold: true
+          }
 
           Repeater {
-            model: root.week
+            model: [
+              {
+                glyph: Icons.chevronLeft,
+                step: -1
+              },
+              {
+                glyph: Icons.chevronRight,
+                step: 1
+              }
+            ]
 
-            delegate: Item {
-              id: dayCell
+            delegate: Rectangle {
+              id: monthArrow
 
               required property var modelData
 
-              width: weekRow.width / 7
-              height: 36
+              x: modelData.step < 0 ? 0 : monthBar.width - width
+              width: 26
+              height: 26
+              radius: 13
+              color: monthArrowArea.containsMouse ? Qt.rgba(1, 1, 1, 0.14) : "transparent"
 
               Ink {
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.top: parent.top
-                text: dayCell.modelData.name
-                font.pixelSize: Theme.smallSize
-                color: dayCell.modelData.today ? root.hot : root.inkDim
+                anchors.centerIn: parent
+                text: monthArrow.modelData.glyph
+                font.pixelSize: Theme.iconSize
               }
 
+              MouseArea {
+                id: monthArrowArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.monthOffset += monthArrow.modelData.step
+              }
+            }
+          }
+        }
+
+        Grid {
+          id: monthGrid
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.top: monthBar.bottom
+          anchors.topMargin: 4
+          columns: 7
+
+          readonly property real cellWidth: width / 7
+
+          Repeater {
+            model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
+
+            delegate: Item {
+              required property string modelData
+
+              width: monthGrid.cellWidth
+              height: 18
+
+              Ink {
+                anchors.centerIn: parent
+                text: parent.modelData
+                color: root.inkDim
+                font.pixelSize: Theme.smallSize
+              }
+            }
+          }
+
+          Repeater {
+            model: root.monthDays
+
+            delegate: Item {
+              id: dateCell
+
+              required property var modelData
+
+              width: monthGrid.cellWidth
+              height: 29
+
               Rectangle {
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.bottom: parent.bottom
-                width: 22
-                height: 22
-                radius: 11
-                color: dayCell.modelData.today ? root.hot : "transparent"
-                border.width: dayCell.modelData.picked && !dayCell.modelData.today ? 1.5 : 0
+                anchors.centerIn: parent
+                width: 27
+                height: 27
+                radius: 13.5
+                color: dateCell.modelData.today ? root.hot : dateArea.containsMouse ? Qt.rgba(1, 1, 1, 0.14) : "transparent"
+                border.width: dateCell.modelData.picked && !dateCell.modelData.today ? 1.5 : 0
                 border.color: root.hot
 
                 Ink {
                   anchors.centerIn: parent
-                  text: dayCell.modelData.day
-                  font.bold: dayCell.modelData.today
-                  color: dayCell.modelData.today ? "#140f08" : root.ink
+                  text: dateCell.modelData.day
+                  font.bold: dateCell.modelData.today
+                  color: dateCell.modelData.today ? "#140f08" : dateCell.modelData.inMonth ? root.ink : Qt.rgba(0.96, 0.94, 0.89, 0.28)
                 }
               }
+
+              MouseArea {
+                id: dateArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.dayOffset = dateCell.modelData.offset
+              }
+            }
+          }
+        }
+
+        // Market symbols from the Dashboard, drifting past.
+        Rectangle {
+          id: ticker
+          visible: Dashboard.stocks.length > 0
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.top: monthGrid.bottom
+          anchors.topMargin: 10
+          height: 28
+          radius: 14
+          color: Qt.rgba(1, 1, 1, 0.07)
+          clip: true
+
+          component TickerRow: Row {
+            spacing: 26
+            y: (28 - height) / 2
+
+            Repeater {
+              model: Dashboard.stocks.filter(q => q.price !== undefined && q.previous)
+
+              delegate: Row {
+                id: quote
+
+                required property var modelData
+                readonly property real change: Dashboard.changePercent(modelData)
+
+                spacing: 6
+
+                Ink {
+                  text: quote.modelData.symbol
+                  font.pixelSize: Theme.smallSize + 1
+                }
+                Ink {
+                  text: (quote.change >= 0 ? "+" : "") + quote.change.toFixed(1) + "%"
+                  font.pixelSize: Theme.smallSize + 1
+                  color: quote.change >= 0 ? root.good : "#f0808f"
+                }
+              }
+            }
+          }
+
+          Item {
+            id: tape
+            height: parent.height
+            property real span: firstRow.implicitWidth + 26
+
+            NumberAnimation on x {
+              running: root.mode === "today" && tape.span > 30
+              loops: Animation.Infinite
+              from: 14
+              to: 14 - tape.span
+              duration: Math.max(4000, tape.span * 42)
+            }
+
+            TickerRow {
+              id: firstRow
+            }
+            TickerRow {
+              x: tape.span
+            }
+            TickerRow {
+              x: tape.span * 2
             }
           }
         }
@@ -1748,10 +2075,10 @@ PanelWindow {
               scale: focusArea.pressed ? 0.9 : 1
 
               Behavior on scale {
-                SpringAnimation {
-                  spring: 6
-                  damping: 0.3
-                  epsilon: 0.002
+                NumberAnimation {
+                  duration: 260
+                  easing.type: Easing.BezierSpline
+                  easing.bezierCurve: [0.34, 1.56, 0.64, 1, 1, 1]
                 }
               }
 
@@ -2439,6 +2766,76 @@ PanelWindow {
       cursorShape: Qt.PointingHandCursor
       onClicked: Moments.popupRequested("tones", root.screenName())
     }
+  }
+
+  // A green dot while something records the mic, orange for the camera. Hover
+  // to see which app.
+  component PrivacyDot: Rectangle {
+    id: pdot
+
+    property bool on: false
+    property string label: ""
+
+    y: shape.y + (root.compactH - height) / 2
+    width: 8
+    height: 8
+    radius: 4
+    scale: on ? 1 : 0
+    visible: scale > 0.01
+
+    Behavior on scale {
+      NumberAnimation {
+        duration: 500
+        easing.type: Easing.OutBack
+        easing.overshoot: 2
+      }
+    }
+
+    MouseArea {
+      id: pdotArea
+      anchors.fill: parent
+      anchors.margins: -5
+      hoverEnabled: true
+    }
+
+    Rectangle {
+      anchors.horizontalCenter: parent.horizontalCenter
+      y: 18
+      width: pdotLabel.implicitWidth + 20
+      height: 24
+      radius: 10
+      color: "#050403"
+      opacity: pdotArea.containsMouse ? 1 : 0
+
+      Behavior on opacity {
+        NumberAnimation {
+          duration: 140
+        }
+      }
+
+      Ink {
+        id: pdotLabel
+        anchors.centerIn: parent
+        text: pdot.label
+        font.pixelSize: Theme.smallSize + 1
+      }
+    }
+  }
+
+  PrivacyDot {
+    id: micDot
+    x: (IdleInhibit.enabled ? dot.x + dot.width : root.bubbleShown ? bubble.x + bubble.width : shape.x + shape.width) + 6
+    color: "#8ad79a"
+    on: Privacy.micInUse
+    label: "Microphone · " + Privacy.micApps.join(", ")
+  }
+
+  PrivacyDot {
+    id: camDot
+    x: micDot.x + (Privacy.micInUse ? micDot.width + 6 : 0)
+    color: "#F59A6E"
+    on: Privacy.camInUse
+    label: "Camera · " + Privacy.camApps.join(", ")
   }
 
   // Keep awake: a small breathing dot beside the island, like a privacy light.

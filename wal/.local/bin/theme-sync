@@ -1,0 +1,397 @@
+#!/usr/bin/env python3
+"""Push the pywal palette to everything on the desktop that can take it.
+
+Runs after `wal` on every wallpaper change (~/.config/waypaper/post-command.sh).
+Run it by hand any time: `theme-sync`. Each target is independent, so one
+failing can't stop the others; failures go to ~/.cache/wal/theme-sync.log.
+
+The first time a file outside the repo is edited, the original is kept in
+~/.local/share/theme-sync/backup.
+"""
+import colorsys
+import json
+import os
+import re
+import shutil
+import subprocess
+import time
+import traceback
+from pathlib import Path
+
+HOME = Path.home()
+CACHE = HOME / ".cache/wal"
+CONFIG = HOME / ".config"
+BACKUP = HOME / ".local/share/theme-sync/backup"
+
+
+# ------------------------------------------------------------------ colours
+def rgb(h):
+    h = h.lstrip("#")
+    return tuple(int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))
+
+
+def to_hex(c):
+    return "#" + "".join(f"{round(max(0, min(1, v)) * 255):02x}" for v in c)
+
+
+def mix(a, b, t):
+    ca, cb = rgb(a), rgb(b)
+    return to_hex(tuple(x + (y - x) * t for x, y in zip(ca, cb)))
+
+
+def luminance(h):
+    def channel(v):
+        return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+
+    r, g, b = (channel(v) for v in rgb(h))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def contrast(a, b):
+    la, lb = luminance(a), luminance(b)
+    return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+
+
+def bare(h):
+    return h.lstrip("#")
+
+
+def plain_rgb(h):
+    return ",".join(str(round(v * 255)) for v in rgb(h))
+
+
+data = json.loads((CACHE / "colors.json").read_text())
+C = data["colors"]
+BG = data["special"]["background"]
+FG = data["special"]["foreground"]
+RAMP = [C[f"color{i}"] for i in range(1, 7)]
+
+
+def pick_accent():
+    # The same "liveliest colour, forced bright" rule as Quickshell's Theme.qml,
+    # so the desktop and the bar agree.
+    def score(h):
+        _, s, v = colorsys.rgb_to_hsv(*rgb(h))
+        return s * (0.4 + v)
+
+    h, s, v = colorsys.rgb_to_hsv(*rgb(max(RAMP, key=score)))
+    return to_hex(colorsys.hsv_to_rgb(h, min(1, s * 1.15), max(0.78, v)))
+
+
+ACCENT = pick_accent()
+ON_ACCENT = "#14100a" if contrast(ACCENT, "#14100a") >= contrast(ACCENT, "#ffffff") else "#ffffff"
+SURFACE = mix(BG, FG, 0.06)
+RAISED = mix(BG, FG, 0.12)
+BORDER = mix(BG, FG, 0.2)
+DIM = mix(FG, BG, 0.38)
+DARK = mix(BG, "#000000", 0.25)
+GOOD, WARN, CRIT = "#8ad79a", "#f0c674", "#f0808f"
+
+
+# ------------------------------------------------------------------ helpers
+def backup(path):
+    target = BACKUP / path.relative_to(HOME)
+    if path.exists() and not target.exists():
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, target)
+
+
+def write(path, text):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(text)
+    os.replace(tmp, path)
+
+
+def edit_in_place(path, text):
+    # For files other things may link to or watch: keep the same inode.
+    backup(path)
+    with open(path, "w") as f:
+        f.write(text)
+
+
+def run(*cmd):
+    return subprocess.run(cmd, capture_output=True, text=True, timeout=20)
+
+
+# ------------------------------------------------------------------ targets
+def hyprland():
+    write(CACHE / "hypr-colors.lua", f"""return {{
+    active_a = "rgba({bare(ACCENT)}ee)",
+    active_b = "rgba({bare(mix(ACCENT, FG, 0.45))}ee)",
+    inactive = "rgba({bare(BORDER)}aa)",
+    group_active = "rgba({bare(ACCENT)}ff)",
+    group_inactive = "rgba({bare(RAISED)}ff)",
+    text = "rgba({bare(FG)}ff)",
+    text_on_active = "rgba({bare(ON_ACCENT)}ff)",
+}}
+""")
+    run("hyprctl", "reload")
+
+
+def hyprlock():
+    write(CACHE / "hyprlock-colors.conf", f"""$accent = rgb({bare(ACCENT)})
+$surface = rgb({bare(SURFACE)})
+$text = rgb({bare(FG)})
+$dim = rgb({bare(DIM)})
+$base = rgb({bare(BG)})
+""")
+
+
+def btop():
+    t = {
+        "main_bg": BG, "main_fg": FG, "title": FG, "hi_fg": ACCENT,
+        "selected_bg": ACCENT, "selected_fg": ON_ACCENT, "inactive_fg": DIM,
+        "graph_text": DIM, "meter_bg": RAISED, "proc_misc": ACCENT,
+        "cpu_box": BORDER, "mem_box": BORDER, "net_box": BORDER, "proc_box": BORDER,
+        "div_line": BORDER, "temp_start": GOOD, "temp_mid": WARN, "temp_end": CRIT,
+    }
+    for name in ("cpu", "free", "cached", "available", "used", "download", "upload", "process"):
+        t[f"{name}_start"], t[f"{name}_mid"], t[f"{name}_end"] = mix(ACCENT, BG, 0.5), ACCENT, mix(ACCENT, FG, 0.5)
+    write(CONFIG / "btop/themes/wal.theme", "".join(f'theme[{k}]="{v}"\n' for k, v in t.items()))
+    conf = CONFIG / "btop/btop.conf"
+    text = conf.read_text() if conf.exists() else ""
+    if re.search(r"^color_theme\s*=", text, re.M):
+        text = re.sub(r"^color_theme\s*=.*$", 'color_theme = "wal"', text, flags=re.M)
+    else:
+        text = 'color_theme = "wal"\n' + text
+    write(conf, text)
+    run("pkill", "-USR2", "-x", "btop")
+
+
+def starship():
+    path = CONFIG / "starship.toml"
+    text = path.read_text()
+    section = re.search(r"^\[palettes\.catppuccin_mocha\]\n(.*?)(?=^\[|\Z)", text, re.M | re.S)
+    keys = re.findall(r"^(\w+)\s*=", section.group(1), re.M)
+    neutrals = {
+        "text": FG, "subtext1": mix(FG, BG, 0.15), "subtext0": mix(FG, BG, 0.3),
+        "overlay2": mix(FG, BG, 0.4), "overlay1": mix(FG, BG, 0.5), "overlay0": mix(FG, BG, 0.6),
+        "surface2": mix(BG, FG, 0.28), "surface1": mix(BG, FG, 0.2), "surface0": RAISED,
+        "base": BG, "mantle": DARK, "crust": mix(BG, "#000000", 0.4), "peach": ACCENT,
+    }
+    accents = iter(RAMP * 4)
+    lines = [f'{k} = "{neutrals[k] if k in neutrals else next(accents)}"' for k in keys]
+    block = "[palettes.wal]\n" + "\n".join(lines) + "\n\n"
+    new = re.sub(r"^\[palettes\.wal\]\n.*?(?=^\[|\Z)", "", text, flags=re.M | re.S)
+    new = re.sub(r"^palette\s*=.*$", "palette = 'wal'", new, count=1, flags=re.M)
+    new = new.replace("[palettes.catppuccin_mocha]", block + "[palettes.catppuccin_mocha]", 1)
+    if new != text:
+        edit_in_place(path, new)
+
+
+def kitty():
+    conf = CONFIG / "kitty/kitty.conf"
+    line = f"include {CACHE}/colors-kitty.conf\n"
+    if not conf.exists() or line not in conf.read_text():
+        with open(conf, "a") as f:
+            f.write(line)
+    run("pkill", "-USR1", "-x", "kitty")
+
+
+def rofi():
+    conf = CONFIG / "rofi/config.rasi"
+    want = f'@import "{CACHE}/colors-rofi-dark.rasi"\n'
+    if conf.read_text() != want:
+        edit_in_place(conf, want)
+
+
+def gtk_value(name):
+    n = name
+    dim_it = "insensitive" in n
+    back = "backdrop" in n or "unfocused" in n
+    if "error" in n:
+        v = CRIT
+    elif "success" in n:
+        v = GOOD
+    elif "warning" in n:
+        v = WARN
+    elif "link_visited" in n:
+        v = mix(ACCENT, FG, 0.4)
+    elif "link" in n:
+        v = ACCENT
+    elif "selected_fg" in n:
+        v = ON_ACCENT
+    elif "selected_bg" in n or "decoration" in n:
+        v = ACCENT
+    elif "border" in n:
+        v = BORDER
+    elif "tooltip_background" in n:
+        v = DARK
+    elif ("titlebar" in n or "header" in n) and "background" in n:
+        v = DARK
+    elif "button_background" in n:
+        v = RAISED
+    elif "foreground" in n or "_fg_" in n or "text" in n:
+        v = FG
+    elif "base_color" in n or "view_bg" in n:
+        v = SURFACE
+    else:
+        v = BG
+    if dim_it:
+        v = mix(v, BG, 0.5)
+    elif back and v == FG:
+        v = mix(v, BG, 0.2)
+    return v
+
+
+def gtk():
+    names = re.findall(r"@define-color\s+(\S+)", (CONFIG / "gtk-3.0/colors.css").read_text())
+    defs = {n: gtk_value(n) for n in names}
+    defs.update({
+        # libadwaita (GTK4) and plain GTK3 names.
+        "theme_bg_color": BG, "theme_fg_color": FG, "theme_base_color": SURFACE, "theme_text_color": FG,
+        "theme_selected_bg_color": ACCENT, "theme_selected_fg_color": ON_ACCENT,
+        "accent_color": ACCENT, "accent_bg_color": ACCENT, "accent_fg_color": ON_ACCENT,
+        "window_bg_color": BG, "window_fg_color": FG, "view_bg_color": SURFACE, "view_fg_color": FG,
+        "headerbar_bg_color": DARK, "headerbar_fg_color": FG, "headerbar_backdrop_color": BG,
+        "headerbar_border_color": BORDER, "headerbar_shade_color": DARK,
+        "sidebar_bg_color": DARK, "sidebar_fg_color": FG, "sidebar_backdrop_color": BG, "sidebar_border_color": BORDER,
+        "card_bg_color": SURFACE, "card_fg_color": FG, "dialog_bg_color": RAISED, "dialog_fg_color": FG,
+        "popover_bg_color": RAISED, "popover_fg_color": FG, "thumbnail_bg_color": RAISED, "thumbnail_fg_color": FG,
+        "destructive_bg_color": CRIT, "destructive_color": CRIT, "success_bg_color": GOOD, "success_color": GOOD,
+        "warning_bg_color": WARN, "warning_color": WARN, "error_bg_color": CRIT, "error_color": CRIT,
+    })
+    write(CACHE / "gtk-colors.css", "".join(f"@define-color {k} {v};\n" for k, v in defs.items()))
+    line = f'@import url("file://{CACHE}/gtk-colors.css");\n'
+    for folder in ("gtk-3.0", "gtk-4.0"):
+        css = CONFIG / folder / "gtk.css"
+        text = css.read_text() if css.exists() else ""
+        if line not in text:
+            if text and not text.endswith("\n"):
+                text += "\n"
+            edit_in_place(css, text + line)
+    # GTK only re-reads its CSS when the theme name changes.
+    theme = run("gsettings", "get", "org.gnome.desktop.interface", "gtk-theme").stdout.strip().strip("'")
+    run("gsettings", "set", "org.gnome.desktop.interface", "gtk-theme", "Adwaita" if theme != "Adwaita" else "Breeze")
+    time.sleep(0.15)
+    run("gsettings", "set", "org.gnome.desktop.interface", "gtk-theme", theme)
+
+
+def kde():
+    def group(title, bg, alt, fg, inactive):
+        return f"""[Colors:{title}]
+BackgroundAlternate={plain_rgb(alt)}
+BackgroundNormal={plain_rgb(bg)}
+DecorationFocus={plain_rgb(ACCENT)}
+DecorationHover={plain_rgb(ACCENT)}
+ForegroundActive={plain_rgb(ACCENT)}
+ForegroundInactive={plain_rgb(inactive)}
+ForegroundLink={plain_rgb(ACCENT)}
+ForegroundNegative={plain_rgb(CRIT)}
+ForegroundNeutral={plain_rgb(WARN)}
+ForegroundNormal={plain_rgb(fg)}
+ForegroundPositive={plain_rgb(GOOD)}
+ForegroundVisited={plain_rgb(mix(ACCENT, FG, 0.4))}
+
+"""
+
+    body = "".join([
+        group("Button", RAISED, SURFACE, FG, DIM),
+        group("Complementary", DARK, BG, FG, DIM),
+        group("Header", DARK, BG, FG, DIM),
+        group("Selection", ACCENT, mix(ACCENT, BG, 0.2), ON_ACCENT, ON_ACCENT),
+        group("Tooltip", DARK, BG, FG, DIM),
+        group("View", SURFACE, BG, FG, DIM),
+        group("Window", BG, SURFACE, FG, DIM),
+    ])
+    # plasma-apply-colorscheme ignores a scheme that's already current, so
+    # alternate between two names to make every change land.
+    state = CACHE / "kde-scheme-side"
+    side = "B" if state.exists() and state.read_text() == "A" else "A"
+    state.write_text(side)
+    name = f"Pywal{side}"
+    write(HOME / f".local/share/color-schemes/{name}.colors",
+          f"[General]\nColorScheme={name}\nName=Pywal\n\n[KDE]\nLookAndFeelPackage=\n\n[WM]\n"
+          f"activeBackground={plain_rgb(DARK)}\nactiveForeground={plain_rgb(FG)}\n"
+          f"inactiveBackground={plain_rgb(BG)}\ninactiveForeground={plain_rgb(DIM)}\n\n{body}")
+    backup(CONFIG / "kdeglobals")
+    result = run("plasma-apply-colorscheme", name)
+    if result.returncode != 0:
+        raise RuntimeError(result.stdout + result.stderr)
+
+
+def vscode():
+    path = CONFIG / "Code/User/settings.json"
+    colors = {
+        "editor.background": BG, "editor.foreground": FG, "editorLineNumber.foreground": DIM,
+        "editorLineNumber.activeForeground": ACCENT, "editorCursor.foreground": ACCENT,
+        "editor.selectionBackground": BORDER, "editorGroupHeader.tabsBackground": DARK,
+        "tab.activeBackground": BG, "tab.activeForeground": FG, "tab.activeBorderTop": ACCENT,
+        "tab.inactiveBackground": DARK, "tab.inactiveForeground": DIM, "tab.border": DARK,
+        "activityBar.background": DARK, "activityBar.foreground": ACCENT, "activityBar.inactiveForeground": DIM,
+        "activityBarBadge.background": ACCENT, "activityBarBadge.foreground": ON_ACCENT,
+        "sideBar.background": DARK, "sideBar.foreground": FG, "sideBarSectionHeader.background": BG,
+        "statusBar.background": ACCENT, "statusBar.foreground": ON_ACCENT,
+        "statusBar.noFolderBackground": RAISED, "titleBar.activeBackground": DARK, "titleBar.activeForeground": FG,
+        "titleBar.inactiveBackground": DARK, "panel.background": DARK, "panel.border": BORDER,
+        "terminal.background": BG, "terminal.foreground": FG, "button.background": ACCENT,
+        "button.foreground": ON_ACCENT, "focusBorder": ACCENT, "input.background": SURFACE,
+        "dropdown.background": SURFACE, "list.activeSelectionBackground": RAISED,
+        "list.hoverBackground": SURFACE, "list.inactiveSelectionBackground": SURFACE,
+        "editorWidget.background": DARK, "menu.background": DARK, "quickInput.background": DARK,
+    }
+    block = '"workbench.colorCustomizations": ' + json.dumps(colors, indent=8)[:-1] + "    }"
+    text = path.read_text()
+    pattern = r'"workbench\.colorCustomizations"\s*:\s*\{[^{}]*\}'
+    if re.search(pattern, text):
+        new = re.sub(pattern, lambda _: block, text, count=1)
+    else:
+        new = text.replace("{", "{\n    " + block + ",", 1)
+    if new != text:
+        edit_in_place(path, new)
+
+
+def chromium():
+    folder = CACHE / "chromium-theme"
+    def triplet(h):
+        return [round(v * 255) for v in rgb(h)]
+
+    manifest = {
+        "manifest_version": 3, "name": "Pywal",
+        # The browser caches a theme by version, so every palette needs a new one.
+        "version": f"1.{int(time.time()) // 65536}.{int(time.time()) % 65536}",
+        "theme": {"colors": {
+            "frame": triplet(DARK), "frame_inactive": triplet(BG), "toolbar": triplet(BG),
+            "tab_background_text": triplet(DIM), "tab_text": triplet(FG), "bookmark_text": triplet(FG),
+            "toolbar_button_icon": triplet(FG), "omnibox_background": triplet(SURFACE), "omnibox_text": triplet(FG),
+            "ntp_background": triplet(BG), "ntp_text": triplet(FG), "ntp_link": triplet(ACCENT),
+            "button_background": triplet(ACCENT),
+        }},
+    }
+    write(folder / "manifest.json", json.dumps(manifest, indent=2))
+    flags = CONFIG / "chromium-flags.conf"
+    line = f"--load-extension={folder}\n"
+    if not flags.exists() or line not in flags.read_text():
+        with open(flags, "a") as f:
+            f.write(line)
+
+
+def neovim():
+    # The colourscheme itself reads colors.json (nvim/colors/pywal.lua). Here,
+    # just tell running editors that are using it to reload.
+    runtime = Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}"))
+    for sock in runtime.glob("nvim.*"):
+        run("nvim", "--server", str(sock), "--remote-expr",
+            "execute(\"if get(g:,'colors_name','')=='pywal'|colorscheme pywal|endif\")")
+
+
+TARGETS = [hyprland, hyprlock, btop, starship, kitty, rofi, gtk, kde, vscode, chromium, neovim]
+
+
+def main():
+    failures = []
+    for target in TARGETS:
+        try:
+            target()
+        except Exception:
+            failures.append(f"{target.__name__}:\n{traceback.format_exc()}")
+    stamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    with open(CACHE / "theme-sync.log", "a") as log:
+        log.write(f"[{stamp}] {len(TARGETS) - len(failures)}/{len(TARGETS)} ok\n" + "".join(failures))
+    print(f"{len(TARGETS) - len(failures)}/{len(TARGETS)} themed")
+    for f in failures:
+        print(f)
+
+
+main()

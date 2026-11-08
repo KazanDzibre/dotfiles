@@ -17,6 +17,7 @@ pragma Singleton
 // service is still reporting its initial state.
 
 import Quickshell
+import Quickshell.Io
 import Quickshell.Services.Pipewire
 import Quickshell.Services.UPower
 import Quickshell.Networking
@@ -215,6 +216,123 @@ Singleton {
     else
       root.toast(Icons.batteryRamp[Math.max(0, Math.min(10, Math.round(root.batteryPercent / 10)))], "On battery", root.batteryPercent + "%", false);
   }
+
+  // ------------------------------------------------------------------ health
+  // Only when something is wrong, and only once per incident: an alert re-arms
+  // after the value has properly recovered. CPU and memory also have to stay
+  // high for a few readings, so a brief spike says nothing.
+  property var over: ({})
+  property var fired: ({})
+
+  function watch(key, value, trip, recover, needed, raise) {
+    if (!root.ready)
+      return;
+    if (value < recover) {
+      root.over[key] = 0;
+      root.fired[key] = false;
+      return;
+    }
+    if (value < trip)
+      return;
+    root.over[key] = (root.over[key] ?? 0) + 1;
+    if (!root.fired[key] && root.over[key] >= needed) {
+      root.fired[key] = true;
+      raise();
+    }
+  }
+
+  function alert(data) {
+    root.show(Object.assign({
+      kind: "alert"
+    }, data), 6500);
+  }
+
+  // Names what's responsible before showing the alert.
+  property var pendingAlert: null
+
+  function alertWithTop(data, sortBy, describe) {
+    root.pendingAlert = {
+      data: data,
+      describe: describe
+    };
+    topProcess.exec(["sh", "-c", "ps -eo comm=,pcpu=,rss= --sort=-" + sortBy + " | head -1"]);
+  }
+
+  Process {
+    id: topProcess
+    stdout: StdioCollector {
+      onStreamFinished: {
+        const p = root.pendingAlert;
+        if (!p)
+          return;
+        const f = text.trim().split(/\s+/);
+        const rss = Number(f[f.length - 1]);
+        const pcpu = f[f.length - 2];
+        const name = f.slice(0, -2).join(" ");
+        root.alert(Object.assign({}, p.data, {
+          detail: name ? p.describe(name, pcpu, rss) : ""
+        }));
+        root.pendingAlert = null;
+      }
+    }
+  }
+
+  Connections {
+    target: SysInfo
+
+    function onCpuTempChanged() {
+      root.watch("cpu", SysInfo.cpuTemp, 90, 80, 3, () => root.alertWithTop({
+        glyph: Icons.thermometer,
+        label: "CPU running hot",
+        value: Math.round(SysInfo.cpuTemp) + "°C",
+        crit: true,
+        action: "system"
+      }, "pcpu", (name, pcpu) => "Busiest process: " + name + ", using " + pcpu + "% of a core."));
+    }
+
+    function onMemoryChanged() {
+      root.watch("memory", SysInfo.memory, 0.9, 0.82, 3, () => root.alertWithTop({
+        glyph: Icons.memory,
+        label: "Memory running out",
+        value: Math.round(SysInfo.memory * 100) + "%",
+        crit: true,
+        action: "system"
+      }, "rss", (name, pcpu, rss) => "Biggest user: " + name + ", at " + (rss / 1048576).toFixed(1) + " GB."));
+    }
+
+    function onDiskChanged() {
+      root.watch("disk", SysInfo.disk, 0.9, 0.85, 1, () => root.alert({
+        glyph: Icons.disk,
+        label: "Disk almost full",
+        value: Math.round(SysInfo.disk * 100) + "%",
+        crit: SysInfo.disk >= 0.95,
+        detail: "Root drive has " + Math.round(SysInfo.diskTotalGb - SysInfo.diskUsedGb) + " GB free.",
+        action: "system"
+      }));
+    }
+  }
+
+  // Low is the bad direction here, so it's watched as "how far gone".
+  function checkBattery() {
+    if (root.charging || !root.battery || !root.battery.isPresent) {
+      root.over.battery = 0;
+      root.fired.battery = false;
+      root.fired.batteryCrit = false;
+      return;
+    }
+    const raise = crit => () => root.alert({
+          glyph: Icons.batteryAlert,
+          label: "Battery low",
+          value: root.batteryPercent + "%",
+          crit: crit,
+          detail: root.battery.timeToEmpty > 0 ? "About " + Math.round(root.battery.timeToEmpty / 60) + " minutes left at this rate." : "",
+          action: ""
+        });
+    root.watch("battery", 100 - root.batteryPercent, 80, 70, 1, raise(false));
+    root.watch("batteryCrit", 100 - root.batteryPercent, 90, 85, 1, raise(true));
+  }
+
+  onBatteryPercentChanged: root.checkBattery()
 
   // ---------------------------------------------------------------------- AI
   // When an answer finishes while the panel is closed, offer a peek at it.

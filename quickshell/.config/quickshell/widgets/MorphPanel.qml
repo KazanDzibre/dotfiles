@@ -171,6 +171,20 @@ PanelWindow {
   // The pill this grows out of: its width, height and gap from the screen's
   // right edge. Its top is centred in the bar like every island.
   property real pillWidth: 100
+
+  // Growing rightwards from a pill on the left instead, at pillLeft.
+  property bool fromLeft: false
+  property real pillLeft: 0
+
+  // What the pill shows, drawn at the same spot while it dissolves.
+  property Component face: statusFace
+
+  Component {
+    id: statusFace
+    StatusFace {
+      lit: true
+    }
+  }
   readonly property real pillHeight: Theme.islandHeight
   readonly property real pillRight: Theme.margin
   readonly property real pillTop: (Theme.barHeight - Theme.islandHeight) / 2
@@ -192,9 +206,10 @@ PanelWindow {
   // ----------------------------------------------------------------- window
   anchors {
     top: true
-    right: true
+    left: root.fromLeft
+    right: !root.fromLeft
   }
-  implicitWidth: cardWidth + 40
+  implicitWidth: cardWidth + 240
   implicitHeight: 760
   exclusionMode: ExclusionMode.Ignore
   color: "transparent"
@@ -268,7 +283,7 @@ PanelWindow {
     id: shape
 
     // Grows leftwards and down from the pill's top-right corner.
-    x: root.width - root.pillRight - width
+    x: root.fromLeft ? root.pillLeft : root.width - root.pillRight - width
     y: root.pillTop
     width: root.useStart ? root.startW : root.opened ? root.openWidth : root.pillWidth
     height: root.useStart ? root.startH : root.opened ? root.openHeight : root.pillHeight
@@ -302,11 +317,13 @@ PanelWindow {
     // The pill's own face, on the same spot it has on the bar. It dissolves in
     // the first third of the opening and comes back in the last third of the
     // closing, so the pill melts into the panel instead of staying on top.
-    StatusFace {
-      anchors.right: parent.right
+    Loader {
+      sourceComponent: root.face
+      anchors.left: root.fromLeft ? parent.left : undefined
+      anchors.right: root.fromLeft ? undefined : parent.right
+      anchors.leftMargin: Theme.padding
       anchors.rightMargin: Theme.padding
       y: (root.pillHeight - height) / 2
-      lit: true
       opacity: 1 - Math.min(1, root.progress * 3)
       scale: 1 - root.progress * 0.15
       visible: opacity > 0.01

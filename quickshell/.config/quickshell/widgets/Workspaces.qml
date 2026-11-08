@@ -105,11 +105,22 @@ Item {
           anchors.rightMargin: -2
           hoverEnabled: true
           cursorShape: Qt.PointingHandCursor
-          onClicked: root.focusWorkspace(slot.modelData)
+          onEntered: preview.showFor(slot.modelData, slot.mapToItem(null, 0, 0).x)
+          onExited: preview.hideSoon()
+          onClicked: {
+            preview.hideNow();
+            root.focusWorkspace(slot.modelData);
+          }
         }
       }
     }
 
+  }
+
+  WorkspacePreview {
+    id: preview
+    barScreen: root.barScreen
+    onChosen: ws => root.focusWorkspace(ws)
   }
 
   // Scrolling walks this screen's own pills, wrapping at the ends. `workspace

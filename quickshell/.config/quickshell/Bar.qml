@@ -108,7 +108,14 @@ Scope {
 
         // Its own pill, so a window switch only ever resizes this one.
         Island {
+          id: titleIsland
+
           shown: windowTitle.present
+          tappable: true
+          onTapped: switcher.toggle()
+          // The switcher grows out of this exact spot and wears its face, so
+          // the pill is "in" the panel while it's out.
+          opacity: switcher.visible ? 0 : shown ? 1 : 0
 
           WindowTitle {
             id: windowTitle
@@ -117,6 +124,19 @@ Scope {
             // around the centre), minus the workspaces pill and this pill's
             // own icon, spacing and padding.
             maxWidth: Math.max(60, bar.width / 2 - 270 - Theme.margin - workspacesIsland.width - Theme.gap - (Theme.iconSize + 7) - Theme.padding * 2)
+          }
+        }
+      }
+
+      WindowSwitcher {
+        id: switcher
+        screen: bar.screen
+        pillLeft: Theme.margin + titleIsland.x
+        pillWidth: titleIsland.width
+
+        face: Component {
+          WindowTitle {
+            maxWidth: windowTitle.maxWidth
           }
         }
       }

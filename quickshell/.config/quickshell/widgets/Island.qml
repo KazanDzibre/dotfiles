@@ -27,6 +27,18 @@ Rectangle {
   scale: shown ? 1 : 0.9
   visible: opacity > 0.01
 
+  // For a pill that opens something when clicked anywhere on it.
+  property bool tappable: false
+  signal tapped
+
+  MouseArea {
+    anchors.fill: parent
+    enabled: root.tappable
+    visible: root.tappable
+    cursorShape: Qt.PointingHandCursor
+    onClicked: root.tapped()
+  }
+
   Row {
     id: layout
     anchors.centerIn: parent

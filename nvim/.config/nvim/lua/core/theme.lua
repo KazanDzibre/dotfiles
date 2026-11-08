@@ -6,6 +6,7 @@
 local M = {}
 
 M.themes = {
+    "pywal",
     "catppuccin-mocha",
     "catppuccin-macchiato",
     "catppuccin-frappe",
@@ -15,7 +16,7 @@ M.themes = {
     "kanagawa",
 }
 
-M.default = "catppuccin-mocha"
+M.default = "pywal"
 
 local state_file = vim.fn.stdpath("data") .. "/theme.txt"
 

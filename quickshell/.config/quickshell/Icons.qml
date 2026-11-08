@@ -4,9 +4,38 @@
 pragma Singleton
 
 import Quickshell
+import Quickshell.Io
 
 Singleton {
   id: root
+
+  // ---------------------------------------------------------------- pixmaps
+  // Plenty of apps ship their icon only in the pixmaps folders, under a name
+  // the icon theme doesn't have (Spotify's is "spotify-client"), and Qt doesn't
+  // look there by itself. Name -> file, with the sharpest format winning.
+  property var pixmaps: ({})
+
+  Process {
+    running: true
+    command: ["sh", "-c", "find /usr/share/pixmaps \"$HOME/.local/share/pixmaps\" -maxdepth 1 \\( -type f -o -type l \\) 2>/dev/null"]
+
+    stdout: StdioCollector {
+      onStreamFinished: {
+        const rank = {
+          svg: 3,
+          png: 2,
+          xpm: 1
+        };
+        const found = {};
+        for (const path of text.split("\n")) {
+          const m = path.match(/([^\/]+)\.(svg|png|xpm)$/);
+          if (m && (!found[m[1]] || rank[m[2]] > rank[found[m[1]].split(".").pop()]))
+            found[m[1]] = path;
+        }
+        root.pixmaps = found;
+      }
+    }
+  }
 
   // ------------------------------------------------------------------ audio
   readonly property string volHigh: String.fromCodePoint(0xf057e)
@@ -129,6 +158,13 @@ Singleton {
   readonly property string wallpaper: String.fromCodePoint(0xf0e09)
   readonly property string palette: String.fromCodePoint(0xf03d8)
   readonly property string timer: String.fromCodePoint(0xf051b)
+  readonly property string weatherCloudy: String.fromCodePoint(0xf0590)
+  readonly property string weatherFog: String.fromCodePoint(0xf0591)
+  readonly property string weatherLightning: String.fromCodePoint(0xf0593)
+  readonly property string weatherPartly: String.fromCodePoint(0xf0595)
+  readonly property string weatherRainy: String.fromCodePoint(0xf0597)
+  readonly property string weatherSnowy: String.fromCodePoint(0xf0598)
+  readonly property string weatherSunny: String.fromCodePoint(0xf0599)
   readonly property string bolt: String.fromCodePoint(0xf140b)
   readonly property string shuffle: String.fromCodePoint(0xf049f)
 
@@ -192,8 +228,9 @@ Singleton {
       return "";
 
     const entry = DesktopEntries.heuristicLookup(cls);
-    if (entry && entry.icon && Quickshell.hasThemeIcon(entry.icon))
-      return Quickshell.iconPath(entry.icon);
+    const fromEntry = entry ? root.themeIcon(entry.icon) : "";
+    if (fromEntry)
+      return fromEntry;
 
     const candidates = [cls, cls.toLowerCase(), cls.split(".").pop().toLowerCase()];
     for (const c of candidates) {
@@ -222,9 +259,16 @@ Singleton {
     return root.bluetooth;
   }
 
-  // A themed icon URL for any freedesktop icon name, or "" if absent.
+  // An icon URL for a desktop entry's Icon= value, or "" if absent. That can be
+  // a theme name, a name only found in the pixmaps folders, or a full path.
   function themeIcon(name) {
-    return name && Quickshell.hasThemeIcon(name) ? Quickshell.iconPath(name) : "";
+    if (!name)
+      return "";
+    if (name.startsWith("/"))
+      return "file://" + name;
+    if (Quickshell.hasThemeIcon(name))
+      return Quickshell.iconPath(name);
+    return root.pixmaps[name] ? "file://" + root.pixmaps[name] : "";
   }
 
   // Maps a Hyprland window class to a glyph. Matching is substring-based and
