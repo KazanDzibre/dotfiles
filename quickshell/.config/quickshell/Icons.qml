@@ -47,6 +47,8 @@ Singleton {
 
   // -------------------------------------------------------------- calendar
   readonly property string calendar: String.fromCodePoint(0xf00ed)
+  readonly property string chevronUp: String.fromCodePoint(0xf0143)
+  readonly property string chevronDown: String.fromCodePoint(0xf0140)
   readonly property string chevronLeft: String.fromCodePoint(0xf0141)
   readonly property string chevronRight: String.fromCodePoint(0xf0142)
 

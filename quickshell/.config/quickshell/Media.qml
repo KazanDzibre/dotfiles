@@ -5,6 +5,7 @@
 pragma Singleton
 
 import Quickshell
+import Quickshell.Io
 import Quickshell.Services.Mpris
 import QtQuick
 
@@ -55,6 +56,78 @@ Singleton {
     onTriggered: {
       if (root.active)
         root.active.positionChanged();
+    }
+  }
+
+  // ------------------------------------------------------------ cover colour
+  // The liveliest colour on the current cover, for tinting the island. Covers
+  // are usually remote, so this fetches once per track and remembers it. If
+  // anything fails, or the cover is grey, hasCoverTint stays false and the
+  // island keeps the theme's accent.
+  property color coverTint: "transparent"
+  property bool hasCoverTint: false
+  property var tintCache: ({})
+
+  readonly property string tintScript: [
+    'case "$1" in',
+    '  file://*) magick "${1#file://}" -resize 48x -colors 6 -unique-colors txt:- ;;',
+    "  http://*|https://*) curl -sfL --proto '=https,http' --max-time 6 --max-filesize 5000000 -- \"$1\" | magick - -resize 48x -colors 6 -unique-colors txt:- ;;",
+    'esac'
+  ].join("\n")
+
+  onArtUrlChanged: root.updateTint()
+
+  function updateTint() {
+    if (root.artUrl.length === 0) {
+      root.hasCoverTint = false;
+      return;
+    }
+    const known = root.tintCache[root.artUrl];
+    if (known !== undefined) {
+      root.applyTint(known);
+      return;
+    }
+    tintProcess.url = root.artUrl;
+    tintProcess.exec(["sh", "-c", root.tintScript, "sh", root.artUrl]);
+  }
+
+  function applyTint(hex) {
+    root.hasCoverTint = hex.length > 0;
+    if (root.hasCoverTint)
+      root.coverTint = hex;
+  }
+
+  // Same rule as Theme's accent: most saturated and bright, forced readable.
+  function pickTint(output) {
+    let best = null;
+    let bestScore = 0;
+    for (const hex of output.match(/#[0-9A-Fa-f]{6}/g) ?? []) {
+      const c = Qt.color(hex);
+      const score = c.hsvSaturation * (0.4 + c.hsvValue);
+      if (score > bestScore) {
+        bestScore = score;
+        best = c;
+      }
+    }
+    if (!best || best.hsvSaturation < 0.18)
+      return "";
+    return Qt.hsva(Math.max(0, best.hsvHue), Math.min(1, best.hsvSaturation * 1.15), Math.max(0.82, best.hsvValue), 1).toString();
+  }
+
+  Process {
+    id: tintProcess
+
+    property string url: ""
+
+    stdout: StdioCollector {
+      onStreamFinished: {
+        const hex = root.pickTint(text);
+        const next = Object.assign({}, root.tintCache);
+        next[tintProcess.url] = hex;
+        root.tintCache = next;
+        if (tintProcess.url === root.artUrl)
+          root.applyTint(hex);
+      }
     }
   }
 

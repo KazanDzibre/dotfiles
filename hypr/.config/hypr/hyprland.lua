@@ -28,7 +28,6 @@ hl.monitor({
 
 local terminal    = "alacritty"
 local fileManager = "dolphin"
-local menu        = "wofi"
 
 
 -------------------
@@ -263,7 +262,8 @@ hl.bind(mainMod .. " + RETURN",    hl.dsp.exec_cmd(terminal))
 hl.bind(mainMod .. " + SHIFT + Q", hl.dsp.window.close())
 hl.bind(mainMod .. " + SHIFT + E", hl.dsp.exec_cmd("command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch 'hl.dsp.exit()'"))
 hl.bind(mainMod .. " + V",         hl.dsp.window.float({ action = "toggle" }))
-hl.bind(mainMod .. " + SHIFT + D", hl.dsp.exec_cmd(menu))
+-- App search in the island (Spotlight.qml), in place of wofi.
+hl.bind(mainMod .. " + SHIFT + D", hl.dsp.global("quickshell:spotlight"))
 hl.bind(mainMod .. " + P",         hl.dsp.exec_cmd("$HOME/Nuketown/rustystore/rustystore.sh"))
 hl.bind(mainMod .. " + F",         hl.dsp.window.fullscreen({ mode = "maximized" }))
 hl.bind(mainMod .. " + SHIFT + F", hl.dsp.window.fullscreen({ mode = "fullscreen" }))

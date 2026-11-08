@@ -31,12 +31,16 @@ PanelWindow {
   // ----------------------------------------------------------------- window
   anchors.top: true
   implicitWidth: 600
-  implicitHeight: 200
+  // Tall enough for the biggest card; only the island itself takes input.
+  implicitHeight: 480
   exclusionMode: ExclusionMode.Ignore
   color: "transparent"
 
   WlrLayershell.namespace: "quickshell:island"
   WlrLayershell.layer: WlrLayer.Top
+  // Keyboard only while the search box is open.
+  WlrLayershell.keyboardFocus: mode === "search" ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+  focusable: mode === "search"
 
   // Bound field by field: a Region given just `item` didn't follow the island
   // as it resized, which left it unclickable.
@@ -63,8 +67,182 @@ PanelWindow {
   readonly property int morphMs: 620
 
   // ------------------------------------------------------------------ state
-  // Which big card is open, if any: "player", "today" or "inbox".
+  // Which big card is open, if any: "player", "today", "inbox" or "search".
   property string view: ""
+
+  // Cover colour when the track has one, otherwise the theme's accent.
+  property color tint: Media.hasCoverTint ? Media.coverTint : hot
+  Behavior on tint {
+    ColorAnimation {
+      duration: 700
+    }
+  }
+
+  // True once the island has finished morphing into the current mode. Typing
+  // in the search resizes the island on every key; those need to be quick, not
+  // a full spring each time.
+  property bool settled: false
+  Timer {
+    id: settleTimer
+    interval: root.morphMs + 40
+    onTriggered: root.settled = true
+  }
+
+  // ----------------------------------------------------------------- search
+  property string query: ""
+  property int selected: 0
+  readonly property var results: view === "search" ? Spotlight.search(query) : []
+  onResultsChanged: selected = 0
+
+  function openSearch() {
+    Moments.dismiss();
+    root.query = "";
+    root.lastPointer = Qt.point(-1, -1);
+    searchField.text = "";
+    root.view = "search";
+    focusRetry.attempts = 0;
+    focusRetry.restart();
+  }
+
+  property point lastPointer: Qt.point(-1, -1)
+
+  function pointerMoved(x, y) {
+    const first = root.lastPointer.x < 0;
+    const moved = x !== root.lastPointer.x || y !== root.lastPointer.y;
+    root.lastPointer = Qt.point(x, y);
+    return !first && moved;
+  }
+
+  function runSelected() {
+    const item = root.results[root.selected];
+    if (!item)
+      return;
+    root.view = "";
+    Spotlight.run(item);
+  }
+
+  // The surface only gets the keyboard once mapped with focus; keep asking.
+  Timer {
+    id: focusRetry
+    property int attempts: 0
+    interval: 40
+    repeat: true
+    onTriggered: {
+      if (root.view !== "search" || searchField.activeFocus || attempts > 25) {
+        stop();
+        return;
+      }
+      attempts++;
+      searchField.forceActiveFocus();
+    }
+  }
+
+  Connections {
+    target: Spotlight
+    function onToggleRequested(screenName) {
+      if (screenName !== root.screenName())
+        return;
+      if (root.view === "search")
+        root.view = "";
+      else
+        root.openSearch();
+    }
+  }
+
+  // --------------------------------------------------------------- gestures
+  property real swipeTotal: 0
+  property real dayTotal: 0
+  property bool swipeLocked: false
+  property int dayOffset: 0
+  property bool volumeShown: false
+  property real nudge: 0
+
+  onViewChanged: {
+    if (view !== "today")
+      dayOffset = 0;
+    if (view !== "inbox")
+      openGroup = "";
+  }
+
+  Timer {
+    id: gestureIdle
+    interval: 280
+    onTriggered: {
+      root.swipeTotal = 0;
+      root.dayTotal = 0;
+      root.swipeLocked = false;
+    }
+  }
+
+  Timer {
+    id: volumeHide
+    interval: 1300
+    onTriggered: root.volumeShown = false
+  }
+
+  // A small shove in the direction of the skip.
+  SequentialAnimation {
+    id: nudgeAnim
+    property real amount: 8
+    NumberAnimation {
+      target: root
+      property: "nudge"
+      to: nudgeAnim.amount
+      duration: 110
+      easing.type: Easing.OutQuad
+    }
+    NumberAnimation {
+      target: root
+      property: "nudge"
+      to: 0
+      duration: 460
+      easing.type: Easing.BezierSpline
+      easing.bezierCurve: root.popCurve
+    }
+  }
+
+  // Up and down is volume, sideways skips, on anything showing music. On the
+  // clock and Today card, up and down walks through the days. Trackpads send
+  // many tiny events and wheels a few big ones, so both add up to a threshold.
+  function scrolled(wheel) {
+    const dx = wheel.angleDelta.x;
+    const dy = wheel.angleDelta.y;
+    gestureIdle.restart();
+
+    const onMusic = root.mode === "player" || root.mode === "music" || (root.mode === "level" && root.musicOn);
+    if (onMusic && Media.active) {
+      if (Math.abs(dx) > Math.abs(dy)) {
+        root.swipeTotal += dx;
+        if (!root.swipeLocked && Math.abs(root.swipeTotal) >= 240) {
+          root.swipeLocked = true;
+          const next = root.swipeTotal < 0;
+          nudgeAnim.amount = next ? -8 : 8;
+          nudgeAnim.restart();
+          if (next && Media.active.canGoNext)
+            Media.active.next();
+          else if (!next && Media.active.canGoPrevious)
+            Media.active.previous();
+        }
+      } else if (Moments.sink && Moments.sink.audio) {
+        const audio = Moments.sink.audio;
+        audio.volume = Math.max(0, Math.min(1, audio.volume + dy / 120 * 0.03));
+        root.volumeShown = true;
+        volumeHide.restart();
+      }
+      return;
+    }
+
+    if (root.mode === "clock" || root.mode === "today") {
+      root.dayTotal += dy;
+      if (Math.abs(root.dayTotal) >= 120) {
+        const step = root.dayTotal > 0 ? -1 : 1;
+        root.dayTotal = 0;
+        if (root.mode === "clock")
+          root.view = "today";
+        root.dayOffset += step;
+      }
+    }
+  }
   // Clicking the island while it's open clears the grab *and* lands as a tap;
   // without this the tap would open it straight back up.
   property real grabClearedAt: 0
@@ -72,7 +250,10 @@ PanelWindow {
   readonly property bool musicOn: Media.hasPlayer && Media.playing
 
   readonly property string mode: {
-    if (moment)
+    if (view === "search")
+      return "search";
+    // A volume change or toggle shouldn't fold away a card you have open.
+    if (moment && !(view !== "" && (moment.kind === "level" || moment.kind === "toast")))
       return moment.kind;
     if (view === "player" && Media.hasPlayer)
       return "player";
@@ -95,9 +276,11 @@ PanelWindow {
 
   // The timer splits off into its own bubble whenever something else holds
   // the island.
-  readonly property bool bubbleShown: Tones.timing && mode !== "timer" && mode !== "player" && mode !== "today" && mode !== "inbox"
+  readonly property bool bubbleShown: Tones.timing && mode !== "timer" && mode !== "player" && mode !== "today" && mode !== "inbox" && mode !== "search"
 
   onModeChanged: {
+    root.settled = false;
+    settleTimer.restart();
     if (mode === "shot")
       shutter.restart();
   }
@@ -120,7 +303,70 @@ PanelWindow {
     }
   }
 
-  readonly property int inboxRows: Math.min(Notifications.count, 4)
+  // ------------------------------------------------------------------ inbox
+  // Notifications stack by app, newest app first. A stack opens to show every
+  // one in it; only one stack is open at a time.
+  property string openGroup: ""
+
+  readonly property var inboxGroups: {
+    const groups = [];
+    for (const n of Notifications.history) {
+      const app = n.appName || "Other";
+      let g = groups.find(x => x.app === app);
+      if (!g) {
+        g = {
+          app: app,
+          items: []
+        };
+        groups.push(g);
+      }
+      g.items.push(n);
+    }
+    return groups;
+  }
+
+  readonly property var inboxItems: {
+    const out = [];
+    for (const g of inboxGroups) {
+      if (g.app === openGroup) {
+        g.items.forEach((n, i) => out.push({
+              n: n,
+              app: g.app,
+              more: 0,
+              collapsible: i === 0 && g.items.length > 1
+            }));
+      } else {
+        out.push({
+          n: g.items[0],
+          app: g.app,
+          more: g.items.length - 1,
+          collapsible: false
+        });
+      }
+    }
+    return out.slice(0, 4);
+  }
+
+  // Lives out here because invoking usually removes the notification, which
+  // destroys the row that was clicked while its handler is still running.
+  function openNotification(n, action) {
+    root.view = "";
+    if (action)
+      action.invoke();
+    if (Notifications.history.includes(n))
+      Notifications.dismiss(n);
+  }
+
+  function noteActions(n) {
+    return Array.from(n.actions).filter(a => a.identifier !== "default");
+  }
+
+  function noteHeight(item) {
+    return 50 + (noteActions(item.n).length > 0 ? 32 : 0) + (item.more > 0 ? 5 : 0);
+  }
+
+  readonly property int inboxHidden: Notifications.count - inboxItems.reduce((sum, i) => sum + 1 + i.more, 0)
+  readonly property real inboxHeight: 12 + 24 + inboxItems.reduce((sum, i) => sum + 8 + noteHeight(i), 0) + (inboxHidden > 0 ? 8 + 16 : 0) + 14
 
   // Progress only needs polling while the player is open.
   Binding {
@@ -150,7 +396,9 @@ PanelWindow {
     case "today":
       return [400, 168];
     case "inbox":
-      return [400, 14 + 24 + 8 + inboxRows * 58 + (Notifications.count > 4 ? 24 : 0) + 10];
+      return [400, inboxHeight];
+    case "search":
+      return [480, 60 + (results.length > 0 ? results.length * 46 + 8 : 0)];
     case "level":
       return [280, compactH];
     case "toast":
@@ -220,17 +468,34 @@ PanelWindow {
   // Clicking anywhere else folds the island back up.
   HyprlandFocusGrab {
     windows: [root]
-    active: root.mode === "player" || root.mode === "today" || root.mode === "inbox"
+    active: root.mode === "player" || root.mode === "today" || root.mode === "inbox" || root.mode === "search"
     onCleared: {
       root.grabClearedAt = Date.now();
       root.view = "";
     }
   }
 
-  // Monday-first days of the current week, for the Today card.
+  // The day the Today card is on: today, unless you've scrolled away.
+  readonly property date shownDay: {
+    const now = Time.now;
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset);
+  }
+
+  readonly property string shownDayLabel: {
+    const base = Qt.formatDateTime(shownDay, "dddd, d MMMM");
+    if (dayOffset === 0)
+      return base;
+    const n = Math.abs(dayOffset);
+    if (n === 1)
+      return base + " · " + (dayOffset > 0 ? "tomorrow" : "yesterday");
+    return base + " · " + (dayOffset > 0 ? "in " + n + " days" : n + " days ago");
+  }
+
+  // Monday-first days of the week the Today card is showing.
   readonly property var week: {
     const now = Time.now;
-    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (now.getDay() + 6) % 7);
+    const shown = shownDay;
+    const monday = new Date(shown.getFullYear(), shown.getMonth(), shown.getDate() - (shown.getDay() + 6) % 7);
     const names = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
     const out = [];
     for (let i = 0; i < 7; i++) {
@@ -238,7 +503,8 @@ PanelWindow {
       out.push({
         name: names[i],
         day: d.getDate(),
-        today: d.getDate() === now.getDate() && d.getMonth() === now.getMonth()
+        today: d.toDateString() === now.toDateString(),
+        picked: root.dayOffset !== 0 && d.toDateString() === shown.toDateString()
       });
     }
     return out;
@@ -316,49 +582,6 @@ PanelWindow {
         }
       }
     ]
-  }
-
-  // Bars that bounce while music plays. Fake, but cheap: four looping
-  // animations rather than a real analyser per screen.
-  component Bars: Row {
-    id: bars
-
-    property int barHeight: 12
-    property int barWidth: 3
-
-    spacing: 2
-    height: barHeight
-
-    Repeater {
-      model: [420, 610, 350, 530, 470]
-
-      delegate: Rectangle {
-        required property int modelData
-        required property int index
-
-        visible: index < (bars.barWidth > 3 ? 5 : 4)
-        anchors.bottom: parent.bottom
-        width: bars.barWidth
-        radius: width / 2
-        color: root.hot
-        height: 3
-
-        SequentialAnimation on height {
-          running: Media.playing
-          loops: Animation.Infinite
-          NumberAnimation {
-            to: bars.barHeight
-            duration: modelData
-            easing.type: Easing.InOutSine
-          }
-          NumberAnimation {
-            to: 3
-            duration: modelData * 0.9
-            easing.type: Easing.InOutSine
-          }
-        }
-      }
-    }
   }
 
   component Art: ClippingRectangle {
@@ -492,7 +715,7 @@ PanelWindow {
     // Only rendered while it can be seen; otherwise it would redraw on every
     // frame of every morph for nothing.
     layer.enabled: glow.visible
-    color: root.mode === "charging" ? root.good : root.hot
+    color: root.mode === "charging" ? root.good : root.mode === "player" ? root.tint : root.hot
   }
 
   MultiEffect {
@@ -504,7 +727,9 @@ PanelWindow {
     blur: 1.0
     blurMax: 32
     autoPaddingEnabled: true
-    opacity: root.mode === "charging" || root.mode === "thinking" ? 0.7 : 0
+    // The player's glow waits for the morph to finish; blurring a resizing
+    // shape every frame is what made this stutter before.
+    opacity: root.mode === "charging" || root.mode === "thinking" ? 0.7 : root.mode === "player" && root.settled && Media.hasCoverTint ? 0.42 : 0
 
     Behavior on opacity {
       NumberAnimation {
@@ -526,6 +751,9 @@ PanelWindow {
     border.color: Qt.rgba(1, 1, 1, 0.07)
     clip: true
     scale: tapArea.pressed ? 0.96 : 1
+    transform: Translate {
+      x: root.nudge
+    }
 
     Behavior on width {
       NumberAnimation {
@@ -536,9 +764,9 @@ PanelWindow {
     }
     Behavior on height {
       NumberAnimation {
-        duration: root.morphMs
+        duration: root.mode === "search" && root.settled ? 200 : root.morphMs
         easing.type: Easing.BezierSpline
-        easing.bezierCurve: root.shapeCurve
+        easing.bezierCurve: root.mode === "search" && root.settled ? [0.2, 0.8, 0.2, 1, 1, 1] : root.shapeCurve
       }
     }
     Behavior on scale {
@@ -555,6 +783,7 @@ PanelWindow {
       acceptedButtons: Qt.LeftButton | Qt.RightButton
       cursorShape: Qt.PointingHandCursor
       onClicked: event => root.tap(event.button)
+      onWheel: wheel => root.scrolled(wheel)
     }
 
     // ------------------------------------------------- notification tail
@@ -711,10 +940,14 @@ PanelWindow {
         font.bold: true
       }
 
-      Bars {
+      Spectrum {
         anchors.right: parent.right
         anchors.rightMargin: 12
         anchors.verticalCenter: parent.verticalCenter
+        bars: 4
+        maxHeight: 14
+        color: root.tint
+        active: Media.playing && root.mode === "music"
       }
     }
 
@@ -892,9 +1125,184 @@ PanelWindow {
       }
     }
 
+    // ------------------------------------------------------------- search
+    Layer {
+      key: "search"
+
+      Ink {
+        id: searchGlyph
+        x: 20
+        y: 12 + (36 - height) / 2
+        text: Icons.search
+        font.pixelSize: Theme.iconSize + 3
+        color: root.tint
+      }
+
+      TextInput {
+        id: searchField
+
+        anchors.left: searchGlyph.right
+        anchors.leftMargin: 13
+        anchors.right: parent.right
+        anchors.rightMargin: 20
+        y: 12 + (36 - height) / 2
+        color: root.ink
+        selectionColor: root.hot
+        selectedTextColor: "#140f08"
+        font.family: Theme.fontFamily
+        font.pixelSize: Theme.fontSize + 4
+        clip: true
+
+        onTextChanged: root.query = text
+
+        Keys.onPressed: event => {
+          const count = root.results.length;
+          const ctrl = event.modifiers & Qt.ControlModifier;
+          if (event.key === Qt.Key_Escape) {
+            root.view = "";
+          } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+            root.runSelected();
+          } else if (count > 0 && (event.key === Qt.Key_Down || event.key === Qt.Key_Tab || (ctrl && event.key === Qt.Key_N))) {
+            root.selected = (root.selected + 1) % count;
+          } else if (count > 0 && (event.key === Qt.Key_Up || event.key === Qt.Key_Backtab || (ctrl && event.key === Qt.Key_P))) {
+            root.selected = (root.selected - 1 + count) % count;
+          } else {
+            return;
+          }
+          event.accepted = true;
+        }
+
+        Ink {
+          anchors.verticalCenter: parent.verticalCenter
+          visible: searchField.text.length === 0
+          text: "Search apps, windows, clipboard, or do a sum"
+          color: root.inkDim
+          font.pixelSize: Theme.fontSize + 2
+        }
+      }
+
+      Item {
+        id: resultList
+        x: 10
+        y: 60
+        width: parent.width - 20
+        height: root.results.length * 46
+
+        // One highlight that glides between rows.
+        Rectangle {
+          visible: root.results.length > 0
+          y: root.selected * 46
+          width: parent.width
+          height: 46
+          radius: 15
+          color: Qt.rgba(1, 1, 1, 0.11)
+
+          Behavior on y {
+            NumberAnimation {
+              duration: 170
+              easing.type: Easing.OutCubic
+            }
+          }
+        }
+
+        Repeater {
+          model: root.results
+
+          delegate: Item {
+            id: resultRow
+
+            required property var modelData
+            required property int index
+
+            y: index * 46
+            width: resultList.width
+            height: 46
+
+            Rectangle {
+              id: resultIconBox
+              anchors.left: parent.left
+              anchors.leftMargin: 9
+              anchors.verticalCenter: parent.verticalCenter
+              width: 30
+              height: 30
+              radius: 9
+              color: resultRow.modelData.icon ? "transparent" : Qt.rgba(1, 1, 1, 0.1)
+
+              IconImage {
+                anchors.fill: parent
+                visible: resultRow.modelData.icon.length > 0
+                source: resultRow.modelData.icon
+                asynchronous: true
+              }
+
+              Ink {
+                anchors.centerIn: parent
+                visible: resultRow.modelData.icon.length === 0
+                text: resultRow.modelData.glyph
+                font.pixelSize: Theme.iconSize + 1
+              }
+            }
+
+            Column {
+              anchors.left: resultIconBox.right
+              anchors.leftMargin: 12
+              anchors.right: resultKind.left
+              anchors.rightMargin: 10
+              anchors.verticalCenter: parent.verticalCenter
+              spacing: 1
+
+              Ink {
+                width: parent.width
+                text: resultRow.modelData.title
+                textFormat: Text.PlainText
+                font.bold: true
+              }
+              Ink {
+                width: parent.width
+                visible: text.length > 0
+                text: resultRow.modelData.sub
+                textFormat: Text.PlainText
+                color: root.inkDim
+                font.pixelSize: Theme.smallSize + 1
+              }
+            }
+
+            Ink {
+              id: resultKind
+              anchors.right: parent.right
+              anchors.rightMargin: 13
+              anchors.verticalCenter: parent.verticalCenter
+              text: resultRow.modelData.label
+              color: root.inkDim
+              font.pixelSize: Theme.smallSize
+            }
+
+            // Follows real movement only: new rows report a position the
+            // moment they appear under a resting pointer, and that must not
+            // steal the selection from the keyboard.
+            MouseArea {
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onPositionChanged: mouse => {
+                const at = mapToItem(null, mouse.x, mouse.y);
+                if (root.pointerMoved(at.x, at.y))
+                  root.selected = resultRow.index;
+              }
+              onClicked: {
+                root.selected = resultRow.index;
+                root.runSelected();
+              }
+            }
+          }
+        }
+      }
+    }
+
     // ------------------------------------------------------------- inbox
-    // The latest notifications, inside the island. Click one to open it (its
-    // default action), × to dismiss, Clear all to empty the lot.
+    // Stacked by app. Click a stack to open it, click a single notification to
+    // open its app; × dismisses (a whole stack, if it's closed); the app's own
+    // buttons sit underneath.
     Layer {
       key: "inbox"
 
@@ -949,135 +1357,243 @@ PanelWindow {
         }
 
         Repeater {
-          model: Notifications.history.slice(0, 4)
+          model: root.inboxItems
 
-          delegate: Rectangle {
+          delegate: Item {
             id: note
 
             required property var modelData
-            readonly property string icon: Notifications.iconFor(modelData)
+            readonly property var n: modelData.n
+            readonly property int more: modelData.more
+            readonly property var actions: root.noteActions(n)
+            readonly property string icon: Notifications.iconFor(n)
 
             width: parent.width
-            height: 50
-            radius: 14
-            color: noteArea.containsMouse ? Qt.rgba(1, 1, 1, 0.11) : Qt.rgba(1, 1, 1, 0.06)
+            height: root.noteHeight(modelData)
 
-            Behavior on color {
-              ColorAnimation {
-                duration: 140
-              }
-            }
-
-            MouseArea {
-              id: noteArea
-              anchors.fill: parent
-              hoverEnabled: true
-              cursorShape: Qt.PointingHandCursor
-              onClicked: {
-                const actions = note.modelData.actions;
-                const main = actions.find(a => a.identifier === "default") ?? actions[0];
-                if (main)
-                  main.invoke();
-                Notifications.dismiss(note.modelData);
-                root.view = "";
-              }
+            // The edge of the next card, peeking out under a closed stack.
+            Rectangle {
+              visible: note.more > 0
+              anchors.bottom: parent.bottom
+              anchors.horizontalCenter: parent.horizontalCenter
+              width: parent.width - 18
+              height: 14
+              radius: 7
+              color: Qt.rgba(1, 1, 1, 0.05)
             }
 
             Rectangle {
-              id: noteIconBox
-              anchors.left: parent.left
-              anchors.leftMargin: 9
-              anchors.verticalCenter: parent.verticalCenter
-              width: 32
-              height: 32
-              radius: 10
-              color: inboxIcon.status === Image.Ready ? "transparent" : root.hot
+              id: noteCard
+              width: parent.width
+              height: parent.height - (note.more > 0 ? 5 : 0)
+              radius: 14
+              color: noteArea.containsMouse ? Qt.rgba(0.17, 0.17, 0.17, 1) : Qt.rgba(0.09, 0.09, 0.09, 1)
 
-              IconImage {
-                id: inboxIcon
-                anchors.fill: parent
-                source: note.icon.length === 0 ? "" : note.icon.startsWith("/") ? "file://" + note.icon : note.icon
-                visible: status === Image.Ready
-              }
-
-              Ink {
-                anchors.centerIn: parent
-                visible: inboxIcon.status !== Image.Ready
-                text: Icons.bell
-                color: "#140f08"
-              }
-            }
-
-            Column {
-              anchors.left: noteIconBox.right
-              anchors.leftMargin: 10
-              anchors.right: dismissBox.left
-              anchors.rightMargin: 6
-              anchors.verticalCenter: parent.verticalCenter
-              spacing: 2
-
-              Item {
-                width: parent.width
-                height: summaryText.implicitHeight
-
-                Ink {
-                  id: summaryText
-                  anchors.left: parent.left
-                  anchors.right: ageText.left
-                  anchors.rightMargin: 6
-                  text: note.modelData.summary || note.modelData.appName
-                  font.bold: true
+              Behavior on color {
+                ColorAnimation {
+                  duration: 140
                 }
-                Ink {
-                  id: ageText
-                  anchors.right: parent.right
-                  text: Notifications.ageText(note.modelData)
-                  color: root.inkDim
-                  font.pixelSize: Theme.smallSize
-                }
-              }
-
-              Ink {
-                width: parent.width
-                text: String(note.modelData.body).replace(/<[^>]*>/g, "").replace(/\s+/g, " ")
-                textFormat: Text.PlainText
-                color: root.inkDim
-                font.pixelSize: Theme.smallSize + 1
-              }
-            }
-
-            Rectangle {
-              id: dismissBox
-              anchors.right: parent.right
-              anchors.rightMargin: 8
-              anchors.verticalCenter: parent.verticalCenter
-              width: 22
-              height: 22
-              radius: 11
-              color: dismissArea.containsMouse ? Qt.rgba(1, 1, 1, 0.18) : "transparent"
-
-              Ink {
-                anchors.centerIn: parent
-                text: Icons.close
-                font.pixelSize: Theme.smallSize + 1
-                color: dismissArea.containsMouse ? root.ink : root.inkDim
               }
 
               MouseArea {
-                id: dismissArea
+                id: noteArea
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: Notifications.dismiss(note.modelData)
+                onClicked: {
+                  if (note.more > 0) {
+                    root.openGroup = note.modelData.app;
+                    return;
+                  }
+                  root.openNotification(note.n, Array.from(note.n.actions).find(a => a.identifier === "default"));
+                }
+              }
+
+              Rectangle {
+                id: noteIconBox
+                x: 9
+                y: 9
+                width: 32
+                height: 32
+                radius: 10
+                color: inboxIcon.status === Image.Ready ? "transparent" : root.hot
+
+                IconImage {
+                  id: inboxIcon
+                  anchors.fill: parent
+                  source: note.icon.length === 0 ? "" : note.icon.startsWith("/") ? "file://" + note.icon : note.icon
+                  visible: status === Image.Ready
+                }
+
+                Ink {
+                  anchors.centerIn: parent
+                  visible: inboxIcon.status !== Image.Ready
+                  text: Icons.bell
+                  color: "#140f08"
+                }
+              }
+
+              Column {
+                anchors.left: noteIconBox.right
+                anchors.leftMargin: 10
+                anchors.right: dismissBox.left
+                anchors.rightMargin: 6
+                y: 8
+                spacing: 2
+
+                Item {
+                  width: parent.width
+                  height: summaryText.implicitHeight
+
+                  Ink {
+                    id: summaryText
+                    anchors.left: parent.left
+                    anchors.right: noteMeta.left
+                    anchors.rightMargin: 6
+                    text: note.n.summary || note.n.appName
+                    textFormat: Text.PlainText
+                    font.bold: true
+                  }
+
+                  Row {
+                    id: noteMeta
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 6
+
+                    // "+2" on a closed stack; a chevron to fold an open one.
+                    Rectangle {
+                      visible: note.more > 0 || note.modelData.collapsible
+                      anchors.verticalCenter: parent.verticalCenter
+                      width: stackLabel.implicitWidth + 12
+                      height: 16
+                      radius: 8
+                      color: Qt.rgba(1, 1, 1, 0.14)
+
+                      Ink {
+                        id: stackLabel
+                        anchors.centerIn: parent
+                        text: note.more > 0 ? "+" + note.more : Icons.chevronUp
+                        font.pixelSize: Theme.smallSize
+                        font.bold: true
+                      }
+
+                      MouseArea {
+                        anchors.fill: parent
+                        anchors.margins: -3
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.openGroup = note.more > 0 ? note.modelData.app : ""
+                      }
+                    }
+
+                    Ink {
+                      anchors.verticalCenter: parent.verticalCenter
+                      text: Notifications.ageText(note.n)
+                      color: root.inkDim
+                      font.pixelSize: Theme.smallSize
+                    }
+                  }
+                }
+
+                Ink {
+                  width: parent.width
+                  text: String(note.n.body).replace(/<[^>]*>/g, "").replace(/\s+/g, " ")
+                  textFormat: Text.PlainText
+                  color: root.inkDim
+                  font.pixelSize: Theme.smallSize + 1
+                }
+              }
+
+              Rectangle {
+                id: dismissBox
+                anchors.right: parent.right
+                anchors.rightMargin: 8
+                y: 14
+                width: 22
+                height: 22
+                radius: 11
+                color: dismissArea.containsMouse ? Qt.rgba(1, 1, 1, 0.18) : "transparent"
+
+                Ink {
+                  anchors.centerIn: parent
+                  text: Icons.close
+                  font.pixelSize: Theme.smallSize + 1
+                  color: dismissArea.containsMouse ? root.ink : root.inkDim
+                }
+
+                MouseArea {
+                  id: dismissArea
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: {
+                    if (note.more > 0) {
+                      const group = root.inboxGroups.find(g => g.app === note.modelData.app);
+                      for (const item of group.items.slice())
+                        Notifications.dismiss(item);
+                    } else {
+                      Notifications.dismiss(note.n);
+                    }
+                  }
+                }
+              }
+
+              // The app's own buttons ("Reply", "Mark as read"…).
+              Row {
+                visible: note.actions.length > 0
+                x: 51
+                y: 50
+                spacing: 6
+
+                Repeater {
+                  model: note.actions
+
+                  delegate: Rectangle {
+                    id: actionChip
+
+                    required property var modelData
+
+                    width: Math.min(130, actionText.implicitWidth + 20)
+                    height: 24
+                    radius: 12
+                    color: actionArea.containsMouse ? root.hot : Qt.rgba(1, 1, 1, 0.12)
+
+                    Behavior on color {
+                      ColorAnimation {
+                        duration: 140
+                      }
+                    }
+
+                    Ink {
+                      id: actionText
+                      anchors.centerIn: parent
+                      width: Math.min(implicitWidth, 110)
+                      text: actionChip.modelData.text
+                      textFormat: Text.PlainText
+                      font.pixelSize: Theme.smallSize + 1
+                      color: actionArea.containsMouse ? "#140f08" : root.ink
+                    }
+
+                    MouseArea {
+                      id: actionArea
+                      anchors.fill: parent
+                      hoverEnabled: true
+                      cursorShape: Qt.PointingHandCursor
+                      onClicked: {
+                        root.openNotification(note.n, actionChip.modelData);
+                      }
+                    }
+                  }
+                }
               }
             }
           }
         }
 
         Ink {
-          visible: Notifications.count > 4
+          visible: root.inboxHidden > 0
           anchors.horizontalCenter: parent.horizontalCenter
-          text: "+" + (Notifications.count - 4) + " more · open all"
+          text: "+" + root.inboxHidden + " more · open all"
           color: moreArea.containsMouse ? root.hot : root.inkDim
           font.pixelSize: Theme.smallSize + 1
 
@@ -1118,7 +1634,7 @@ PanelWindow {
             font.pixelSize: 30
           }
           Ink {
-            text: Qt.formatDateTime(Time.now, "dddd, d MMMM")
+            text: root.shownDayLabel
             color: root.inkDim
           }
         }
@@ -1176,6 +1692,8 @@ PanelWindow {
                 height: 22
                 radius: 11
                 color: dayCell.modelData.today ? root.hot : "transparent"
+                border.width: dayCell.modelData.picked && !dayCell.modelData.today ? 1.5 : 0
+                border.color: root.hot
 
                 Ink {
                   anchors.centerIn: parent
@@ -1268,6 +1786,51 @@ PanelWindow {
     Layer {
       key: "player"
 
+      // A wash of the cover's colour from the left.
+      Rectangle {
+        anchors.fill: parent
+        radius: shape.radius
+        visible: Media.hasCoverTint
+        gradient: Gradient {
+          orientation: Gradient.Horizontal
+          GradientStop {
+            position: 0
+            color: Qt.rgba(root.tint.r, root.tint.g, root.tint.b, 0.3)
+          }
+          GradientStop {
+            position: 0.75
+            color: Qt.rgba(root.tint.r, root.tint.g, root.tint.b, 0)
+          }
+        }
+      }
+
+      // Appears while you scroll to change the volume here.
+      Row {
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.topMargin: 11
+        anchors.rightMargin: 18
+        spacing: 4
+        opacity: root.volumeShown ? 1 : 0
+
+        Behavior on opacity {
+          NumberAnimation {
+            duration: 180
+          }
+        }
+
+        Ink {
+          text: Icons.volHigh
+          font.pixelSize: Theme.smallSize + 1
+          color: root.tint
+        }
+        Ink {
+          text: Moments.sink && Moments.sink.audio ? Math.round(Moments.sink.audio.volume * 100) : ""
+          font.pixelSize: Theme.smallSize + 1
+          font.bold: true
+        }
+      }
+
       Column {
         anchors.fill: parent
         anchors.margins: 16
@@ -1301,11 +1864,15 @@ PanelWindow {
             }
           }
 
-          Bars {
+          Spectrum {
             anchors.verticalCenter: parent.verticalCenter
-            barHeight: 22
+            bars: 5
             barWidth: 4
-            spacing: 3
+            barSpacing: 3
+            minHeight: 4
+            maxHeight: 24
+            color: root.tint
+            active: Media.playing && root.mode === "player"
           }
         }
 
@@ -1332,7 +1899,7 @@ PanelWindow {
               width: Media.length > 0 ? parent.width * Math.min(1, Media.position / Media.length) : 0
               height: parent.height
               radius: 2
-              color: root.ink
+              color: root.tint
 
               Behavior on width {
                 NumberAnimation {
