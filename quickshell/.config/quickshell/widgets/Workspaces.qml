@@ -1,8 +1,9 @@
 // Workspaces.qml — live Hyprland workspaces, for one screen.
 //
-// Each existing workspace is a small dot; the one this screen is showing
-// stretches into a pill and takes the accent colour. No numbers, as in the
-// bar design. Click to switch, scroll anywhere on the group to cycle.
+// Each existing workspace is a small dot in the colour of its main app; the one
+// this screen is showing stretches into a pill, and the focused one takes the
+// accent colour. A dot pulses when a window there wants attention. No numbers,
+// as in the bar design. Click to switch, scroll anywhere on the group to cycle.
 //
 // A bar lists only the workspaces living on its own monitor. Listing all of
 // them put the same row on every screen, which says nothing about the screen
@@ -72,6 +73,29 @@ Item {
         readonly property bool focused: modelData.focused
         readonly property bool urgent: modelData.urgent
 
+        // The app with the most windows here; the first one found wins a tie.
+        readonly property string mainApp: {
+          const counts = {};
+          let best = "";
+          for (const t of Array.from(Hyprland.toplevels.values)) {
+            if (!t.workspace || t.workspace.id !== modelData.id)
+              continue;
+            const cls = (t.wayland ? t.wayland.appId : "") || (t.lastIpcObject ? t.lastIpcObject.class : "") || "";
+            if (!cls)
+              continue;
+            counts[cls] = (counts[cls] ?? 0) + 1;
+            if (!best || counts[cls] > counts[best])
+              best = cls;
+          }
+          return best;
+        }
+        readonly property string appHex: AppColors.colorFor(mainApp)
+
+        function tinted(alpha) {
+          const c = Qt.color(appHex);
+          return Qt.rgba(c.r, c.g, c.b, alpha);
+        }
+
         implicitWidth: dot.width
         implicitHeight: 18
 
@@ -82,7 +106,23 @@ Item {
           width: slot.active ? 22 : 8
           height: 8
           radius: 4
-          color: slot.focused ? Theme.accent : slot.urgent ? Theme.crit : slot.active ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.55) : mouse.containsMouse ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.55) : Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.28)
+          color: slot.urgent ? Theme.crit : slot.focused ? Theme.accent : slot.appHex ? slot.tinted(mouse.containsMouse ? 1 : slot.active ? 0.95 : 0.75) : slot.active ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.55) : mouse.containsMouse ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.55) : Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.28)
+
+          SequentialAnimation on scale {
+            running: slot.urgent
+            loops: Animation.Infinite
+            alwaysRunToEnd: true
+            NumberAnimation {
+              to: 1.45
+              duration: 520
+              easing.type: Easing.InOutSine
+            }
+            NumberAnimation {
+              to: 1
+              duration: 520
+              easing.type: Easing.InOutSine
+            }
+          }
 
           Behavior on width {
             NumberAnimation {

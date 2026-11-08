@@ -88,6 +88,10 @@ Item {
     anchors.centerIn: parent
     spacing: 11
 
+    Pulse {
+      anchors.verticalCenter: parent.verticalCenter
+    }
+
     Glyph {
       text: root.netGlyph
       color: root.wired || root.activeNetwork ? Theme.accent : Theme.fgDim

@@ -899,6 +899,13 @@ MorphPanel {
       }
 
       Launcher {
+        glyph: Sounds.enabled ? Icons.volHigh : Icons.volMute
+        label: "Sounds"
+        lit: Sounds.enabled
+        onActivated: Sounds.toggle()
+      }
+
+      Launcher {
         glyph: Icons.clipboard
         label: "Clipboard"
         onActivated: root.request("clipboard")

@@ -202,7 +202,15 @@ PanelWindow {
   property bool volumeShown: false
   property real nudge: 0
 
+  property string previousView: ""
+
   onViewChanged: {
+    root.cancelPeek();
+    if (view !== "" && previousView === "")
+      Sounds.play("open");
+    else if (view === "" && previousView !== "")
+      Sounds.play("close");
+    previousView = view;
     if (view !== "today") {
       dayOffset = 0;
       monthOffset = 0;
@@ -225,7 +233,8 @@ PanelWindow {
 
   Timer {
     id: volumeHide
-    interval: 1300
+    // Longer than the volume moment lasts, so a peek never flips to it at the end.
+    interval: 1600
     onTriggered: root.volumeShown = false
   }
 
@@ -250,46 +259,49 @@ PanelWindow {
     }
   }
 
-  // Up and down is volume, sideways skips, on anything showing music. On the
-  // clock and Today card, up and down walks through the days. Trackpads send
-  // many tiny events and wheels a few big ones, so both add up to a threshold.
+  // Up and down is volume on the slim island and the player, whatever it's
+  // showing; on the Today card it walks through the days. Sideways skips on
+  // anything showing music. Trackpads send many tiny events and wheels a few
+  // big ones, so skips and days add up to a threshold.
   function scrolled(wheel) {
     const dx = wheel.angleDelta.x;
     const dy = wheel.angleDelta.y;
     gestureIdle.restart();
+    // Scrolling means you came to do something, not to look: no peek starts now.
+    peekDelay.stop();
 
-    const onMusic = root.mode === "player" || root.mode === "music" || (root.mode === "level" && root.musicOn);
-    if (onMusic && Media.active) {
-      if (Math.abs(dx) > Math.abs(dy)) {
-        root.swipeTotal += dx;
-        if (!root.swipeLocked && Math.abs(root.swipeTotal) >= 240) {
-          root.swipeLocked = true;
-          const next = root.swipeTotal < 0;
-          nudgeAnim.amount = next ? -8 : 8;
-          nudgeAnim.restart();
-          if (next && Media.active.canGoNext)
-            Media.active.next();
-          else if (!next && Media.active.canGoPrevious)
-            Media.active.previous();
-        }
-      } else if (Moments.sink && Moments.sink.audio) {
-        const audio = Moments.sink.audio;
-        audio.volume = Math.max(0, Math.min(1, audio.volume + dy / 120 * 0.03));
-        root.volumeShown = true;
-        volumeHide.restart();
+    if (Math.abs(dx) > Math.abs(dy)) {
+      const onMusic = root.mode === "player" || root.mode === "music" || (root.mode === "level" && root.musicOn);
+      if (!onMusic || !Media.active)
+        return;
+      root.swipeTotal += dx;
+      if (!root.swipeLocked && Math.abs(root.swipeTotal) >= 240) {
+        root.swipeLocked = true;
+        const next = root.swipeTotal < 0;
+        nudgeAnim.amount = next ? -8 : 8;
+        nudgeAnim.restart();
+        if (next && Media.active.canGoNext)
+          Media.active.next();
+        else if (!next && Media.active.canGoPrevious)
+          Media.active.previous();
       }
       return;
     }
 
-    if (root.mode === "clock" || root.mode === "today") {
+    if (root.mode === "today") {
       root.dayTotal += dy;
       if (Math.abs(root.dayTotal) >= 120) {
-        const step = root.dayTotal > 0 ? -1 : 1;
+        root.dayOffset += root.dayTotal > 0 ? -1 : 1;
         root.dayTotal = 0;
-        if (root.mode === "clock")
-          root.view = "today";
-        root.dayOffset += step;
       }
+      return;
+    }
+
+    if ((root.slim || root.mode === "player") && Moments.sink && Moments.sink.audio) {
+      const audio = Moments.sink.audio;
+      audio.volume = Math.max(0, Math.min(1, audio.volume + dy / 120 * 0.03));
+      root.volumeShown = true;
+      volumeHide.restart();
     }
   }
   // Clicking the island while it's open clears the grab *and* lands as a tap;
@@ -307,8 +319,11 @@ PanelWindow {
       return "ask";
     if (view === "alert" && alertShown)
       return "alertCard";
+    // Scrolling the volume while peeking stays in the peek: dropping to the slim
+    // volume bar would shrink the island out from under the pointer.
+    const peekKeepsVolume = moment && moment.kind === "level" && peekWanted && volumeShown && view === "";
     // A volume change or toggle shouldn't fold away a card you have open.
-    if (moment && !(view !== "" && (moment.kind === "level" || moment.kind === "toast" || moment.kind === "answer")))
+    if (moment && !peekKeepsVolume && !(view !== "" && (moment.kind === "level" || moment.kind === "toast" || moment.kind === "answer" || moment.kind === "headphones" || moment.kind === "downloaded")))
       return moment.kind;
     if (view === "player" && Media.hasPlayer)
       return "player";
@@ -330,6 +345,8 @@ PanelWindow {
       return "claude";
     if (musicOn)
       return "music";
+    if (Downloads.downloading && !musicOn)
+      return "download";
     if (Tones.timing)
       return "timer";
     if (Tones.active)
@@ -342,7 +359,89 @@ PanelWindow {
   readonly property bool bubbleShown: Tones.timing && mode !== "timer" && mode !== "player" && mode !== "today" && mode !== "inbox" && mode !== "search" && mode !== "alertCard" && mode !== "ask" && mode !== "shelf"
 
   // Claude busy while something else holds the island: a little spinning bubble.
-  readonly property bool claudeBubbleShown: ClaudeCode.working !== null && mode !== "claude" && mode !== "claudeWaiting" && size[1] === compactH
+  readonly property bool claudeBubbleShown: ClaudeCode.working !== null && mode !== "claude" && mode !== "claudeWaiting" && slim
+
+  // A download while something else holds the island.
+  readonly property bool downloadBubbleShown: Downloads.downloading && mode !== "download" && slim
+
+  // Where the last round bubble ends, for the dots that sit after them.
+  readonly property real bubblesRight: downloadBubbleShown ? downloadSat.x + downloadSat.width : claudeBubbleShown ? claudeSat.x + claudeSat.width : bubbleShown ? bubble.x + bubble.width : shape.x + shape.width
+
+  // ------------------------------------------------------------- hover peek
+  // Rest the pointer on the slim island and it grows a little to say more. The
+  // mode underneath doesn't change, so clicks and gestures still act on it, and
+  // a scroll that begins before the peek does keeps it from starting at all.
+  property bool peekWanted: false
+  readonly property bool peeking: peekWanted && view === "" && canPeek(mode)
+  readonly property string activeKey: peeking ? "peek" : mode
+
+  function canPeek(m) {
+    return ["clock", "music", "timer", "tone", "claude", "download"].includes(m);
+  }
+
+  function cancelPeek() {
+    peekDelay.stop();
+    root.peekWanted = false;
+  }
+
+  Timer {
+    id: peekDelay
+    interval: 450
+    onTriggered: {
+      if (root.view === "" && root.canPeek(root.mode))
+        root.peekWanted = true;
+    }
+  }
+
+  readonly property string peekTitle: {
+    switch (mode) {
+    case "clock":
+      return Qt.formatDateTime(Time.now, "dddd, d MMMM");
+    case "music":
+      return Media.title;
+    case "timer":
+      return "Focus session";
+    case "tone":
+      return Tones.nameFor(Tones.playing);
+    case "claude":
+      return ClaudeCode.working ? ClaudeCode.working.project || "Claude" : "Claude";
+    case "download":
+      return Downloads.label;
+    }
+    return "";
+  }
+
+  readonly property string peekSub: {
+    switch (mode) {
+    case "clock":
+      return Weather.ready ? Weather.tempC + "° · " + Weather.description : Notifications.count > 0 ? Notifications.count + " waiting" : "Nothing waiting";
+    case "music":
+      return Media.artist;
+    case "timer":
+      return "Ends at " + Qt.formatDateTime(new Date(Time.now.getTime() + Tones.timerLeft * 1000), "HH:mm");
+    case "tone":
+      return Tones.playing + " Hz";
+    case "claude":
+      return ClaudeCode.working ? ClaudeCode.working.detail : "";
+    case "download":
+      return Downloads.status;
+    }
+    return "";
+  }
+
+  readonly property string peekRight: {
+    switch (mode) {
+    case "clock":
+      return Time.time;
+    case "timer":
+      return Tones.formatLeft(Tones.timerLeft);
+    case "claude":
+      return ClaudeCode.formatElapsed(root.claudeElapsed);
+    case "download":
+      return Downloads.percent;
+    }
+    return "";
+  }
 
   onModeChanged: {
     root.settled = false;
@@ -447,7 +546,10 @@ PanelWindow {
     when: root.mode === "player"
   }
 
-  readonly property var size: sizeFor(mode)
+  readonly property var size: sizeFor(activeKey)
+
+  // Whether the current mode is one of the slim ones, even while it's peeking.
+  readonly property bool slim: sizeFor(mode)[1] === compactH
 
   function sizeFor(m) {
     switch (m) {
@@ -470,6 +572,14 @@ PanelWindow {
       return [400, compactH];
     case "recording":
       return [230, compactH];
+    case "download":
+      return [290, compactH];
+    case "peek":
+      return [mode === "claude" ? 430 : 350, 56];
+    case "headphones":
+      return [340, 76];
+    case "downloaded":
+      return [420, 64];
     case "drop":
       return [320, 64];
     case "shelf":
@@ -526,6 +636,14 @@ PanelWindow {
     case "alertCard":
       root.view = "";
       return;
+    case "headphones":
+      Moments.dismiss();
+      Moments.popupRequested("bluetooth", root.screenName());
+      return;
+    case "downloaded":
+      Shelf.open(root.moment.path);
+      Moments.dismiss();
+      return;
     case "shot":
       if (root.moment.open || root.moment.image)
         Quickshell.execDetached(["xdg-open", root.moment.open ?? root.moment.image]);
@@ -559,6 +677,7 @@ PanelWindow {
     case "music":
     case "timer":
     case "tone":
+    case "download":
     case "clock":
       if (Date.now() - root.grabClearedAt < 400)
         return;
@@ -645,7 +764,7 @@ PanelWindow {
     id: layer
 
     required property string key
-    readonly property bool shown: root.mode === key
+    readonly property bool shown: root.activeKey === key
 
     x: (parent.width - root.tailNow - width) / 2
     y: 0
@@ -753,6 +872,7 @@ PanelWindow {
 
     property real progress: Tones.timerProgress
     property real thickness: 2.5
+    property color tone: root.hot
 
     preferredRendererType: Shape.CurveRenderer
 
@@ -771,7 +891,7 @@ PanelWindow {
     }
 
     ShapePath {
-      strokeColor: root.hot
+      strokeColor: ring.tone
       strokeWidth: ring.thickness
       fillColor: "transparent"
       capStyle: ShapePath.RoundCap
@@ -783,6 +903,63 @@ PanelWindow {
         startAngle: -90
         sweepAngle: Math.max(1, 360 * (1 - ring.progress))
       }
+    }
+  }
+
+  // A download: fills as it goes, or circles until the size is known.
+  component DownloadRing: Ring {
+    id: dlRing
+
+    property real spin: 0
+    readonly property bool unknown: Downloads.progress < 0
+
+    progress: unknown ? 0.72 : 1 - Downloads.progress
+    rotation: unknown ? spin : 0
+
+    NumberAnimation on spin {
+      running: Downloads.downloading && dlRing.unknown
+      loops: Animation.Infinite
+      from: 0
+      to: 360
+      duration: 1300
+    }
+  }
+
+  // A small rounded button inside a card.
+  component Chip: Rectangle {
+    id: chip
+
+    property string label
+    property bool strong: false
+    signal pressed
+
+    anchors.verticalCenter: parent.verticalCenter
+    width: chipLabel.implicitWidth + 22
+    height: 26
+    radius: 13
+    color: strong ? (chipArea.containsMouse ? Qt.lighter(root.hot, 1.1) : root.hot) : chipArea.containsMouse ? Qt.rgba(1, 1, 1, 0.2) : Qt.rgba(1, 1, 1, 0.11)
+
+    Behavior on color {
+      ColorAnimation {
+        duration: 140
+      }
+    }
+
+    Ink {
+      id: chipLabel
+      anchors.centerIn: parent
+      text: chip.label
+      font.pixelSize: Theme.smallSize + 1
+      font.bold: true
+      color: chip.strong ? "#140f08" : root.ink
+    }
+
+    MouseArea {
+      id: chipArea
+      anchors.fill: parent
+      hoverEnabled: true
+      cursorShape: Qt.PointingHandCursor
+      onClicked: chip.pressed()
     }
   }
 
@@ -798,18 +975,18 @@ PanelWindow {
   // keep-awake dot when they're out.
   // Built from the *animated* widths, so the group re-centres every frame as
   // the island grows, instead of a second animation chasing the first.
-  readonly property real groupWidth: shape.width + (bubble.width > 0.5 ? bubble.width + 6 : 0) + (claudeSat.width > 0.5 ? claudeSat.width + 6 : 0) + dot.scale * 13 + micDot.scale * 14 + camDot.scale * 14
+  readonly property real groupWidth: shape.width + (bubble.width > 0.5 ? bubble.width + 6 : 0) + (claudeSat.width > 0.5 ? claudeSat.width + 6 : 0) + (downloadSat.width > 0.5 ? downloadSat.width + 6 : 0) + dot.scale * 13 + micDot.scale * 14 + camDot.scale * 14
 
   // What takes input: the island and its satellites. Sized from where the
   // island is *going*, so the input region changes once per mode rather than
   // on every animation frame.
-  readonly property real targetGroupWidth: size[0] + (bubbleShown ? compactH + 6 : 0) + (claudeBubbleShown ? compactH + 6 : 0) + tailTarget + (IdleInhibit.enabled ? 13 : 0) + (Privacy.micInUse ? 14 : 0) + (Privacy.camInUse ? 14 : 0)
+  readonly property real targetGroupWidth: size[0] + (bubbleShown ? compactH + 6 : 0) + (claudeBubbleShown ? compactH + 6 : 0) + (downloadBubbleShown ? compactH + 6 : 0) + tailTarget + (IdleInhibit.enabled ? 13 : 0) + (Privacy.micInUse ? 14 : 0) + (Privacy.camInUse ? 14 : 0)
 
   // Unread notifications: the island grows a section on its right with the
   // bell and a count. They never pop open on arrival; the bell just hops.
   // Only on the slim island — the big cards have their own layout.
-  readonly property bool noteShown: Notifications.count > 0 && !Notifications.doNotDisturb && size[1] === compactH
-  readonly property bool shelfShown: Shelf.count > 0 && size[1] === compactH
+  readonly property bool noteShown: Notifications.count > 0 && !Notifications.doNotDisturb && slim
+  readonly property bool shelfShown: Shelf.count > 0 && slim
   readonly property real shelfTailTarget: shelfShown ? shelfRow.implicitWidth + 24 : 0
   readonly property real tailTarget: (noteShown ? noteRow.implicitWidth + 24 : 0) + shelfTailTarget
   property real shelfTailNow: shelfTailTarget
@@ -914,6 +1091,16 @@ PanelWindow {
       }
     }
 
+    HoverHandler {
+      id: islandHover
+      onHoveredChanged: {
+        if (hovered)
+          peekDelay.restart();
+        else
+          root.cancelPeek();
+      }
+    }
+
     MouseArea {
       id: tapArea
       anchors.fill: parent
@@ -931,7 +1118,7 @@ PanelWindow {
       anchors.rightMargin: root.shelfTailNow
       y: 0
       width: root.tailNow - root.shelfTailNow
-      height: root.compactH
+      height: parent.height
       opacity: root.noteShown ? 1 : 0
       visible: width > 0.5
 
@@ -1085,7 +1272,331 @@ PanelWindow {
         bars: 4
         maxHeight: 14
         color: root.tint
-        active: Media.playing && root.mode === "music"
+        active: Media.playing && root.activeKey === "music"
+      }
+    }
+
+    // ---------------------------------------------------------- hover peek
+    Layer {
+      key: "peek"
+
+      Item {
+        id: peekSlot
+        anchors.left: parent.left
+        anchors.leftMargin: 11
+        anchors.verticalCenter: parent.verticalCenter
+        width: 34
+        height: 34
+
+        Art {
+          anchors.fill: parent
+          visible: root.mode === "music"
+          corner: 8
+        }
+
+        Ring {
+          anchors.fill: parent
+          visible: root.mode === "timer"
+          thickness: 3
+        }
+
+        DownloadRing {
+          anchors.fill: parent
+          visible: root.mode === "download"
+          thickness: 3
+        }
+
+        Ink {
+          anchors.centerIn: parent
+          visible: root.mode === "clock" || root.mode === "tone" || root.mode === "claude"
+          text: root.mode === "clock" ? (Weather.ready ? Weather.glyph : Icons.calendar) : root.mode === "tone" ? Icons.sineWave : Icons.sparkle
+          font.pixelSize: Theme.iconSize + 8
+          color: root.hot
+        }
+      }
+
+      Column {
+        anchors.left: peekSlot.right
+        anchors.leftMargin: 11
+        anchors.right: peekEnd.left
+        anchors.rightMargin: 12
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: 2
+
+        Ink {
+          width: parent.width
+          text: root.peekTitle
+          font.bold: true
+          textFormat: Text.PlainText
+        }
+        Item {
+          width: parent.width
+          height: peekSubText.implicitHeight
+
+          readonly property bool showVolume: root.volumeShown && Moments.sink !== null
+
+          Ink {
+            id: peekSubText
+            width: parent.width
+            text: root.peekSub
+            color: root.inkDim
+            font.pixelSize: Theme.smallSize + 1
+            textFormat: Text.PlainText
+            opacity: parent.showVolume ? 0 : 1
+
+            Behavior on opacity {
+              NumberAnimation {
+                duration: 140
+              }
+            }
+          }
+
+          // Takes the artist's place while you scroll the volume.
+          Row {
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 9
+            opacity: parent.showVolume ? 1 : 0
+
+            Behavior on opacity {
+              NumberAnimation {
+                duration: 140
+              }
+            }
+
+            Ink {
+              anchors.verticalCenter: parent.verticalCenter
+              text: Icons.volHigh
+              font.pixelSize: Theme.iconSize - 1
+              color: root.hot
+            }
+
+            Rectangle {
+              id: peekVolumeTrack
+              anchors.verticalCenter: parent.verticalCenter
+              width: 130
+              height: 4
+              radius: 2
+              color: Qt.rgba(1, 1, 1, 0.16)
+
+              Rectangle {
+                height: parent.height
+                radius: 2
+                color: root.hot
+                width: parent.width * Math.min(1, Moments.sink && Moments.sink.audio ? Moments.sink.audio.volume : 0)
+
+                Behavior on width {
+                  NumberAnimation {
+                    duration: 120
+                  }
+                }
+              }
+            }
+
+            Ink {
+              anchors.verticalCenter: parent.verticalCenter
+              text: Math.round((Moments.sink && Moments.sink.audio ? Moments.sink.audio.volume : 0) * 100)
+              color: root.inkDim
+              font.pixelSize: Theme.smallSize + 1
+            }
+          }
+        }
+      }
+
+      Item {
+        id: peekEnd
+        anchors.right: parent.right
+        anchors.rightMargin: 16
+        anchors.verticalCenter: parent.verticalCenter
+        width: root.mode === "music" ? peekSpectrum.width : peekRightText.implicitWidth
+        height: parent.height
+
+        Spectrum {
+          id: peekSpectrum
+          anchors.centerIn: parent
+          visible: root.mode === "music"
+          bars: 4
+          maxHeight: 18
+          color: root.tint
+          active: Media.playing && root.activeKey === "peek" && root.mode === "music"
+        }
+
+        Ink {
+          id: peekRightText
+          anchors.centerIn: parent
+          text: root.peekRight
+          font.bold: true
+          color: root.mode === "clock" ? root.ink : root.mode === "claude" ? root.inkDim : root.hot
+        }
+      }
+    }
+
+    // ------------------------------------------------------------ download
+    Layer {
+      key: "download"
+
+      DownloadRing {
+        id: downloadRing
+        anchors.left: parent.left
+        anchors.leftMargin: 5
+        anchors.verticalCenter: parent.verticalCenter
+        width: 20
+        height: 20
+      }
+
+      Ink {
+        anchors.left: downloadRing.right
+        anchors.leftMargin: 8
+        anchors.right: downloadPercent.left
+        anchors.rightMargin: 8
+        anchors.verticalCenter: parent.verticalCenter
+        text: Downloads.label
+        textFormat: Text.PlainText
+      }
+
+      Ink {
+        id: downloadPercent
+        anchors.right: parent.right
+        anchors.rightMargin: 13
+        anchors.verticalCenter: parent.verticalCenter
+        text: Downloads.percent
+        font.bold: true
+        color: root.hot
+      }
+    }
+
+    // -------------------------------------------------------- download done
+    Layer {
+      key: "downloaded"
+
+      readonly property var m: root.moment && root.moment.kind === "downloaded" ? root.moment : null
+
+      Rectangle {
+        id: doneBadge
+        anchors.left: parent.left
+        anchors.leftMargin: 13
+        anchors.verticalCenter: parent.verticalCenter
+        width: 38
+        height: 38
+        radius: 12
+        color: root.hot
+
+        Ink {
+          anchors.centerIn: parent
+          text: Icons.download
+          font.pixelSize: Theme.iconSize + 5
+          color: "#140f08"
+        }
+      }
+
+      Column {
+        anchors.left: doneBadge.right
+        anchors.leftMargin: 12
+        anchors.right: doneButtons.left
+        anchors.rightMargin: 12
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: 3
+
+        Ink {
+          width: parent.width
+          text: parent.parent.m ? parent.parent.m.name : ""
+          font.bold: true
+          textFormat: Text.PlainText
+          elide: Text.ElideMiddle
+        }
+        Ink {
+          text: "Download finished"
+          color: root.inkDim
+          font.pixelSize: Theme.smallSize + 1
+        }
+      }
+
+      Row {
+        id: doneButtons
+        anchors.right: parent.right
+        anchors.rightMargin: 14
+        anchors.verticalCenter: parent.verticalCenter
+        height: parent.height
+        spacing: 6
+
+        Chip {
+          label: "Open"
+          strong: true
+          onPressed: {
+            Shelf.open(root.moment.path);
+            Moments.dismiss();
+          }
+        }
+        Chip {
+          label: "Add to shelf"
+          onPressed: {
+            Shelf.addPaths([root.moment.path]);
+            Moments.dismiss();
+          }
+        }
+      }
+    }
+
+    // ---------------------------------------------------------- headphones
+    Layer {
+      id: headphonesLayer
+      key: "headphones"
+
+      // Held onto so the card doesn't blank while it shrinks away.
+      property var device: null
+      readonly property var live: root.moment && root.moment.kind === "headphones" ? root.moment.device : null
+      onLiveChanged: if (live)
+        device = live
+
+      readonly property bool hasBattery: device ? device.batteryAvailable === true : false
+      readonly property real battery: hasBattery ? device.battery : 0
+
+      Ring {
+        id: phonesRing
+        anchors.left: parent.left
+        anchors.leftMargin: 14
+        anchors.verticalCenter: parent.verticalCenter
+        width: 52
+        height: 52
+        thickness: 3
+        tone: headphonesLayer.battery < 0.2 ? "#f0808f" : root.good
+        progress: 1 - headphonesLayer.battery
+        scale: headphonesLayer.shown ? 1 : 0.6
+
+        Behavior on scale {
+          NumberAnimation {
+            duration: 700
+            easing.type: Easing.OutBack
+            easing.overshoot: 1.8
+          }
+        }
+
+        Ink {
+          anchors.centerIn: parent
+          text: Icons.forBluetoothDevice(headphonesLayer.device ? headphonesLayer.device.icon : "audio-headset")
+          font.pixelSize: 24
+        }
+      }
+
+      Column {
+        anchors.left: phonesRing.right
+        anchors.leftMargin: 14
+        anchors.right: parent.right
+        anchors.rightMargin: 18
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: 3
+
+        Ink {
+          width: parent.width
+          text: headphonesLayer.device ? (headphonesLayer.device.name || headphonesLayer.device.deviceName || "Headphones") : ""
+          font.bold: true
+          textFormat: Text.PlainText
+        }
+        Ink {
+          width: parent.width
+          text: headphonesLayer.hasBattery ? "Connected · " + Math.round(headphonesLayer.battery * 100) + "%" : "Connected"
+          color: root.inkDim
+          font.pixelSize: Theme.smallSize + 1
+        }
       }
     }
 
@@ -2191,7 +2702,7 @@ PanelWindow {
       anchors.right: parent.right
       y: 0
       width: root.shelfTailNow
-      height: root.compactH
+      height: parent.height
       opacity: root.shelfShown ? 1 : 0
       visible: width > 0.5
 
@@ -3484,6 +3995,48 @@ PanelWindow {
     }
   }
 
+  // A download while something else holds the island.
+  Rectangle {
+    id: downloadSat
+
+    x: (root.claudeBubbleShown ? claudeSat.x + claudeSat.width : root.bubbleShown ? bubble.x + bubble.width : shape.x + shape.width) + (root.downloadBubbleShown ? 6 : 0)
+    y: shape.y
+    width: root.downloadBubbleShown ? root.compactH : 0
+    height: root.compactH
+    radius: height / 2
+    color: "#050403"
+    border.width: 1
+    border.color: Qt.rgba(1, 1, 1, 0.07)
+    clip: true
+    opacity: root.downloadBubbleShown ? 1 : 0
+    visible: opacity > 0.01
+
+    Behavior on width {
+      NumberAnimation {
+        duration: root.morphMs
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: root.shapeCurve
+      }
+    }
+    Behavior on opacity {
+      NumberAnimation {
+        duration: 220
+      }
+    }
+
+    DownloadRing {
+      anchors.centerIn: parent
+      width: 18
+      height: 18
+    }
+
+    MouseArea {
+      anchors.fill: parent
+      cursorShape: Qt.PointingHandCursor
+      onClicked: Downloads.openFolder()
+    }
+  }
+
   // A green dot while something records the mic, orange for the camera. Hover
   // to see which app.
   component PrivacyDot: Rectangle {
@@ -3540,7 +4093,7 @@ PanelWindow {
 
   PrivacyDot {
     id: micDot
-    x: (IdleInhibit.enabled ? dot.x + dot.width : root.claudeBubbleShown ? claudeSat.x + claudeSat.width : root.bubbleShown ? bubble.x + bubble.width : shape.x + shape.width) + 6
+    x: (IdleInhibit.enabled ? dot.x + dot.width : root.bubblesRight) + 6
     color: "#8ad79a"
     on: Privacy.micInUse
     label: "Microphone · " + Privacy.micApps.join(", ")
@@ -3558,7 +4111,7 @@ PanelWindow {
   Rectangle {
     id: dot
 
-    x: (root.claudeBubbleShown ? claudeSat.x + claudeSat.width : root.bubbleShown ? bubble.x + bubble.width : shape.x + shape.width) + 6
+    x: root.bubblesRight + 6
     y: shape.y + (root.compactH - height) / 2
     width: 7
     height: 7

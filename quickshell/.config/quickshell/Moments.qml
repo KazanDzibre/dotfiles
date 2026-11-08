@@ -217,14 +217,66 @@ Singleton {
       root.toast(Icons.batteryRamp[Math.max(0, Math.min(10, Math.round(root.batteryPercent / 10)))], "On battery", root.batteryPercent + "%", false);
   }
 
+  // -------------------------------------------------------------- headphones
+  // The card holds the device itself, because the battery often shows up a
+  // moment after the connection does.
+  readonly property var audioDevices: Bluetooth.devices ? Array.from(Bluetooth.devices.values).filter(d => d.connected && /audio|head/i.test(d.icon ?? "")) : []
+  property var knownAudio: []
+
+  onAudioDevicesChanged: {
+    const fresh = root.audioDevices.filter(d => !root.knownAudio.includes(d.address));
+    root.knownAudio = root.audioDevices.map(d => d.address);
+    if (fresh.length === 0 || !root.ready)
+      return;
+    root.show({
+      kind: "headphones",
+      device: fresh[0]
+    }, 4500);
+    Sounds.play("connect");
+  }
+
+  // --------------------------------------------------------------- downloads
+  Connections {
+    target: Downloads
+
+    function onFinished(name, path) {
+      root.show({
+        kind: "downloaded",
+        name: name,
+        path: path
+      }, 7000);
+      Sounds.play("download");
+    }
+  }
+
+  // ------------------------------------------------------------------ sounds
+  Connections {
+    target: Sounds
+
+    function onEnabledChanged() {
+      root.toast(Sounds.enabled ? Icons.volHigh : Icons.volMute, "Island sounds", Sounds.enabled ? "ON" : "OFF", Sounds.enabled);
+    }
+  }
+
   // ------------------------------------------------------------- Claude Code
+  property string lastWaiting: ""
+
   Connections {
     target: ClaudeCode
+
+    // Each hook replaces the session object, so go by id: one chime per wait.
+    function onWaitingChanged() {
+      const id = ClaudeCode.waiting ? ClaudeCode.waiting.id : "";
+      if (id && id !== root.lastWaiting && root.ready)
+        Sounds.play("attention");
+      root.lastWaiting = id;
+    }
 
     function onFinished(session, failed, seconds) {
       // Quick replies aren't worth interrupting for.
       if (seconds < 15 && !failed)
         return;
+      Sounds.play(failed ? "alert" : "complete");
       root.show({
         kind: "toast",
         glyph: Icons.sparkle,
@@ -280,6 +332,7 @@ Singleton {
   }
 
   function alert(data) {
+    Sounds.play("alert");
     root.show(Object.assign({
       kind: "alert"
     }, data), 6500);
@@ -482,6 +535,7 @@ Singleton {
     target: Tones
 
     function onTimerFinished() {
+      Sounds.play("complete");
       root.toast(Icons.timer, "Focus session done", "DONE", true, 3500);
     }
   }

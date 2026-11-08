@@ -1,9 +1,9 @@
 // SysInfo.qml — CPU, memory and disk usage, plus hardware temperatures.
 //
 // One long-lived shell loop feeds this rather than re-spawning processes on a
-// timer. It prints six numbers every two seconds:
+// timer. It prints seven numbers every two seconds:
 //
-//   cpuTotalJiffies cpuIdleJiffies memTotalKb memAvailKb diskTotalKb diskUsedKb
+//   cpuTotalJiffies cpuIdleJiffies memTotalKb memAvailKb diskTotalKb diskUsedKb netBytes
 //
 // CPU has to be derived from the delta between two samples, which is why the
 // raw jiffy counters come across rather than a percentage.
@@ -27,6 +27,18 @@ Singleton {
   property real diskTotalGb: 0
 
   property bool ready: false
+
+  // Network traffic in bytes per second, and the last stretch of it and CPU
+  // for the status pill's graph. `busy` needs a couple of readings to switch on
+  // and several calm ones to switch off, so the graph doesn't flicker.
+  property real netRate: 0
+  readonly property int historyLength: 18
+  property var cpuHistory: []
+  property var netHistory: []
+  property bool busy: false
+  property int hotRun: 0
+  property int calmRun: 0
+  property var previousNet: null
 
   // Previous CPU sample; usage is meaningless until we have two.
   property var previousCpu: null
@@ -91,7 +103,7 @@ Singleton {
 
   Process {
     running: true
-    command: ["sh", "-c", "while true; do awk '/^cpu /{t=0; for (i=2; i<=NF; i++) t+=$i; printf \"%d %d \", t, $5+$6}' /proc/stat; awk '/^MemTotal:/{t=$2} /^MemAvailable:/{a=$2} END{printf \"%d %d \", t, a}' /proc/meminfo; df -kP / | awk 'NR==2{printf \"%d %d\\n\", $2, $3}'; sleep 2; done"]
+    command: ["sh", "-c", "while true; do awk '/^cpu /{t=0; for (i=2; i<=NF; i++) t+=$i; printf \"%d %d \", t, $5+$6}' /proc/stat; awk '/^MemTotal:/{t=$2} /^MemAvailable:/{a=$2} END{printf \"%d %d \", t, a}' /proc/meminfo; df -kP / | awk 'NR==2{printf \"%d %d \", $2, $3}'; awk 'NR>2{sub(/^ +/, \"\"); split($0, f, /[: ]+/); if (f[1] !~ /^(lo|docker|veth|br-|virbr|tun|wg|tailscale)/) n+=f[2]+f[10]} END{printf \"%.0f\\n\", n}' /proc/net/dev; sleep 2; done"]
 
     stdout: SplitParser {
       splitMarker: "\n"
@@ -101,7 +113,7 @@ Singleton {
 
   function ingest(line) {
     const f = line.trim().split(/\s+/).map(Number);
-    if (f.length < 6 || f.some(isNaN))
+    if (f.length < 7 || f.some(isNaN))
       return;
 
     const cpuTotal = f[0];
@@ -133,6 +145,28 @@ Singleton {
       root.diskUsedGb = diskUsed / 1048576;
       root.diskTotalGb = diskTotal / 1048576;
     }
+
+    const now = Date.now();
+    if (root.previousNet) {
+      const seconds = (now - root.previousNet.at) / 1000;
+      if (seconds > 0)
+        root.netRate = Math.max(0, (f[6] - root.previousNet.bytes) / seconds);
+    }
+    root.previousNet = {
+      bytes: f[6],
+      at: now
+    };
+
+    root.netHistory = root.netHistory.concat([root.netRate]).slice(-root.historyLength);
+    root.cpuHistory = root.cpuHistory.concat([root.cpu]).slice(-root.historyLength);
+
+    const hot = root.cpu >= 0.55 || root.netRate >= 1500000;
+    root.hotRun = hot ? root.hotRun + 1 : 0;
+    root.calmRun = hot ? 0 : root.calmRun + 1;
+    if (root.hotRun >= 2)
+      root.busy = true;
+    else if (root.calmRun >= 5)
+      root.busy = false;
 
     root.ready = true;
   }
