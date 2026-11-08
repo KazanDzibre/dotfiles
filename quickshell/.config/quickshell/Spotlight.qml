@@ -194,6 +194,20 @@ Singleton {
     const apps = Array.from(DesktopEntries.applications.values).filter(e => !e.noDisplay);
     const q = rawQuery.trim().toLowerCase();
 
+    if (q.startsWith("?")) {
+      const question = rawQuery.trim().substring(1).trim();
+      return [{
+        kind: "ask",
+        label: "Ask AI",
+        title: question || "Type your question",
+        sub: AiChat.configured ? AiChat.modelLabel : "Needs QS_AI_API_KEY",
+        icon: "",
+        glyph: Icons.sparkle,
+        question: question,
+        points: 0
+      }];
+    }
+
     if (q.length === 0) {
       return apps.sort((a, b) => (root.usage[root.usageKey(b)] ?? 0) - (root.usage[root.usageKey(a)] ?? 0) || a.name.localeCompare(b.name)).slice(0, root.maxResults).map(e => root.appItem(e, 0));
     }

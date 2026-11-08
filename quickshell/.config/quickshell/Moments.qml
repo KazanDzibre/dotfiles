@@ -217,6 +217,44 @@ Singleton {
       root.toast(Icons.batteryRamp[Math.max(0, Math.min(10, Math.round(root.batteryPercent / 10)))], "On battery", root.batteryPercent + "%", false);
   }
 
+  // ------------------------------------------------------------- Claude Code
+  Connections {
+    target: ClaudeCode
+
+    function onFinished(session, failed, seconds) {
+      // Quick replies aren't worth interrupting for.
+      if (seconds < 15 && !failed)
+        return;
+      root.show({
+        kind: "toast",
+        glyph: Icons.sparkle,
+        label: failed ? "Claude stopped with an error" : "Claude finished",
+        state: ClaudeCode.formatElapsed(seconds),
+        on: !failed,
+        window: session.window
+      }, 5000);
+    }
+  }
+
+  // --------------------------------------------------------------- recording
+  Connections {
+    target: Recorder
+
+    function onFinished(path, thumbnail) {
+      root.show({
+        kind: "shot",
+        image: thumbnail,
+        open: path,
+        title: "Recording saved",
+        sub: "Click to open"
+      }, 5000);
+    }
+
+    function onMissing(tool) {
+      root.toast(Icons.record, "Install " + tool + " first", "MISSING", false, 3500);
+    }
+  }
+
   // ------------------------------------------------------------------ health
   // Only when something is wrong, and only once per incident: an alert re-arms
   // after the value has properly recovered. CPU and memory also have to stay

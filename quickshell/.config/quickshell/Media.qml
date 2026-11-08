@@ -51,7 +51,7 @@ Singleton {
   // bar would sit still for the whole track.
   Timer {
     running: root.trackPosition && root.playing && root.hasPlayer
-    interval: 1000
+    interval: 400
     repeat: true
     onTriggered: {
       if (root.active)

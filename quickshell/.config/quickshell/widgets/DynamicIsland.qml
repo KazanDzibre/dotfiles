@@ -39,8 +39,8 @@ PanelWindow {
   WlrLayershell.namespace: "quickshell:island"
   WlrLayershell.layer: WlrLayer.Top
   // Keyboard only while the search box is open.
-  WlrLayershell.keyboardFocus: mode === "search" ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
-  focusable: mode === "search"
+  WlrLayershell.keyboardFocus: mode === "search" || mode === "ask" ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+  focusable: mode === "search" || mode === "ask"
 
   // Bound field by field: a Region given just `item` didn't follow the island
   // as it resized, which left it unclickable.
@@ -88,6 +88,38 @@ PanelWindow {
     onTriggered: root.settled = true
   }
 
+  // A file being dragged over the island.
+  property bool dragOver: false
+  property bool shelfDragging: false
+
+  // How long the current Claude turn has been going.
+  property int claudeElapsed: 0
+  Timer {
+    running: ClaudeCode.current !== null
+    repeat: true
+    triggeredOnStart: true
+    interval: 1000
+    onTriggered: root.claudeElapsed = ClaudeCode.current ? Math.round((Date.now() - ClaudeCode.current.since) / 1000) : 0
+  }
+
+  // -------------------------------------------------------------------- ask
+  // "?" in the search asks the AI; the answer streams in right here.
+  property string question: ""
+  readonly property string answer: {
+    if (AiChat.error)
+      return AiChat.error;
+    if (AiChat.partial)
+      return AiChat.partial;
+    if (AiChat.streaming)
+      return "";
+    const last = AiChat.messages[AiChat.messages.length - 1];
+    return last && last.role === "assistant" ? last.content : "";
+  }
+
+  // Typing and streaming resize the island constantly; those need to be quick,
+  // not a full spring every time.
+  readonly property bool quickResize: (mode === "search" || mode === "ask") && settled
+
   // ----------------------------------------------------------------- search
   property string query: ""
   property int selected: 0
@@ -100,6 +132,7 @@ PanelWindow {
     root.lastPointer = Qt.point(-1, -1);
     searchField.text = "";
     root.view = "search";
+    focusRetry.target = searchField;
     focusRetry.attempts = 0;
     focusRetry.restart();
   }
@@ -117,6 +150,17 @@ PanelWindow {
     const item = root.results[root.selected];
     if (!item)
       return;
+    if (item.kind === "ask") {
+      if (!item.question || !AiChat.configured)
+        return;
+      root.question = item.question;
+      root.view = "ask";
+      focusRetry.target = askKeys;
+      focusRetry.attempts = 0;
+      focusRetry.restart();
+      AiChat.send(item.question);
+      return;
+    }
     root.view = "";
     Spotlight.run(item);
   }
@@ -125,15 +169,16 @@ PanelWindow {
   Timer {
     id: focusRetry
     property int attempts: 0
+    property Item target: null
     interval: 40
     repeat: true
     onTriggered: {
-      if (root.view !== "search" || searchField.activeFocus || attempts > 25) {
+      if ((root.view !== "search" && root.view !== "ask") || !target || target.activeFocus || attempts > 25) {
         stop();
         return;
       }
       attempts++;
-      searchField.forceActiveFocus();
+      target.forceActiveFocus();
     }
   }
 
@@ -254,23 +299,35 @@ PanelWindow {
   readonly property bool musicOn: Media.hasPlayer && Media.playing
 
   readonly property string mode: {
+    if (dragOver)
+      return "drop";
     if (view === "search")
       return "search";
+    if (view === "ask")
+      return "ask";
     if (view === "alert" && alertShown)
       return "alertCard";
     // A volume change or toggle shouldn't fold away a card you have open.
-    if (moment && !(view !== "" && (moment.kind === "level" || moment.kind === "toast")))
+    if (moment && !(view !== "" && (moment.kind === "level" || moment.kind === "toast" || moment.kind === "answer")))
       return moment.kind;
     if (view === "player" && Media.hasPlayer)
       return "player";
     if (view === "inbox" && Notifications.count > 0)
       return "inbox";
+    if (view === "shelf" && Shelf.count > 0)
+      return "shelf";
     if (view === "today" || view === "player")
       return "today";
+    if (Recorder.recording)
+      return "recording";
+    if (ClaudeCode.waiting)
+      return "claudeWaiting";
     if (AiChat.streaming && !AiChat.open)
       return "thinking";
     if (Updates.installing)
       return "installing";
+    if (ClaudeCode.working && !musicOn)
+      return "claude";
     if (musicOn)
       return "music";
     if (Tones.timing)
@@ -282,12 +339,15 @@ PanelWindow {
 
   // The timer splits off into its own bubble whenever something else holds
   // the island.
-  readonly property bool bubbleShown: Tones.timing && mode !== "timer" && mode !== "player" && mode !== "today" && mode !== "inbox" && mode !== "search" && mode !== "alertCard"
+  readonly property bool bubbleShown: Tones.timing && mode !== "timer" && mode !== "player" && mode !== "today" && mode !== "inbox" && mode !== "search" && mode !== "alertCard" && mode !== "ask" && mode !== "shelf"
+
+  // Claude busy while something else holds the island: a little spinning bubble.
+  readonly property bool claudeBubbleShown: ClaudeCode.working !== null && mode !== "claude" && mode !== "claudeWaiting" && size[1] === compactH
 
   onModeChanged: {
     root.settled = false;
     settleTimer.restart();
-    if (mode === "shot")
+    if (mode === "shot" && !moment.title)
       shutter.restart();
   }
 
@@ -403,7 +463,19 @@ PanelWindow {
     case "installing":
       return [300, compactH];
     case "player":
-      return [400, 154];
+      return [400, 154 + (Lyrics.available ? 76 : 0)];
+    case "claude":
+      return [340, compactH];
+    case "claudeWaiting":
+      return [400, compactH];
+    case "recording":
+      return [230, compactH];
+    case "drop":
+      return [320, 64];
+    case "shelf":
+      return [420, 12 + 24 + Math.min(Shelf.count, 5) * 52 + 14];
+    case "ask":
+      return [480, Math.min(440, 14 + 26 + 10 + Math.max(22, askBody.implicitHeight) + 18)];
     case "today":
       return [420, 362 + (Dashboard.stocks.length > 0 ? 38 : 0)];
     case "inbox":
@@ -455,9 +527,23 @@ PanelWindow {
       root.view = "";
       return;
     case "shot":
-      if (root.moment.image)
-        Quickshell.execDetached(["xdg-open", root.moment.image]);
+      if (root.moment.open || root.moment.image)
+        Quickshell.execDetached(["xdg-open", root.moment.open ?? root.moment.image]);
       Moments.dismiss();
+      return;
+    case "claude":
+    case "claudeWaiting":
+      if (ClaudeCode.current)
+        ClaudeCode.focus(ClaudeCode.current.window);
+      return;
+    case "recording":
+      Recorder.stop();
+      return;
+    case "ask":
+    case "drop":
+      return;
+    case "shelf":
+      root.view = "";
       return;
     case "answer":
     case "thinking":
@@ -485,14 +571,19 @@ PanelWindow {
         root.view = Media.hasPlayer ? "player" : "today";
       return;
     }
+    if (root.moment && root.moment.window)
+      ClaudeCode.focus(root.moment.window);
     Moments.dismiss();
   }
 
   // Clicking anywhere else folds the island back up.
   HyprlandFocusGrab {
     windows: [root]
-    active: root.mode === "player" || root.mode === "today" || root.mode === "inbox" || root.mode === "search" || root.mode === "alertCard"
+    active: root.mode === "player" || root.mode === "today" || root.mode === "inbox" || root.mode === "search" || root.mode === "alertCard" || root.mode === "ask" || root.mode === "shelf"
     onCleared: {
+      // Dragging a file out of the shelf hands the pointer to the drag.
+      if (root.shelfDragging)
+        return;
       root.grabClearedAt = Date.now();
       root.view = "";
     }
@@ -707,18 +798,28 @@ PanelWindow {
   // keep-awake dot when they're out.
   // Built from the *animated* widths, so the group re-centres every frame as
   // the island grows, instead of a second animation chasing the first.
-  readonly property real groupWidth: shape.width + (bubble.width > 0.5 ? bubble.width + 6 : 0) + dot.scale * 13 + micDot.scale * 14 + camDot.scale * 14
+  readonly property real groupWidth: shape.width + (bubble.width > 0.5 ? bubble.width + 6 : 0) + (claudeSat.width > 0.5 ? claudeSat.width + 6 : 0) + dot.scale * 13 + micDot.scale * 14 + camDot.scale * 14
 
   // What takes input: the island and its satellites. Sized from where the
   // island is *going*, so the input region changes once per mode rather than
   // on every animation frame.
-  readonly property real targetGroupWidth: size[0] + (bubbleShown ? compactH + 6 : 0) + tailTarget + (IdleInhibit.enabled ? 13 : 0) + (Privacy.micInUse ? 14 : 0) + (Privacy.camInUse ? 14 : 0)
+  readonly property real targetGroupWidth: size[0] + (bubbleShown ? compactH + 6 : 0) + (claudeBubbleShown ? compactH + 6 : 0) + tailTarget + (IdleInhibit.enabled ? 13 : 0) + (Privacy.micInUse ? 14 : 0) + (Privacy.camInUse ? 14 : 0)
 
   // Unread notifications: the island grows a section on its right with the
   // bell and a count. They never pop open on arrival; the bell just hops.
   // Only on the slim island — the big cards have their own layout.
   readonly property bool noteShown: Notifications.count > 0 && !Notifications.doNotDisturb && size[1] === compactH
-  readonly property real tailTarget: noteShown ? noteRow.implicitWidth + 24 : 0
+  readonly property bool shelfShown: Shelf.count > 0 && size[1] === compactH
+  readonly property real shelfTailTarget: shelfShown ? shelfRow.implicitWidth + 24 : 0
+  readonly property real tailTarget: (noteShown ? noteRow.implicitWidth + 24 : 0) + shelfTailTarget
+  property real shelfTailNow: shelfTailTarget
+  Behavior on shelfTailNow {
+    NumberAnimation {
+      duration: root.morphMs
+      easing.type: Easing.BezierSpline
+      easing.bezierCurve: root.shapeCurve
+    }
+  }
 
   // The same value, animated in step with the island's width, so the main
   // content can stay centred in whatever isn't the tail.
@@ -751,7 +852,7 @@ PanelWindow {
     // Only rendered while it can be seen; otherwise it would redraw on every
     // frame of every morph for nothing.
     layer.enabled: glow.visible
-    color: root.mode === "charging" ? root.good : root.mode === "player" ? root.tint : root.mode === "alert" || root.mode === "alertCard" ? root.alertColor : root.hot
+    color: root.mode === "charging" ? root.good : root.mode === "player" ? root.tint : root.mode === "alert" || root.mode === "alertCard" ? root.alertColor : root.mode === "recording" ? "#f0808f" : root.mode === "claudeWaiting" ? "#f0c674" : root.hot
   }
 
   MultiEffect {
@@ -765,7 +866,7 @@ PanelWindow {
     autoPaddingEnabled: true
     // The player's glow waits for the morph to finish; blurring a resizing
     // shape every frame is what made this stutter before.
-    opacity: root.mode === "charging" || root.mode === "thinking" || (root.mode === "alert" && root.settled) || (root.mode === "alertCard" && root.settled) ? 0.7 : root.mode === "player" && root.settled && Media.hasCoverTint ? 0.42 : 0
+    opacity: root.mode === "charging" || root.mode === "thinking" || (root.mode === "alert" && root.settled) || (root.mode === "alertCard" && root.settled) || (root.mode === "recording" && root.settled) || (root.mode === "claudeWaiting" && root.settled) ? 0.7 : root.mode === "player" && root.settled && Media.hasCoverTint ? 0.42 : 0
 
     Behavior on opacity {
       NumberAnimation {
@@ -800,9 +901,9 @@ PanelWindow {
     }
     Behavior on height {
       NumberAnimation {
-        duration: root.mode === "search" && root.settled ? 200 : root.morphMs
+        duration: root.quickResize ? 200 : root.morphMs
         easing.type: Easing.BezierSpline
-        easing.bezierCurve: root.mode === "search" && root.settled ? [0.2, 0.8, 0.2, 1, 1, 1] : root.shapeCurve
+        easing.bezierCurve: root.quickResize ? [0.2, 0.8, 0.2, 1, 1, 1] : root.shapeCurve
       }
     }
     Behavior on scale {
@@ -827,8 +928,9 @@ PanelWindow {
       id: tail
 
       anchors.right: parent.right
+      anchors.rightMargin: root.shelfTailNow
       y: 0
-      width: root.tailNow
+      width: root.tailNow - root.shelfTailNow
       height: root.compactH
       opacity: root.noteShown ? 1 : 0
       visible: width > 0.5
@@ -1648,6 +1750,508 @@ PanelWindow {
       }
     }
 
+    // ---------------------------------------------------------- claude
+    Layer {
+      key: "claude"
+
+      Ink {
+        id: claudeSpark
+        anchors.left: parent.left
+        anchors.leftMargin: 12
+        anchors.verticalCenter: parent.verticalCenter
+        text: Icons.sparkle
+        font.pixelSize: Theme.iconSize + 1
+        color: root.hot
+
+        SequentialAnimation on opacity {
+          running: root.mode === "claude"
+          loops: Animation.Infinite
+          NumberAnimation {
+            to: 0.4
+            duration: 800
+            easing.type: Easing.InOutSine
+          }
+          NumberAnimation {
+            to: 1
+            duration: 800
+            easing.type: Easing.InOutSine
+          }
+        }
+      }
+
+      Ink {
+        anchors.left: claudeSpark.right
+        anchors.leftMargin: 9
+        anchors.right: claudeTime.left
+        anchors.rightMargin: 10
+        anchors.verticalCenter: parent.verticalCenter
+        text: ClaudeCode.working ? ClaudeCode.working.detail : ""
+        textFormat: Text.PlainText
+      }
+
+      Ink {
+        id: claudeTime
+        anchors.right: parent.right
+        anchors.rightMargin: 13
+        anchors.verticalCenter: parent.verticalCenter
+        text: ClaudeCode.formatElapsed(root.claudeElapsed)
+        color: root.inkDim
+        font.pixelSize: Theme.smallSize + 1
+      }
+    }
+
+    Layer {
+      key: "claudeWaiting"
+
+      Ink {
+        id: waitSpark
+        anchors.left: parent.left
+        anchors.leftMargin: 12
+        anchors.verticalCenter: parent.verticalCenter
+        text: Icons.sparkle
+        font.pixelSize: Theme.iconSize + 1
+        color: "#f0c674"
+      }
+
+      Ink {
+        anchors.left: waitSpark.right
+        anchors.leftMargin: 9
+        anchors.right: waitProject.left
+        anchors.rightMargin: 10
+        anchors.verticalCenter: parent.verticalCenter
+        text: ClaudeCode.waiting ? "Claude · " + ClaudeCode.waiting.detail : ""
+        textFormat: Text.PlainText
+        font.bold: true
+      }
+
+      Ink {
+        id: waitProject
+        anchors.right: parent.right
+        anchors.rightMargin: 13
+        anchors.verticalCenter: parent.verticalCenter
+        width: Math.min(implicitWidth, 110)
+        text: ClaudeCode.waiting ? ClaudeCode.waiting.project : ""
+        color: root.inkDim
+        font.pixelSize: Theme.smallSize + 1
+      }
+    }
+
+    // ------------------------------------------------------- recording
+    Layer {
+      key: "recording"
+
+      Rectangle {
+        id: recDot
+        anchors.left: parent.left
+        anchors.leftMargin: 13
+        anchors.verticalCenter: parent.verticalCenter
+        width: 10
+        height: 10
+        radius: 5
+        color: "#f0808f"
+
+        SequentialAnimation on opacity {
+          running: root.mode === "recording"
+          loops: Animation.Infinite
+          NumberAnimation {
+            to: 0.3
+            duration: 700
+          }
+          NumberAnimation {
+            to: 1
+            duration: 700
+          }
+        }
+      }
+
+      Ink {
+        anchors.left: recDot.right
+        anchors.leftMargin: 10
+        anchors.verticalCenter: parent.verticalCenter
+        text: "Recording"
+        font.bold: true
+      }
+
+      Ink {
+        anchors.right: recStop.left
+        anchors.rightMargin: 10
+        anchors.verticalCenter: parent.verticalCenter
+        text: Recorder.formatTime(Recorder.seconds)
+        color: "#f0808f"
+        font.bold: true
+      }
+
+      Ink {
+        id: recStop
+        anchors.right: parent.right
+        anchors.rightMargin: 12
+        anchors.verticalCenter: parent.verticalCenter
+        text: Icons.stop
+        color: root.inkDim
+      }
+    }
+
+    // ------------------------------------------------------------ drop
+    Layer {
+      key: "drop"
+
+      Row {
+        anchors.centerIn: parent
+        spacing: 12
+
+        Ink {
+          anchors.verticalCenter: parent.verticalCenter
+          text: Icons.shelf
+          font.pixelSize: 22
+          color: root.hot
+        }
+        Ink {
+          anchors.verticalCenter: parent.verticalCenter
+          text: "Drop to keep it on the shelf"
+          font.bold: true
+        }
+      }
+    }
+
+    // ----------------------------------------------------------- shelf
+    Layer {
+      key: "shelf"
+
+      Column {
+        anchors.fill: parent
+        anchors.margins: 14
+        anchors.topMargin: 12
+        spacing: 6
+
+        Item {
+          width: parent.width
+          height: 24
+
+          Ink {
+            anchors.verticalCenter: parent.verticalCenter
+            text: "Shelf"
+            font.bold: true
+          }
+
+          Rectangle {
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            width: shelfClearText.implicitWidth + 18
+            height: 22
+            radius: 11
+            color: shelfClearArea.containsMouse ? Qt.rgba(1, 1, 1, 0.2) : Qt.rgba(1, 1, 1, 0.1)
+
+            Ink {
+              id: shelfClearText
+              anchors.centerIn: parent
+              text: "Clear"
+              font.pixelSize: Theme.smallSize + 1
+            }
+
+            MouseArea {
+              id: shelfClearArea
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: Shelf.clear()
+            }
+          }
+        }
+
+        Repeater {
+          model: Shelf.items.slice(0, 5)
+
+          delegate: Rectangle {
+            id: shelfRowItem
+
+            required property var modelData
+
+            width: parent.width
+            height: 46
+            radius: 13
+            color: shelfArea.containsMouse ? Qt.rgba(1, 1, 1, 0.11) : Qt.rgba(1, 1, 1, 0.06)
+
+            // Drag this row out onto anything that takes files.
+            Item {
+              id: dragToken
+              width: 1
+              height: 1
+              Drag.active: shelfArea.drag.active
+              Drag.dragType: Drag.Automatic
+              Drag.supportedActions: Qt.CopyAction
+              Drag.mimeData: ({
+                  "text/uri-list": "file://" + shelfRowItem.modelData.path + "\r\n"
+                })
+            }
+
+            MouseArea {
+              id: shelfArea
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              drag.target: dragToken
+              onClicked: Shelf.open(shelfRowItem.modelData.path)
+              drag.onActiveChanged: root.shelfDragging = drag.active
+            }
+
+            ClippingRectangle {
+              id: shelfThumb
+              x: 8
+              anchors.verticalCenter: parent.verticalCenter
+              width: 32
+              height: 32
+              radius: 8
+              color: Qt.rgba(1, 1, 1, 0.1)
+
+              Image {
+                anchors.fill: parent
+                visible: shelfRowItem.modelData.image
+                source: shelfRowItem.modelData.image ? "file://" + shelfRowItem.modelData.path : ""
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                sourceSize.width: 96
+              }
+
+              Ink {
+                anchors.centerIn: parent
+                visible: !shelfRowItem.modelData.image
+                text: Icons.appFiles
+                font.pixelSize: Theme.iconSize + 2
+              }
+            }
+
+            Ink {
+              anchors.left: shelfThumb.right
+              anchors.leftMargin: 11
+              anchors.right: shelfCopy.left
+              anchors.rightMargin: 8
+              anchors.verticalCenter: parent.verticalCenter
+              text: shelfRowItem.modelData.name
+              textFormat: Text.PlainText
+            }
+
+            Rectangle {
+              id: shelfCopy
+              anchors.right: shelfRemove.left
+              anchors.rightMargin: 4
+              anchors.verticalCenter: parent.verticalCenter
+              width: 26
+              height: 26
+              radius: 13
+              color: shelfCopyArea.containsMouse ? Qt.rgba(1, 1, 1, 0.18) : "transparent"
+
+              Ink {
+                anchors.centerIn: parent
+                text: Icons.copy
+                font.pixelSize: Theme.iconSize - 1
+              }
+
+              MouseArea {
+                id: shelfCopyArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: Shelf.copy(shelfRowItem.modelData.path)
+              }
+            }
+
+            Rectangle {
+              id: shelfRemove
+              anchors.right: parent.right
+              anchors.rightMargin: 8
+              anchors.verticalCenter: parent.verticalCenter
+              width: 26
+              height: 26
+              radius: 13
+              color: shelfRemoveArea.containsMouse ? Qt.rgba(1, 1, 1, 0.18) : "transparent"
+
+              Ink {
+                anchors.centerIn: parent
+                text: Icons.close
+                font.pixelSize: Theme.smallSize + 1
+                color: root.inkDim
+              }
+
+              MouseArea {
+                id: shelfRemoveArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: Shelf.remove(shelfRowItem.modelData.path)
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // ------------------------------------------------------------- ask
+    Layer {
+      key: "ask"
+
+      Item {
+        id: askKeys
+        anchors.fill: parent
+        Keys.onEscapePressed: root.view = ""
+      }
+
+      Ink {
+        id: askSpark
+        x: 18
+        y: 15
+        text: Icons.sparkle
+        font.pixelSize: Theme.iconSize + 1
+        color: root.tint
+      }
+
+      Ink {
+        anchors.left: askSpark.right
+        anchors.leftMargin: 10
+        anchors.right: askButtons.left
+        anchors.rightMargin: 10
+        y: 15
+        text: root.question
+        textFormat: Text.PlainText
+        font.bold: true
+      }
+
+      Row {
+        id: askButtons
+        anchors.right: parent.right
+        anchors.rightMargin: 14
+        y: 11
+        spacing: 6
+
+        Repeater {
+          model: ["Copy", "Open chat"]
+
+          delegate: Rectangle {
+            id: askBtn
+
+            required property string modelData
+
+            width: askBtnText.implicitWidth + 18
+            height: 24
+            radius: 12
+            color: askBtnArea.containsMouse ? Qt.rgba(1, 1, 1, 0.2) : Qt.rgba(1, 1, 1, 0.1)
+
+            Ink {
+              id: askBtnText
+              anchors.centerIn: parent
+              text: askBtn.modelData
+              font.pixelSize: Theme.smallSize + 1
+            }
+
+            MouseArea {
+              id: askBtnArea
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: {
+                if (askBtn.modelData === "Copy") {
+                  Clipboard.copy(root.answer);
+                } else {
+                  root.view = "";
+                  if (!AiChat.open)
+                    AiChat.toggle();
+                }
+              }
+            }
+          }
+        }
+      }
+
+      Flickable {
+        x: 18
+        y: 48
+        width: parent.width - 36
+        height: parent.height - 48 - 16
+        contentHeight: askBody.implicitHeight
+        contentY: Math.max(0, contentHeight - height)
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+
+        Text {
+          id: askBody
+          width: parent.width
+          wrapMode: Text.Wrap
+          textFormat: Text.MarkdownText
+          text: root.answer.length > 0 ? root.answer : "Thinking…"
+          font.family: Theme.fontFamily
+          font.pixelSize: Theme.fontSize
+          color: AiChat.error ? "#f0808f" : root.answer.length > 0 ? root.ink : root.inkDim
+        }
+      }
+    }
+
+    // ------------------------------------------------------- shelf tail
+    Item {
+      id: shelfTail
+
+      anchors.right: parent.right
+      y: 0
+      width: root.shelfTailNow
+      height: root.compactH
+      opacity: root.shelfShown ? 1 : 0
+      visible: width > 0.5
+
+      Behavior on opacity {
+        NumberAnimation {
+          duration: 260
+        }
+      }
+
+      Rectangle {
+        anchors.left: parent.left
+        anchors.verticalCenter: parent.verticalCenter
+        width: 1
+        height: 14
+        color: Qt.rgba(1, 1, 1, 0.14)
+      }
+
+      Row {
+        id: shelfRow
+        anchors.centerIn: parent
+        anchors.horizontalCenterOffset: 1
+        spacing: 5
+
+        Ink {
+          anchors.verticalCenter: parent.verticalCenter
+          text: Icons.shelf
+          color: root.hot
+        }
+        Ink {
+          anchors.verticalCenter: parent.verticalCenter
+          text: Shelf.count
+          font.bold: true
+        }
+      }
+
+      MouseArea {
+        anchors.fill: parent
+        cursorShape: Qt.PointingHandCursor
+        onClicked: {
+          Moments.dismiss();
+          root.view = "shelf";
+        }
+      }
+    }
+
+    // Files dragged over the island land on the shelf.
+    DropArea {
+      anchors.fill: parent
+      keys: ["text/uri-list"]
+      onEntered: root.dragOver = true
+      onExited: root.dragOver = false
+      onDropped: drop => {
+        root.dragOver = false;
+        if (drop.hasUrls) {
+          Shelf.addUrls(drop.urls);
+          drop.accept(Qt.CopyAction);
+        }
+      }
+    }
+
     // ------------------------------------------------------------- alert
     Layer {
       key: "alert"
@@ -2252,6 +2856,64 @@ PanelWindow {
           }
         }
 
+        // Three lines at a time; the song's position scrolls them.
+        Item {
+          visible: Lyrics.available
+          width: parent.width
+          height: 64
+          clip: true
+
+          Column {
+            width: parent.width
+            y: 21 - Math.max(0, Lyrics.currentIndex) * 22
+
+            Behavior on y {
+              NumberAnimation {
+                duration: 420
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: [0.22, 1, 0.36, 1, 1, 1]
+              }
+            }
+
+            Repeater {
+              model: root.mode === "player" ? Lyrics.lines : []
+
+              delegate: Item {
+                id: lyric
+
+                required property var modelData
+                required property int index
+                readonly property bool current: index === Lyrics.currentIndex
+
+                width: parent.width
+                height: 22
+
+                Ink {
+                  anchors.centerIn: parent
+                  width: parent.width
+                  horizontalAlignment: Text.AlignHCenter
+                  text: lyric.modelData.text
+                  textFormat: Text.PlainText
+                  font.bold: lyric.current
+                  color: lyric.current ? root.tint : root.inkDim
+                  opacity: Math.abs(lyric.index - Lyrics.currentIndex) > 1 ? 0 : 1
+
+                  Behavior on color {
+                    ColorAnimation {
+                      duration: 300
+                    }
+                  }
+                  Behavior on opacity {
+                    NumberAnimation {
+                      duration: 300
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
         Row {
           anchors.horizontalCenter: parent.horizontalCenter
           spacing: 22
@@ -2604,11 +3266,11 @@ PanelWindow {
           spacing: 3
 
           Ink {
-            text: "Screenshot saved"
+            text: root.moment && root.moment.title ? root.moment.title : "Screenshot saved"
             font.bold: true
           }
           Ink {
-            text: "Copied · click to open"
+            text: root.moment && root.moment.sub ? root.moment.sub : "Copied · click to open"
             color: root.inkDim
             font.pixelSize: Theme.smallSize + 1
           }
@@ -2768,6 +3430,60 @@ PanelWindow {
     }
   }
 
+  // Claude busy while music or something else holds the island.
+  Rectangle {
+    id: claudeSat
+
+    x: (root.bubbleShown ? bubble.x + bubble.width : shape.x + shape.width) + (root.claudeBubbleShown ? 6 : 0)
+    y: shape.y
+    width: root.claudeBubbleShown ? root.compactH : 0
+    height: root.compactH
+    radius: height / 2
+    color: "#050403"
+    border.width: 1
+    border.color: Qt.rgba(1, 1, 1, 0.07)
+    clip: true
+    opacity: root.claudeBubbleShown ? 1 : 0
+    visible: opacity > 0.01
+
+    Behavior on width {
+      NumberAnimation {
+        duration: root.morphMs
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: root.shapeCurve
+      }
+    }
+    Behavior on opacity {
+      NumberAnimation {
+        duration: 220
+      }
+    }
+
+    Ink {
+      anchors.centerIn: parent
+      text: Icons.sparkle
+      font.pixelSize: Theme.iconSize + 1
+      color: root.hot
+
+      RotationAnimation on rotation {
+        running: root.claudeBubbleShown
+        loops: Animation.Infinite
+        from: 0
+        to: 360
+        duration: 2400
+      }
+    }
+
+    MouseArea {
+      anchors.fill: parent
+      cursorShape: Qt.PointingHandCursor
+      onClicked: {
+        if (ClaudeCode.working)
+          ClaudeCode.focus(ClaudeCode.working.window);
+      }
+    }
+  }
+
   // A green dot while something records the mic, orange for the camera. Hover
   // to see which app.
   component PrivacyDot: Rectangle {
@@ -2824,7 +3540,7 @@ PanelWindow {
 
   PrivacyDot {
     id: micDot
-    x: (IdleInhibit.enabled ? dot.x + dot.width : root.bubbleShown ? bubble.x + bubble.width : shape.x + shape.width) + 6
+    x: (IdleInhibit.enabled ? dot.x + dot.width : root.claudeBubbleShown ? claudeSat.x + claudeSat.width : root.bubbleShown ? bubble.x + bubble.width : shape.x + shape.width) + 6
     color: "#8ad79a"
     on: Privacy.micInUse
     label: "Microphone · " + Privacy.micApps.join(", ")
@@ -2842,7 +3558,7 @@ PanelWindow {
   Rectangle {
     id: dot
 
-    x: (root.bubbleShown ? bubble.x + bubble.width : shape.x + shape.width) + 6
+    x: (root.claudeBubbleShown ? claudeSat.x + claudeSat.width : root.bubbleShown ? bubble.x + bubble.width : shape.x + shape.width) + 6
     y: shape.y + (root.compactH - height) / 2
     width: 7
     height: 7

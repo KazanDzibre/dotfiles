@@ -886,6 +886,18 @@ MorphPanel {
         }
       }
 
+      // Left click records the screen, right click picks a region.
+      Launcher {
+        glyph: Icons.record
+        label: Recorder.recording ? "Stop" : "Record"
+        lit: Recorder.recording
+        onActivated: button => {
+          root.close();
+          recordDelay.region = button === Qt.RightButton;
+          recordDelay.restart();
+        }
+      }
+
       Launcher {
         glyph: Icons.clipboard
         label: "Clipboard"
@@ -922,6 +934,13 @@ MorphPanel {
         onActivated: root.request("drives")
       }
     }
+  }
+
+  Timer {
+    id: recordDelay
+    property bool region: false
+    interval: 320
+    onTriggered: Recorder.toggle(region)
   }
 
   // Let this card get out of the frame before the capture starts.
