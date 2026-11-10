@@ -170,6 +170,11 @@ Singleton {
   // A small parser rather than eval(): this text comes straight from the
   // keyboard, and only arithmetic should ever run. Returns null if it isn't
   // a sum.
+  //
+  // % reads like a phone calculator: after a number it is a percentage, and
+  // after + or - it is a percentage *of what came before* (200 + 15% = 230,
+  // 200 - 10% = 180, 200 * 15% = 30). Between two operands it is still modulo
+  // (15 % 4 = 3).
   function calculate(input) {
     const src = input.replace(/\s+/g, "");
     if (!/^[0-9.+\-*\/%^()]+$/.test(src) || !/[+\-*\/%^]/.test(src) || !/[0-9]/.test(src))
@@ -202,8 +207,21 @@ Singleton {
       }
       return number();
     }
+    // Whether the character after a % begins another operand, which makes that
+    // % a modulo rather than a percent sign.
+    function startsOperand(c) {
+      return c !== undefined && /[0-9.(]/.test(c);
+    }
+    let pctFlag = false;   // the term just read ended in a percent sign
+    let pctLone = false;   // ...and was the whole product, not part of one
     function power() {
-      const base = atom();
+      let base = atom();
+      pctFlag = false;
+      if (src[i] === "%" && !startsOperand(src[i + 1])) {
+        i++;
+        base = base / 100;
+        pctFlag = true;
+      }
       if (src[i] === "^") {
         i++;
         return Math.pow(base, power());
@@ -212,11 +230,14 @@ Singleton {
     }
     function product() {
       let v = power();
+      let lone = pctFlag;
       while (src[i] === "*" || src[i] === "/" || src[i] === "%") {
         const op = src[i++];
         const r = power();
         v = op === "*" ? v * r : op === "/" ? v / r : v % r;
+        lone = false;
       }
+      pctLone = lone;
       return v;
     }
     function sum() {
@@ -224,7 +245,9 @@ Singleton {
       while (src[i] === "+" || src[i] === "-") {
         const op = src[i++];
         const r = product();
-        v = op === "+" ? v + r : v - r;
+        // "200 + 15%" adds 15% of 200, not 0.15.
+        const amount = pctLone ? v * r : r;
+        v = op === "+" ? v + amount : v - amount;
       }
       return v;
     }
