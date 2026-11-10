@@ -857,10 +857,7 @@ MorphPanel {
         glyph: Icons.dashboard
         label: "Dashboard"
         lit: Dashboard.open
-        onActivated: {
-          root.close();
-          Dashboard.toggle();
-        }
+        onActivated: root.request("dashboard")
       }
 
       Launcher {
