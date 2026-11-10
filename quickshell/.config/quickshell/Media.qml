@@ -16,7 +16,11 @@ Singleton {
   // player goes away so the automatic choice takes over again.
   property string preferredDbusName: ""
 
-  readonly property var players: Mpris.players ? Array.from(Mpris.players.values) : []
+  // A browser leaves an MPRIS entry behind with no track and nothing playing
+  // (Chromium does it once a tab has used the media session). Counting it as a
+  // player made the island offer a blank card, and `players[0]` below could pick
+  // it over a paused Spotify. Playing, or having a track title, is "real".
+  readonly property var players: Mpris.players ? Array.from(Mpris.players.values).filter(p => p.isPlaying || (p.trackTitle ?? "").length > 0) : []
 
   readonly property var active: {
     if (players.length === 0)
