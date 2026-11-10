@@ -83,8 +83,16 @@ rofi neovim ptyxis fish starship
 # nvim/.config/nvim/lua/plugins/lsp.lua through npm.
 nodejs npm
 wl-clipboard cliphist grim slurp brightnessctl playerctl pamixer cava
+
+# pulseaudio-utils is just `pactl`, which Privacy.qml uses for the mic dot;
+# wf-recorder is the screen recorder in the island (Recorder.qml).
+pulseaudio-utils wf-recorder
 network-manager-gnome blueman imagemagick
 mate-polkit
+
+# Fingerprint reader (ELAN 04f3:0c8c): fprintd is what hyprlock talks to,
+# libpam-fprintd adds it to sudo/polkit. Enrol with `fprintd-enroll`.
+fprintd libpam-fprintd
 
 # cmatrix drives the only enabled screensaver effect
 # (screensaver/.config/screensaver/config.toml). The screensaver skips an effect
@@ -369,7 +377,7 @@ phase_check() {
 
     local c
     for c in hyprland quickshell qs rofi nvim stow wal waypaper brave-browser \
-             wl-copy cliphist grim slurp brightnessctl playerctl pamixer ptyxis zed; do
+             wl-copy cliphist grim slurp brightnessctl playerctl pamixer pactl wf-recorder ptyxis zed; do
         printf '    %-14s %s\n' "$c" "$(command -v "$c" || echo '-- missing')"
     done
 
