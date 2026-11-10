@@ -1,9 +1,15 @@
 // Workspaces.qml — live Hyprland workspaces, for one screen.
 //
 // Each existing workspace is a small dot in the colour of its main app; the one
-// this screen is showing stretches into a pill, and the focused one takes the
+// this screen is showing is covered by a pill, and the focused one takes the
 // accent colour. A dot pulses when a window there wants attention. No numbers,
 // as in the bar design. Click to switch, scroll anywhere on the group to cycle.
+//
+// The pill is one rectangle whose two edges are driven by separate springs. The
+// edge in the direction of travel is stiff and arrives first; the trailing edge
+// is soft and catches up, so the pill stretches across the gap and then snaps
+// back with a little overshoot. A fainter ghost lags further behind, which is
+// what smears a quick run of switches. Both spring sets are tunable below.
 //
 // A bar lists only the workspaces living on its own monitor. Listing all of
 // them put the same row on every screen, which says nothing about the screen
@@ -29,6 +35,76 @@ Item {
 
   implicitWidth: row.implicitWidth
   implicitHeight: 18
+
+  // The slot of the workspace this screen is showing. `rep.count` is read so the
+  // binding re-runs once the Repeater has actually built the delegate.
+  readonly property Item activeSlot: {
+    rep.count;
+    const i = wsModel.values.findIndex(w => w.active);
+    return i >= 0 ? rep.itemAt(i) : null;
+  }
+
+  // Where each edge of the pill wants to be, in this item's coordinates.
+  readonly property real targetLeft: activeSlot ? row.x + activeSlot.x : 0
+  readonly property real targetRight: activeSlot ? row.x + activeSlot.x + activeSlot.width : 0
+  property real previousCentre: -1
+  readonly property bool movingRight: (targetLeft + targetRight) / 2 >= previousCentre
+
+  onTargetLeftChanged: Qt.callLater(() => root.previousCentre = (root.targetLeft + root.targetRight) / 2)
+
+  // Stiffness/damping of the two edges. Qt's SpringAnimation: higher spring is
+  // snappier, lower damping rings longer.
+  readonly property real leadSpring: 9.0
+  readonly property real leadDamping: 0.32
+  readonly property real tailSpring: 3.8
+  readonly property real tailDamping: 0.26
+
+  // No spring on the first placement, or the pill would fly in from x = 0 when
+  // the bar starts.
+  property bool ready: false
+  Timer {
+    running: true
+    interval: 600
+    onTriggered: root.ready = true
+  }
+
+  property real edgeLeft: targetLeft
+  property real edgeRight: targetRight
+
+  Behavior on edgeLeft {
+    enabled: root.ready && root.activeSlot !== null
+    SpringAnimation {
+      spring: root.movingRight ? root.tailSpring : root.leadSpring
+      damping: root.movingRight ? root.tailDamping : root.leadDamping
+      epsilon: 0.2
+    }
+  }
+  Behavior on edgeRight {
+    enabled: root.ready && root.activeSlot !== null
+    SpringAnimation {
+      spring: root.movingRight ? root.leadSpring : root.tailSpring
+      damping: root.movingRight ? root.leadDamping : root.tailDamping
+      epsilon: 0.2
+    }
+  }
+
+  // The ghost: the same edges again, but eased slowly instead of sprung.
+  property real ghostLeft: edgeLeft
+  property real ghostRight: edgeRight
+  Behavior on ghostLeft {
+    enabled: root.ready
+    NumberAnimation {
+      duration: 260
+      easing.type: Easing.OutCubic
+    }
+  }
+  Behavior on ghostRight {
+    enabled: root.ready
+    NumberAnimation {
+      duration: 260
+      easing.type: Easing.OutCubic
+    }
+  }
 
   // Switching goes through an explicit Lua dispatch rather than Quickshell's
   // own workspace activate() method. That method still sends `dispatch
@@ -57,6 +133,7 @@ Item {
     spacing: 5
 
     Repeater {
+      id: rep
       model: wsModel
 
       // The hit target is the full bar height, so the 8px dots stay easy to
@@ -96,17 +173,29 @@ Item {
           return Qt.rgba(c.r, c.g, c.b, alpha);
         }
 
-        implicitWidth: dot.width
+        // The active slot is wider so the pill has room; the dot itself stays
+        // a dot and the pill, drawn above, does the stretching.
+        implicitWidth: slot.active ? 22 : 8
         implicitHeight: 18
+
+        Behavior on implicitWidth {
+          NumberAnimation {
+            duration: 140
+            easing.type: Easing.BezierSpline
+            easing.bezierCurve: [0.16, 1, 0.3, 1, 1, 1]
+          }
+        }
+
+        readonly property color tone: slot.urgent ? Theme.crit : slot.focused ? Theme.accent : slot.appHex ? slot.tinted(mouse.containsMouse ? 1 : slot.active ? 0.95 : 0.75) : slot.active ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.55) : mouse.containsMouse ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.55) : Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.28)
 
         Rectangle {
           id: dot
 
-          anchors.verticalCenter: parent.verticalCenter
-          width: slot.active ? 22 : 8
+          anchors.centerIn: parent
+          width: 8
           height: 8
           radius: 4
-          color: slot.urgent ? Theme.crit : slot.focused ? Theme.accent : slot.appHex ? slot.tinted(mouse.containsMouse ? 1 : slot.active ? 0.95 : 0.75) : slot.active ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.55) : mouse.containsMouse ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.55) : Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.28)
+          color: slot.tone
 
           SequentialAnimation on scale {
             running: slot.urgent
@@ -124,13 +213,6 @@ Item {
             }
           }
 
-          Behavior on width {
-            NumberAnimation {
-              duration: 300
-              easing.type: Easing.BezierSpline
-              easing.bezierCurve: [0.16, 1, 0.3, 1, 1, 1]
-            }
-          }
           Behavior on color {
             ColorAnimation {
               duration: 300
@@ -155,6 +237,66 @@ Item {
       }
     }
 
+  }
+
+  Rectangle {
+    id: ghost
+    // Only while the pill is actually moving; at rest it sits exactly under the
+    // pill and anything it adds there reads as a halo.
+    visible: root.activeSlot !== null && (Math.abs(root.ghostLeft - root.edgeLeft) > 1.5 || Math.abs(root.ghostRight - root.edgeRight) > 1.5)
+    y: (root.height - height) / 2
+    x: Math.min(root.ghostLeft, root.ghostRight)
+    width: Math.max(8, Math.abs(root.ghostRight - root.ghostLeft))
+    height: 8
+    radius: 4
+    color: pill.color
+    opacity: 0.25
+  }
+
+  // Flip to bring the glow back.
+  readonly property bool glow: false
+
+  // Glow: two wider, fainter copies of the pill's footprint stacked under it.
+  // Cheaper than blurring a layer on every frame of a spring, and the bar is
+  // always on screen.
+  Rectangle {
+    visible: root.glow && root.activeSlot !== null
+    x: pill.x - 7
+    y: (root.height - height) / 2
+    width: pill.width + 14
+    height: 22
+    radius: 11
+    color: pill.color
+    opacity: 0.05
+  }
+  Rectangle {
+    visible: root.glow && root.activeSlot !== null
+    x: pill.x - 3.5
+    y: (root.height - height) / 2
+    width: pill.width + 7
+    height: 15
+    radius: 7.5
+    color: pill.color
+    opacity: 0.11
+  }
+
+  Rectangle {
+    id: pill
+    visible: root.activeSlot !== null
+    y: (root.height - height) / 2
+    // Edges can cross for a frame while the springs overshoot; sort them so the
+    // width never goes negative, and never shrink below a dot.
+    x: Math.min(root.edgeLeft, root.edgeRight)
+    width: Math.max(8, Math.abs(root.edgeRight - root.edgeLeft))
+    height: 8
+    radius: 4
+    color: root.activeSlot ? root.activeSlot.tone : Theme.accent
+
+    Behavior on color {
+      ColorAnimation {
+        duration: 300
+      }
+    }
   }
 
   WorkspacePreview {

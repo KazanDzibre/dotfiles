@@ -222,18 +222,50 @@ Singleton {
 
   // ------------------------------------------------------------------ reveal
   // WallpaperReveal.qml listens for this and grows the new image outward from
-  // the middle of each screen, on a layer just above hyprpaper. waypaper runs
-  // at the same time underneath it, so its delay and pywal's re-theme happen
-  // out of sight; the reveal layer unmaps once both are finished.
+  // the middle of each screen, on a layer just above hyprpaper. waypaper must
+  // NOT run until that circle covers every screen: hyprpaper swaps instantly, so
+  // starting it alongside the animation shows the new wallpaper behind the
+  // growing circle instead of the old one. Each reveal surface reports in via
+  // revealCovered(); the last one starts waypaper. The fallback timer covers a
+  // surface that never reports (image failed to load, no screens).
   signal revealRequested(string path)
 
-  function apply(path) {
-    if (setter.running || path.length === 0)
+  property string queuedPath: ""
+  property int coveredCount: 0
+
+  function revealCovered() {
+    if (root.queuedPath.length === 0)
       return;
-    root.revealRequested(path);
-    root.applying = true;
+    root.coveredCount += 1;
+    if (root.coveredCount >= Quickshell.screens.length)
+      root.launchQueued();
+  }
+
+  function launchQueued() {
+    coverFallback.stop();
+    const path = root.queuedPath;
+    root.queuedPath = "";
+    root.coveredCount = 0;
+    if (path.length === 0)
+      return;
     setter.command = ["waypaper", "--wallpaper", path];
     setter.running = true;
+  }
+
+  Timer {
+    id: coverFallback
+    interval: 4000
+    onTriggered: root.launchQueued()
+  }
+
+  function apply(path) {
+    if (setter.running || root.queuedPath.length > 0 || path.length === 0)
+      return;
+    root.applying = true;
+    root.queuedPath = path;
+    root.coveredCount = 0;
+    coverFallback.restart();
+    root.revealRequested(path);
   }
 
   function random() {

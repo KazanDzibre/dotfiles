@@ -4,9 +4,10 @@
 // one layer-shell surface per screen on the Bottom layer — above hyprpaper's
 // Background surface, below every window and the bar. When Wallpaper.apply()
 // fires, each draws the new image masked by a circle that grows from the centre
-// until it covers the screen. waypaper is applying the same image underneath at
-// the same time; once both the animation and waypaper are done, the surface
-// unmaps and what's left is the real wallpaper, pixel for pixel the same.
+// until it covers the screen. Only then does Wallpaper start waypaper, so the
+// old wallpaper stays visible around the circle for the whole animation; once
+// waypaper is done too, the surface unmaps and what's left is the real
+// wallpaper, pixel for pixel the same.
 import QtQuick
 import QtQuick.Effects
 import Quickshell
@@ -73,8 +74,10 @@ Scope {
           return;
         if (image.status === Image.Ready)
           grow.start();
-        else if (image.status === Image.Error || image.status === Image.Null)
+        else if (image.status === Image.Error || image.status === Image.Null) {
           win.active = false;
+          Wallpaper.revealCovered();
+        }
       }
 
       function tryFinish() {
@@ -116,6 +119,8 @@ Scope {
 
         onFinished: {
           win.grown = true;
+          // Only now may waypaper swap the real wallpaper underneath.
+          Wallpaper.revealCovered();
           win.tryFinish();
         }
       }
