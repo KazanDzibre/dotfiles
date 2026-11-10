@@ -1,8 +1,7 @@
-// Updates.qml — pending package updates from the official repos and the AUR.
+// Updates.qml — pending package updates: pacman + AUR on Arch, apt on Ubuntu.
 //
-// Uses the same trick as the eww config it replaces: pointing CHECKUPDATES_DB
-// at a throwaway path means the check needs no root and never touches the real
-// pacman sync database.
+// Which one applies is decided in scripts/updates.sh, not here, so this file is
+// the same on both machines. `aur` is simply empty on apt.
 pragma Singleton
 
 import Quickshell
@@ -23,13 +22,24 @@ Singleton {
 
   readonly property int count: repo.length + aur.length
 
-  // Change this to "paru" if you switch helpers.
-  readonly property string aurHelper: "yay"
+  readonly property string script: Quickshell.shellPath("scripts/updates.sh")
+
+  // "pacman", "apt" or "none"; drives the wording in the popup.
+  property string manager: "pacman"
+  readonly property bool hasAur: manager === "pacman"
+
+  Process {
+    running: true
+    command: ["bash", root.script, "manager"]
+    stdout: StdioCollector {
+      onStreamFinished: root.manager = text.trim() || "none"
+    }
+  }
 
   Process {
     id: proc
 
-    command: ["sh", "-c", "CHECKUPDATES_DB=$(mktemp -u) checkupdates 2>/dev/null; echo '@@AUR@@'; " + root.aurHelper + " -Qua 2>/dev/null | grep -v '\\[ignored\\]'"]
+    command: ["bash", root.script, "check"]
 
     stdout: StdioCollector {
       onStreamFinished: root.parse(text)
@@ -93,8 +103,8 @@ Singleton {
   }
 
   // ----------------------------------------------------------- installing
-  // Runs the upgrade in a terminal rather than silently: pacman and the AUR
-  // both ask questions worth reading. The island shows progress meanwhile.
+  // Runs the upgrade in a terminal rather than silently: pacman, the AUR and
+  // apt all ask questions worth reading. The island shows progress meanwhile.
   function install() {
     if (root.installing)
       return;
@@ -112,7 +122,7 @@ Singleton {
 
   Process {
     id: installer
-    command: ["alacritty", "-e", "sh", "-c", root.aurHelper + " -Syu; printf '\\nDone — press enter to close.'; read _"]
+    command: ["bash", root.script, "term"]
   }
 
   // The upgrade runs detached (a reloading shell must never kill pacman), so
@@ -135,7 +145,7 @@ Singleton {
 
   Process {
     id: installCheck
-    command: ["pgrep", "-f", root.aurHelper + " -Syu"]
+    command: ["pgrep", "-f", "updates.sh upgrade"]
 
     onExited: code => {
       if (code === 0) {

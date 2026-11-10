@@ -33,13 +33,6 @@ MorphPanel {
     return out;
   }
 
-  // Runs the upgrade in a terminal rather than silently: pacman and the AUR
-  // both ask questions worth reading.
-  Process {
-    id: launcher
-    command: ["alacritty", "-e", "sh", "-c", Updates.aurHelper + " -Syu; printf '\\nDone — press enter to close.'; read _"]
-  }
-
   // ------------------------------------------------------------------ header
   Item {
     width: parent.width
@@ -64,7 +57,7 @@ MorphPanel {
       Text {
         anchors.verticalCenter: parent.verticalCenter
         visible: Updates.count > 0
-        text: Updates.repo.length + " repo  ·  " + Updates.aur.length + " AUR"
+        text: Updates.hasAur ? Updates.repo.length + " repo  ·  " + Updates.aur.length + " AUR" : Updates.repo.length + " packages"
         font.family: Theme.fontFamily
         font.pixelSize: Theme.smallSize
         color: Theme.fgDim

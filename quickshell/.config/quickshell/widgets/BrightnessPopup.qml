@@ -152,7 +152,7 @@ MorphPanel {
 
       Text {
         width: parent.width
-        text: "sudo pacman -S hyprsunset"
+        text: Updates.manager === "apt" ? "Not packaged for Ubuntu; build it from source (github.com/hyprwm/hyprsunset)." : "sudo pacman -S hyprsunset"
         wrapMode: Text.WordWrap
         font.family: Theme.fontFamily
         font.pixelSize: Theme.smallSize
