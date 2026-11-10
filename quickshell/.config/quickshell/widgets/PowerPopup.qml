@@ -56,7 +56,7 @@ Popup {
       glyph: Icons.logout,
       confirm: true,
       // Mirrors the SUPER+SHIFT+E binding in hyprland.conf.
-      cmd: ["sh", "-c", "command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch 'hl.dsp.exit()'"]
+      cmd: ["sh", "-c", "command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch 'hl.dsp.exit()' >/dev/null 2>&1 || hyprctl dispatch exit"]
     },
     {
       id: "reboot",

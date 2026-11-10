@@ -994,7 +994,7 @@ MorphPanel {
         label: "Log out",
         glyph: Icons.logout,
         confirm: true,
-        cmd: ["sh", "-c", "command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch 'hl.dsp.exit()'"]
+        cmd: ["sh", "-c", "command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch 'hl.dsp.exit()' >/dev/null 2>&1 || hyprctl dispatch exit"]
       },
       {
         id: "reboot",

@@ -112,7 +112,7 @@ Item {
   // dispatch as Lua now, so the old string form is a syntax error and the
   // click silently did nothing. JSON.stringify quotes and escapes the name.
   function focusWorkspace(ws) {
-    Hyprland.dispatch("hl.dsp.focus({ workspace = " + JSON.stringify(ws.name) + " })");
+    HyprCompat.dispatch("workspace " + ws.name, "hl.dsp.focus({ workspace = " + JSON.stringify(ws.name) + " })");
   }
 
   // Hyprland reports workspaces in creation order, so sort by id. Negative ids
@@ -314,7 +314,8 @@ Item {
       if (!root.monitor || list.length === 0) {
         // Lua, not `workspace e-1`: Hyprland 0.57 parses a dispatch as Lua and
         // rejects the old string form outright ("')' expected near '1'").
-        Hyprland.dispatch(event.angleDelta.y > 0 ? 'hl.dsp.focus({ workspace = "e-1" })' : 'hl.dsp.focus({ workspace = "e+1" })');
+        const up = event.angleDelta.y > 0;
+        HyprCompat.dispatch(up ? "workspace e-1" : "workspace e+1", up ? 'hl.dsp.focus({ workspace = "e-1" })' : 'hl.dsp.focus({ workspace = "e+1" })');
         return;
       }
 
