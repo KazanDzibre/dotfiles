@@ -185,6 +185,14 @@ Scope {
           }
         }
 
+        // The screen recording lives here, not in the centre island, so the
+        // island stays free while recording. Gone when not recording.
+        Island {
+          shown: Recorder.recording
+          padding: 10
+
+          RecordButton {}
+        }
       }
     }
   }

@@ -341,8 +341,6 @@ PanelWindow {
       return "shelf";
     if (view === "today" || view === "player")
       return "today";
-    if (Recorder.recording)
-      return "recording";
     if (ClaudeCode.waiting)
       return "claudeWaiting";
     if (AiChat.streaming && !AiChat.open)
@@ -578,8 +576,6 @@ PanelWindow {
       return [340, compactH];
     case "claudeWaiting":
       return [400, compactH];
-    case "recording":
-      return [230, compactH];
     case "download":
       return [290, compactH];
     case "peek":
@@ -613,6 +609,10 @@ PanelWindow {
     case "charging":
       return [250, compactH];
     case "shot":
+      return [330, 64];
+    case "notification":
+    case "answer":
+      return [390, 68];
     case "clip":
       // By the type the layer last showed, so one that is leaving keeps its
       // own size instead of stretching to fit whatever replaces it.
@@ -629,10 +629,6 @@ PanelWindow {
         return [370, 46];
       }
       return [430, 68];
-      return [330, 64];
-    case "notification":
-    case "answer":
-      return [390, 68];
     }
     return [200, compactH];
   }
@@ -644,13 +640,13 @@ PanelWindow {
   function tap(button) {
     if (button === Qt.RightButton) {
       if (Media.hasPlayer && Media.active.canTogglePlaying)
-    case "clip":
-      Moments.dismiss();
-      return;
         Media.active.togglePlaying();
       return;
     }
     switch (mode) {
+    case "clip":
+      Moments.dismiss();
+      return;
     case "notification":
       Moments.dismiss();
       root.view = "inbox";
@@ -680,9 +676,6 @@ PanelWindow {
     case "claudeWaiting":
       if (ClaudeCode.current)
         ClaudeCode.focus(ClaudeCode.current.window);
-      return;
-    case "recording":
-      Recorder.stop();
       return;
     case "ask":
     case "drop":
@@ -990,6 +983,13 @@ PanelWindow {
     }
   }
 
+  component Ink: Text {
+    font.family: Theme.fontFamily
+    font.pixelSize: Theme.fontSize
+    color: root.ink
+    elide: Text.ElideRight
+  }
+
   // A small button on a card: a copy format, "Open", and so on.
   component ClipPill: Rectangle {
     id: pill
@@ -1024,13 +1024,6 @@ PanelWindow {
       cursorShape: Qt.PointingHandCursor
       onClicked: pill.activated()
     }
-  }
-
-  component Ink: Text {
-    font.family: Theme.fontFamily
-    font.pixelSize: Theme.fontSize
-    color: root.ink
-    elide: Text.ElideRight
   }
 
   // ------------------------------------------------------------- the island
@@ -1092,7 +1085,7 @@ PanelWindow {
     // Only rendered while it can be seen; otherwise it would redraw on every
     // frame of every morph for nothing.
     layer.enabled: glow.visible
-    color: root.mode === "charging" ? root.good : root.mode === "player" ? root.tint : root.mode === "alert" || root.mode === "alertCard" ? root.alertColor : root.mode === "recording" ? "#f0808f" : root.mode === "claudeWaiting" ? "#f0c674" : root.hot
+    color: root.mode === "charging" ? root.good : root.mode === "player" ? root.tint : root.mode === "alert" || root.mode === "alertCard" ? root.alertColor : root.mode === "claudeWaiting" ? "#f0c674" : root.hot
   }
 
   MultiEffect {
@@ -1106,7 +1099,7 @@ PanelWindow {
     autoPaddingEnabled: true
     // The player's glow waits for the morph to finish; blurring a resizing
     // shape every frame is what made this stutter before.
-    opacity: root.mode === "charging" || root.mode === "thinking" || (root.mode === "alert" && root.settled) || (root.mode === "alertCard" && root.settled) || (root.mode === "recording" && root.settled) || (root.mode === "claudeWaiting" && root.settled) ? 0.7 : root.mode === "player" && root.settled && Media.hasCoverTint ? 0.42 : 0
+    opacity: root.mode === "charging" || root.mode === "thinking" || (root.mode === "alert" && root.settled) || (root.mode === "alertCard" && root.settled) || (root.mode === "claudeWaiting" && root.settled) ? 0.7 : root.mode === "player" && root.settled && Media.hasCoverTint ? 0.42 : 0
 
     Behavior on opacity {
       NumberAnimation {
@@ -2407,61 +2400,6 @@ PanelWindow {
         text: ClaudeCode.waiting ? ClaudeCode.waiting.project : ""
         color: root.inkDim
         font.pixelSize: Theme.smallSize + 1
-      }
-    }
-
-    // ------------------------------------------------------- recording
-    Layer {
-      key: "recording"
-
-      Rectangle {
-        id: recDot
-        anchors.left: parent.left
-        anchors.leftMargin: 13
-        anchors.verticalCenter: parent.verticalCenter
-        width: 10
-        height: 10
-        radius: 5
-        color: "#f0808f"
-
-        SequentialAnimation on opacity {
-          running: root.mode === "recording"
-          loops: Animation.Infinite
-          NumberAnimation {
-            to: 0.3
-            duration: 700
-          }
-          NumberAnimation {
-            to: 1
-            duration: 700
-          }
-        }
-      }
-
-      Ink {
-        anchors.left: recDot.right
-        anchors.leftMargin: 10
-        anchors.verticalCenter: parent.verticalCenter
-        text: "Recording"
-        font.bold: true
-      }
-
-      Ink {
-        anchors.right: recStop.left
-        anchors.rightMargin: 10
-        anchors.verticalCenter: parent.verticalCenter
-        text: Recorder.formatTime(Recorder.seconds)
-        color: "#f0808f"
-        font.bold: true
-      }
-
-      Ink {
-        id: recStop
-        anchors.right: parent.right
-        anchors.rightMargin: 12
-        anchors.verticalCenter: parent.verticalCenter
-        text: Icons.stop
-        color: root.inkDim
       }
     }
 
@@ -3790,6 +3728,68 @@ PanelWindow {
     // ------------------------------------------------------------ screenshot
     Layer {
       id: shotLayer
+      key: "shot"
+
+      readonly property string image: root.moment && root.moment.kind === "shot" ? String(root.moment.image) : ""
+
+      Row {
+        anchors.left: parent.left
+        anchors.leftMargin: 10
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: 14
+
+        ClippingRectangle {
+          id: thumb
+          anchors.verticalCenter: parent.verticalCenter
+          width: 76
+          height: 46
+          radius: 9
+          color: Qt.rgba(1, 1, 1, 0.1)
+          border.width: 1
+          border.color: Qt.rgba(1, 1, 1, 0.2)
+          rotation: shotLayer.shown ? 0 : -6
+          scale: shotLayer.shown ? 1 : 0.6
+
+          Behavior on rotation {
+            NumberAnimation {
+              duration: 700
+              easing.type: Easing.OutBack
+            }
+          }
+          Behavior on scale {
+            NumberAnimation {
+              duration: 700
+              easing.type: Easing.OutBack
+              easing.overshoot: 1.8
+            }
+          }
+
+          Image {
+            anchors.fill: parent
+            source: shotLayer.image.length === 0 ? "" : shotLayer.image.startsWith("/") ? "file://" + shotLayer.image : shotLayer.image
+            fillMode: Image.PreserveAspectCrop
+            asynchronous: true
+            sourceSize.width: 160
+          }
+        }
+
+        Column {
+          anchors.verticalCenter: parent.verticalCenter
+          spacing: 3
+
+          Ink {
+            text: root.moment && root.moment.title ? root.moment.title : "Screenshot saved"
+            font.bold: true
+          }
+          Ink {
+            text: root.moment && root.moment.sub ? root.moment.sub : "Copied · click to open"
+            color: root.inkDim
+            font.pixelSize: Theme.smallSize + 1
+          }
+        }
+      }
+    }
+
     // ------------------------------------------------------------- clipboard
     // What was just copied. Everything it shows is built in Moments.qml.
     Layer {
@@ -3913,68 +3913,6 @@ PanelWindow {
         text: clipLayer.d && clipLayer.d.note ? clipLayer.d.note : ""
         color: root.inkDim
         font.pixelSize: Theme.smallSize + 1
-      }
-    }
-
-      key: "shot"
-
-      readonly property string image: root.moment && root.moment.kind === "shot" ? String(root.moment.image) : ""
-
-      Row {
-        anchors.left: parent.left
-        anchors.leftMargin: 10
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: 14
-
-        ClippingRectangle {
-          id: thumb
-          anchors.verticalCenter: parent.verticalCenter
-          width: 76
-          height: 46
-          radius: 9
-          color: Qt.rgba(1, 1, 1, 0.1)
-          border.width: 1
-          border.color: Qt.rgba(1, 1, 1, 0.2)
-          rotation: shotLayer.shown ? 0 : -6
-          scale: shotLayer.shown ? 1 : 0.6
-
-          Behavior on rotation {
-            NumberAnimation {
-              duration: 700
-              easing.type: Easing.OutBack
-            }
-          }
-          Behavior on scale {
-            NumberAnimation {
-              duration: 700
-              easing.type: Easing.OutBack
-              easing.overshoot: 1.8
-            }
-          }
-
-          Image {
-            anchors.fill: parent
-            source: shotLayer.image.length === 0 ? "" : shotLayer.image.startsWith("/") ? "file://" + shotLayer.image : shotLayer.image
-            fillMode: Image.PreserveAspectCrop
-            asynchronous: true
-            sourceSize.width: 160
-          }
-        }
-
-        Column {
-          anchors.verticalCenter: parent.verticalCenter
-          spacing: 3
-
-          Ink {
-            text: root.moment && root.moment.title ? root.moment.title : "Screenshot saved"
-            font.bold: true
-          }
-          Ink {
-            text: root.moment && root.moment.sub ? root.moment.sub : "Copied · click to open"
-            color: root.inkDim
-            font.pixelSize: Theme.smallSize + 1
-          }
-        }
       }
     }
 
