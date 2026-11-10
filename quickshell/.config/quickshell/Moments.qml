@@ -509,6 +509,252 @@ Singleton {
     }
   }
 
+  // --------------------------------------------------------------- clipboard
+  // Something was copied: show what it is, in a form that fits. A colour gets
+  // its other formats, a link its clean version, a file its folder, a number
+  // with a unit its conversion. DynamicIsland.qml only draws what is built here
+  // (the "clip" layer renders `pills`), so a new kind of copy is a change to
+  // this file alone.
+  //
+  // Plain text is the common case and the noisiest; turn it off to peek only
+  // for the kinds that have something to offer.
+  readonly property bool clipPeekText: true
+  readonly property int clipMs: 2800
+
+  // For hover: stay while the pointer is on the card, restart the clock after.
+  function hold(on) {
+    if (!root.moment)
+      return;
+    if (on)
+      expire.stop();
+    else
+      expire.restart();
+  }
+
+  function clipShow(data) {
+    root.show(Object.assign({
+      kind: "clip"
+    }, data), root.clipMs);
+  }
+
+  function hex2(n) {
+    return (n < 16 ? "0" : "") + n.toString(16);
+  }
+
+  function toHsl(r, g, b) {
+    r /= 255;
+    g /= 255;
+    b /= 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
+    let h = 0, s = 0;
+    if (mx !== mn) {
+      const d = mx - mn;
+      s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+      h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      h *= 60;
+    }
+    return [Math.round(h), Math.round(s * 100), Math.round(l * 100)];
+  }
+
+  function colorMoment(r, g, b) {
+    const hex = "#" + root.hex2(r) + root.hex2(g) + root.hex2(b);
+    const rgb = "rgb(" + r + ", " + g + ", " + b + ")";
+    const h = root.toHsl(r, g, b);
+    const hsl = "hsl(" + h[0] + ", " + h[1] + "%, " + h[2] + "%)";
+    return {
+      type: "color",
+      swatch: hex,
+      title: hex,
+      side: "colour",
+      pills: [
+        {
+          label: "hex",
+          copy: hex
+        },
+        {
+          label: rgb,
+          copy: rgb
+        },
+        {
+          label: hsl,
+          copy: hsl
+        }
+      ]
+    };
+  }
+
+  // Tracking parameters that only exist to say where you clicked from.
+  readonly property var trackingParam: /^(utm_[a-z]+|fbclid|gclid|dclid|msclkid|mc_[a-z]+|igshid|yclid|_hsenc|_hsmi|ref_src|ref_url|si)$/i
+
+  function linkMoment(url) {
+    const m = url.match(/^(https?):\/\/([^\/?#\s]+)([^?#\s]*)(\?[^#\s]*)?(#\S*)?$/i);
+    if (!m)
+      return null;
+    const domain = m[2].replace(/^www\./i, "");
+    const path = m[3] === "/" ? "" : m[3];
+    const params = m[4] ? m[4].substring(1).split("&") : [];
+    const kept = params.filter(p => !root.trackingParam.test(p.split("=")[0]));
+    const removed = params.length - kept.length;
+    const clean = m[1] + "://" + m[2] + m[3] + (kept.length > 0 ? "?" + kept.join("&") : "") + (m[5] ?? "");
+    const pills = [
+      {
+        label: "Open",
+        open: url,
+        main: true
+      }
+    ];
+    if (removed > 0) {
+      pills.push({
+        label: "Copy clean link",
+        copy: clean
+      });
+    }
+    return {
+      type: "link",
+      badge: domain.charAt(0).toUpperCase(),
+      tone: "accent",
+      title: domain,
+      titleDim: path.length > 28 ? path.substring(0, 27) + "…" : path,
+      side: "link",
+      note: removed > 0 ? removed + " tracking param" + (removed > 1 ? "s" : "") + " removed" : "",
+      pills: pills
+    };
+  }
+
+  function pathMoment(text) {
+    const home = Quickshell.env("HOME");
+    const full = text.startsWith("~/") ? home + text.substring(1) : text;
+    const slash = full.lastIndexOf("/");
+    const name = full.substring(slash + 1) || full;
+    const folder = slash > 0 ? full.substring(0, slash) : "/";
+    return {
+      type: "file",
+      badge: "F",
+      tone: "good",
+      title: name,
+      side: "file",
+      note: folder.replace(home, "~"),
+      pills: [
+        {
+          label: "Open folder",
+          open: folder,
+          main: true
+        }
+      ]
+    };
+  }
+
+  function textMoment(text) {
+    const first = text.trim().split("\n")[0];
+    const words = text.trim().split(/\s+/).length;
+    const lines = text.split("\n").length;
+    return {
+      type: "text",
+      title: first.length > 58 ? first.substring(0, 57) + "…" : first,
+      note: text.length + " characters · " + words + (words === 1 ? " word" : " words") + (lines > 1 ? " · " + lines + " lines" : ""),
+      pills: []
+    };
+  }
+
+  // Each unit's counterpart in the other system, for the conversion shown.
+  readonly property var counterpart: ({
+      km: "mi",
+      mi: "km",
+      kg: "lb",
+      lb: "kg",
+      lbs: "kg",
+      cm: "in",
+      in: "cm",
+      ft: "m",
+      m: "ft",
+      l: "gal",
+      gal: "l",
+      oz: "g",
+      g: "oz",
+      "°c": "°f",
+      "°f": "°c"
+    })
+
+  property string unitText: ""
+  Process {
+    id: unitProc
+    stdout: StdioCollector {
+      onStreamFinished: {
+        try {
+          const a = JSON.parse(text);
+          if (!a.title)
+            return;
+          root.clipShow({
+            type: "unit",
+            title: root.unitText + " " + a.title,
+            side: "conversion",
+            pills: [
+              {
+                label: "Copy " + a.value,
+                copy: a.value
+              }
+            ]
+          });
+        } catch (e) {}
+      }
+    }
+  }
+
+  Connections {
+    target: Clipboard
+
+    function onArrived(text, sensitive) {
+      if (!root.ready)
+        return;
+      if (sensitive) {
+        root.clipShow({
+          type: "secret",
+          badge: "●",
+          tone: "dim",
+          title: "Copied · hidden",
+          side: "from password manager",
+          pills: []
+        });
+        return;
+      }
+      const t = text.trim();
+      const single = t.indexOf("\n") < 0;
+      let m;
+
+      if (single && (m = t.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i))) {
+        let h = m[1];
+        if (h.length === 3)
+          h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+        const n = parseInt(h, 16);
+        root.clipShow(root.colorMoment((n >> 16) & 255, (n >> 8) & 255, n & 255));
+        return;
+      }
+      if (single && (m = t.match(/^rgba?\(\s*(\d{1,3})\s*[, ]\s*(\d{1,3})\s*[, ]\s*(\d{1,3})/i)) && m[1] <= 255 && m[2] <= 255 && m[3] <= 255) {
+        root.clipShow(root.colorMoment(+m[1], +m[2], +m[3]));
+        return;
+      }
+      if (single && /^https?:\/\//i.test(t)) {
+        const link = root.linkMoment(t);
+        if (link) {
+          root.clipShow(link);
+          return;
+        }
+      }
+      if (single && /^(~\/|\/)[^\n]{1,300}$/.test(t) && t.length > 2) {
+        root.clipShow(root.pathMoment(t));
+        return;
+      }
+      if (single && (m = t.match(/^(-?[\d.,]+)\s*(km|mi|kg|lbs?|cm|in|ft|m|l|gal|oz|g|°c|°f)$/i)) && root.counterpart[m[2].toLowerCase()]) {
+        root.unitText = m[1] + " " + m[2];
+        unitProc.command = ["python3", Quickshell.shellPath("scripts/answer.py"), m[1] + " " + m[2] + " in " + root.counterpart[m[2].toLowerCase()]];
+        unitProc.running = true;
+        return;
+      }
+      if (root.clipPeekText && t.length >= 3)
+        root.clipShow(root.textMoment(text));
+    }
+  }
+
   // ------------------------------------------------------------------ drives
   property int driveCount: Drives.drives.length
 

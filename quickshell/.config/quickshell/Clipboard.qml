@@ -27,12 +27,37 @@ Singleton {
 
   Process {
     running: true
-    command: ["wl-paste", "--type", "text", "--watch", "sh", "-c", "cat; printf '\\036'"]
+    // After the text, a group separator when the copying app says this is
+    // sensitive (password managers set this hint), then the record separator.
+    command: ["wl-paste", "--type", "text", "--watch", "sh", "-c", "cat; wl-paste --list-types 2>/dev/null | grep -qx x-kde-passwordManagerHint && printf '\\035'; printf '\\036'"]
 
     stdout: SplitParser {
       splitMarker: "\u001E"
-      onRead: data => root.record(data)
+      onRead: data => root.arrive(data)
     }
+  }
+
+  // Fired for every copy made anywhere except from this panel. `sensitive`
+  // copies carry no text at all: the island is told something secret was
+  // copied and never gets to see it, and it is not kept in the history.
+  signal arrived(string text, bool sensitive)
+
+  property string lastWritten: ""
+  property double lastWrittenAt: 0
+
+  function arrive(data) {
+    const sensitive = data.endsWith("\u001D");
+    const text = sensitive ? "" : data;
+    if (sensitive) {
+      root.arrived("", true);
+      return;
+    }
+    root.record(text);
+    // Our own wl-copy shows up on the watcher too; that was already announced.
+    if (text === root.lastWritten && Date.now() - root.lastWrittenAt < 1500)
+      return;
+    if (text.trim().length > 0)
+      root.arrived(text, false);
   }
 
   function record(text) {
@@ -56,6 +81,8 @@ Singleton {
   signal copied(string text)
 
   function copy(text) {
+    root.lastWritten = text;
+    root.lastWrittenAt = Date.now();
     root.copied(text);
     writer.command = ["sh", "-c", "printf '%s' \"$1\" | wl-copy", "sh", text];
     writer.startDetached();

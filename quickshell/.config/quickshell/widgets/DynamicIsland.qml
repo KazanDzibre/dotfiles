@@ -309,6 +309,13 @@ PanelWindow {
   // without this the tap would open it straight back up.
   property real grabClearedAt: 0
   readonly property var moment: Moments.moment
+
+  // What kind of copy the clipboard layer last showed (see Moments.qml).
+  property string clipType: ""
+  onMomentChanged: {
+    if (moment && moment.kind === "clip")
+      clipType = moment.type;
+  }
   readonly property bool musicOn: Media.hasPlayer && Media.playing
 
   readonly property string mode: {
@@ -606,6 +613,22 @@ PanelWindow {
     case "charging":
       return [250, compactH];
     case "shot":
+    case "clip":
+      // By the type the layer last showed, so one that is leaving keeps its
+      // own size instead of stretching to fit whatever replaces it.
+      switch (clipType) {
+      case "color":
+        return [490, 86];
+      case "link":
+        return [450, 86];
+      case "file":
+        return [410, 86];
+      case "unit":
+        return [390, 78];
+      case "secret":
+        return [370, 46];
+      }
+      return [430, 68];
       return [330, 64];
     case "notification":
     case "answer":
@@ -621,6 +644,9 @@ PanelWindow {
   function tap(button) {
     if (button === Qt.RightButton) {
       if (Media.hasPlayer && Media.active.canTogglePlaying)
+    case "clip":
+      Moments.dismiss();
+      return;
         Media.active.togglePlaying();
       return;
     }
@@ -961,6 +987,42 @@ PanelWindow {
       hoverEnabled: true
       cursorShape: Qt.PointingHandCursor
       onClicked: chip.pressed()
+    }
+  }
+
+  // A small button on a card: a copy format, "Open", and so on.
+  component ClipPill: Rectangle {
+    id: pill
+
+    property string label: ""
+    property bool main: false
+    signal activated
+
+    implicitWidth: pillText.implicitWidth + 22
+    height: 24
+    radius: 12
+    color: main ? root.hot : pillMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.18) : Qt.rgba(1, 1, 1, 0.09)
+
+    Behavior on color {
+      ColorAnimation {
+        duration: 120
+      }
+    }
+
+    Ink {
+      id: pillText
+      anchors.centerIn: parent
+      text: pill.label
+      font.pixelSize: Theme.smallSize + 1
+      color: pill.main ? "#140f08" : root.ink
+    }
+
+    MouseArea {
+      id: pillMouse
+      anchors.fill: parent
+      hoverEnabled: true
+      cursorShape: Qt.PointingHandCursor
+      onClicked: pill.activated()
     }
   }
 
@@ -3728,6 +3790,132 @@ PanelWindow {
     // ------------------------------------------------------------ screenshot
     Layer {
       id: shotLayer
+    // ------------------------------------------------------------- clipboard
+    // What was just copied. Everything it shows is built in Moments.qml.
+    Layer {
+      id: clipLayer
+      key: "clip"
+
+      readonly property var m: root.moment && root.moment.kind === "clip" ? root.moment : null
+      // Kept so the text does not vanish while the card is folding away.
+      property var held: null
+      onMChanged: {
+        if (m)
+          held = m;
+      }
+      readonly property var d: m ?? held
+
+      // The card waits while the pointer is on it.
+      HoverHandler {
+        onHoveredChanged: Moments.hold(hovered)
+      }
+
+      Item {
+        id: clipHead
+        x: 16
+        y: clipLayer.d && clipLayer.d.pills.length === 0 && !clipLayer.d.note ? (parent.height - height) / 2 : 12
+        width: parent.width - 32
+        height: 26
+
+        Rectangle {
+          id: clipMark
+          visible: clipLayer.d ? (clipLayer.d.swatch !== undefined || clipLayer.d.badge !== undefined) : false
+          width: visible ? 26 : 0
+          height: 26
+          radius: 8
+          color: !clipLayer.d ? "transparent" : clipLayer.d.swatch ? clipLayer.d.swatch : clipLayer.d.tone === "good" ? root.good : clipLayer.d.tone === "dim" ? Qt.rgba(1, 1, 1, 0.12) : root.hot
+          border.width: 1
+          border.color: Qt.rgba(1, 1, 1, 0.18)
+
+          Ink {
+            anchors.centerIn: parent
+            visible: clipLayer.d && !clipLayer.d.swatch
+            text: clipLayer.d && clipLayer.d.badge ? clipLayer.d.badge : ""
+            font.bold: true
+            color: clipLayer.d && clipLayer.d.tone === "dim" ? root.inkDim : "#140f08"
+          }
+        }
+
+        Ink {
+          id: clipTitle
+          anchors.left: clipMark.right
+          anchors.leftMargin: clipMark.visible ? 12 : 0
+          anchors.verticalCenter: parent.verticalCenter
+          width: Math.min(implicitWidth, clipHead.width - clipMark.width - (clipMark.visible ? 12 : 0) - clipSide.implicitWidth - 20 - clipDim.implicitWidth)
+          text: clipLayer.d ? clipLayer.d.title : ""
+          textFormat: Text.PlainText
+          font.bold: true
+          font.pixelSize: clipLayer.d && clipLayer.d.type === "unit" ? Theme.fontSize + 5 : Theme.fontSize + 1
+        }
+
+        Ink {
+          id: clipDim
+          anchors.left: clipTitle.right
+          anchors.leftMargin: 5
+          anchors.verticalCenter: parent.verticalCenter
+          visible: text.length > 0
+          text: clipLayer.d && clipLayer.d.titleDim ? clipLayer.d.titleDim : ""
+          textFormat: Text.PlainText
+          color: root.inkDim
+          width: Math.min(implicitWidth, Math.max(0, clipHead.width - clipMark.width - clipTitle.width - clipSide.implicitWidth - 40))
+        }
+
+        Ink {
+          id: clipSide
+          anchors.right: parent.right
+          anchors.verticalCenter: parent.verticalCenter
+          text: clipLayer.d && clipLayer.d.side ? clipLayer.d.side : ""
+          color: root.inkDim
+          font.pixelSize: Theme.smallSize
+        }
+      }
+
+      Row {
+        x: 16
+        y: 12 + 26 + 8
+        spacing: 8
+        visible: clipLayer.d ? clipLayer.d.pills.length > 0 : false
+
+        Repeater {
+          model: clipLayer.d ? clipLayer.d.pills : []
+
+          delegate: ClipPill {
+            required property var modelData
+
+            label: modelData.label
+            main: modelData.main === true
+            onActivated: {
+              if (modelData.copy !== undefined) {
+                Clipboard.copy(modelData.copy);
+              } else if (modelData.open !== undefined) {
+                Quickshell.execDetached(["xdg-open", modelData.open]);
+                Moments.dismiss();
+              }
+            }
+          }
+        }
+
+        Ink {
+          anchors.verticalCenter: parent.verticalCenter
+          visible: clipLayer.d && clipLayer.d.note ? clipLayer.d.note.length > 0 : false
+          text: clipLayer.d && clipLayer.d.note ? clipLayer.d.note : ""
+          color: root.inkDim
+          font.pixelSize: Theme.smallSize + 1
+        }
+      }
+
+      // Text and secret copies have no buttons; the note sits under the title.
+      Ink {
+        x: 16
+        y: 12 + 26 + 6
+        width: parent.width - 32
+        visible: clipLayer.d ? clipLayer.d.pills.length === 0 && !!clipLayer.d.note : false
+        text: clipLayer.d && clipLayer.d.note ? clipLayer.d.note : ""
+        color: root.inkDim
+        font.pixelSize: Theme.smallSize + 1
+      }
+    }
+
       key: "shot"
 
       readonly property string image: root.moment && root.moment.kind === "shot" ? String(root.moment.image) : ""
