@@ -104,6 +104,69 @@ Singleton {
   }
 
   // ------------------------------------------------------------------- sums
+  // ---------------------------------------------------------------- answers
+  // Time zones, unit conversions, dates and "x% of y", from scripts/answer.py.
+  // Asynchronous, so the search shows its usual results straight away and the
+  // answer joins them a few milliseconds later: search() reads `answer`, which
+  // makes the island's results binding re-run when it lands.
+  property var answer: null
+  property string answerFor: ""
+  property string pendingQuery: ""
+  property string runningQuery: ""
+
+  // Only worth spawning a process for text that could be a question.
+  function answerable(q) {
+    return /\d/.test(q) || /\btime\b/.test(q);
+  }
+
+  function ask(query) {
+    const q = query.trim();
+    root.pendingQuery = q;
+    if (!root.answerable(q.toLowerCase())) {
+      root.answer = null;
+      root.answerFor = "";
+      return;
+    }
+    askDelay.restart();
+  }
+
+  // Debounced, so typing does not start a process per keystroke.
+  Timer {
+    id: askDelay
+    interval: 120
+    onTriggered: root.startAnswer()
+  }
+
+  function startAnswer() {
+    if (answerProc.running || root.pendingQuery.length === 0)
+      return;
+    root.runningQuery = root.pendingQuery;
+    answerProc.command = ["python3", Quickshell.shellPath("scripts/answer.py"), root.runningQuery];
+    answerProc.running = true;
+  }
+
+  Process {
+    id: answerProc
+
+    stdout: StdioCollector {
+      onStreamFinished: {
+        try {
+          const parsed = JSON.parse(text);
+          root.answer = parsed.title ? parsed : null;
+        } catch (e) {
+          root.answer = null;
+        }
+        root.answerFor = root.runningQuery.toLowerCase();
+      }
+    }
+
+    // Typing carried on while this ran: answer the latest text too.
+    onExited: {
+      if (root.pendingQuery !== root.runningQuery)
+        root.startAnswer();
+    }
+  }
+
   // A small parser rather than eval(): this text comes straight from the
   // keyboard, and only arithmetic should ever run. Returns null if it isn't
   // a sum.
@@ -224,6 +287,19 @@ Singleton {
         icon: "",
         glyph: Icons.copy,
         value: String(answer),
+        points: 1000
+      });
+    }
+
+    if (root.answer && root.answerFor === q) {
+      out.push({
+        kind: "calc",
+        label: "Copy",
+        title: root.answer.title,
+        sub: root.answer.sub,
+        icon: "",
+        glyph: Icons.copy,
+        value: root.answer.value,
         points: 1000
       });
     }

@@ -122,6 +122,7 @@ PanelWindow {
 
   // ----------------------------------------------------------------- search
   property string query: ""
+  onQueryChanged: Spotlight.ask(root.view === "search" ? query : "")
   property int selected: 0
   readonly property var results: view === "search" ? Spotlight.search(query) : []
   onResultsChanged: selected = 0
