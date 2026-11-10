@@ -51,8 +51,26 @@ set -uo pipefail
 
 command -v jq >/dev/null 2>&1 || { echo "hypr-stack: jq is required" >&2; exit 1; }
 
-# One Lua expression per call, so quoting stays in one place.
-d() { hyprctl dispatch "$1" >/dev/null; }
+# Hyprland 0.57+ parses a dispatch as Lua; older releases (Ubuntu 26.04 ships
+# 0.53) only know the bare-word form. The Lua spelling is therefore the one
+# written below, and `d` translates it back to the old form when the running
+# compositor is pre-0.57, so the same script works on both machines.
+minor=$(hyprctl version -j 2>/dev/null | jq -r '.tag // "v0.0.0" | ltrimstr("v") | split(".")[1] | tonumber? // 0')
+d() {
+    if [ "${minor:-0}" -ge 57 ]; then
+        hyprctl dispatch "$1" >/dev/null
+        return
+    fi
+    case "$1" in
+        'hl.dsp.group.toggle({})')                 hyprctl dispatch togglegroup ;;
+        'hl.dsp.group.move_window({ forward = false })') hyprctl dispatch movegroupwindow b ;;
+        'hl.dsp.group.move_window({ forward = true })')  hyprctl dispatch movegroupwindow f ;;
+        'hl.dsp.layout("'*) arg=${1#'hl.dsp.layout("'}; hyprctl dispatch layoutmsg "${arg%'")'}" ;;
+        'hl.dsp.window.move({ into_group = "'*) arg=${1#'hl.dsp.window.move({ into_group = "'}; hyprctl dispatch moveintogroup "${arg%'" })'}" ;;
+        'hl.dsp.focus({ window = "'*) arg=${1#'hl.dsp.focus({ window = "'}; hyprctl dispatch focuswindow "${arg%'" })'}" ;;
+        *) echo "hypr-stack: no legacy form for: $1" >&2; return 1 ;;
+    esac >/dev/null
+}
 focus_win() { d "hl.dsp.focus({ window = \"address:$1\" })"; }
 
 ws=$(hyprctl activeworkspace -j | jq '.id')
