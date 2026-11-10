@@ -377,7 +377,7 @@ Singleton {
       root.bump(item.entry);
       // execute() ignores Terminal=true, so those need a terminal around them.
       if (item.entry.runInTerminal)
-        Quickshell.execDetached(["alacritty", "-e"].concat(Array.from(item.entry.command).filter(a => !/^%[a-zA-Z]$/.test(a))));
+        Quickshell.execDetached(["sh", "-c", 'if command -v alacritty >/dev/null; then exec alacritty -e "$@"; elif command -v ptyxis >/dev/null; then exec ptyxis -s -x "$*"; elif command -v kitty >/dev/null; then exec kitty "$@"; else exec foot "$@"; fi', "sh"].concat(Array.from(item.entry.command).filter(a => !/^%[a-zA-Z]$/.test(a))));
       else
         item.entry.execute();
       break;
