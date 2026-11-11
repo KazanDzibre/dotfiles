@@ -35,6 +35,7 @@ Scope {
       // The island is a separate window on the same layer, and this one would
       // otherwise swallow every click on it (transparent or not). So the bar
       // takes input everywhere except a hole in the middle where the island sits.
+      // The hole reaches further right while bubbles sit beside the island.
       mask: Region {
         width: bar.width
         height: bar.height
@@ -42,7 +43,7 @@ Scope {
         Region {
           intersection: Intersection.Subtract
           x: bar.width / 2 - 260
-          width: 520
+          width: 260 + Math.max(260, island.rightReach + 8)
           height: bar.height
         }
       }
@@ -141,8 +142,14 @@ Scope {
         }
       }
 
+      // SUPER+Tab: every workspace on this screen, side by side.
+      WorkspaceOverview {
+        screen: bar.screen
+      }
+
       // -------------------------------------------------------------- centre
       DynamicIsland {
+        id: island
         screen: bar.screen
       }
 

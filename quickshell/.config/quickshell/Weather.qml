@@ -2,8 +2,9 @@ pragma Singleton
 
 // Weather.qml — current conditions for the island's Today card, from wttr.in.
 //
-// Set QS_WEATHER_CITY to pick the place. Without it, wttr.in works out the
-// location from this machine's IP address. Checked every half hour.
+// Novi Sad unless QS_WEATHER_CITY names somewhere else. (Left to itself,
+// wttr.in guesses from the IP address and lands on Belgrade.) Checked every
+// half hour.
 
 import Quickshell
 import Quickshell.Io
@@ -12,7 +13,7 @@ import QtQuick
 Singleton {
   id: root
 
-  readonly property string city: Quickshell.env("QS_WEATHER_CITY") ?? ""
+  readonly property string city: Quickshell.env("QS_WEATHER_CITY") || "Novi Sad"
 
   property bool ready: false
   property int tempC: 0

@@ -26,7 +26,7 @@ Item {
 
   // True while any panel is out of the pill (open, or still shrinking back).
   // The bar hides the real pill meanwhile: the panel has become it.
-  readonly property bool panelOut: cc.visible || wifiPopup.visible || bluetoothPopup.visible || volumePopup.visible || brightnessPopup.visible || tonesPopup.visible || windowsPopup.visible || clipboardPopup.visible || sysInfoPopup.visible || updatesPopup.visible || dashboardPopup.visible || drivesPopup.visible || notificationPopup.visible
+  readonly property bool panelOut: cc.visible || wifiPopup.visible || bluetoothPopup.visible || volumePopup.visible || brightnessPopup.visible || tonesPopup.visible || windowsPopup.visible || clipboardPopup.visible || sysInfoPopup.visible || updatesPopup.visible || dashboardPopup.visible || drivesPopup.visible || shortcutsPopup.visible || notificationPopup.visible
 
   // The bar takes keyboard focus only while one of these needs typing.
   readonly property bool wantsKeyboard: wifiPopup.wantsKeyboard || clipboardPopup.wantsKeyboard
@@ -57,6 +57,7 @@ Item {
       updates: updatesPopup,
       dashboard: dashboardPopup,
       drives: drivesPopup,
+      shortcuts: shortcutsPopup,
       notifications: notificationPopup
     };
     if (name === "wallpaper") {
@@ -227,6 +228,14 @@ Item {
     pillWidth: root.pillWidth
     showBack: true
     onBack: root.backToCenter(notificationPopup)
+  }
+
+  ShortcutsPopup {
+    id: shortcutsPopup
+    screen: root.barScreen
+    pillWidth: root.pillWidth
+    showBack: true
+    onBack: root.backToCenter(shortcutsPopup)
   }
 
   DrivesPopup {

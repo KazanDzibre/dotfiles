@@ -30,7 +30,9 @@ PanelWindow {
 
   // ----------------------------------------------------------------- window
   anchors.top: true
-  implicitWidth: 600
+  // Wide enough for the biggest card plus the bubbles beside it: the island
+  // stays centred and the bubbles only ever extend to its right.
+  implicitWidth: 840
   // Tall enough for the biggest card; only the island itself takes input.
   implicitHeight: 480
   exclusionMode: ExclusionMode.Ignore
@@ -162,7 +164,39 @@ PanelWindow {
       AiChat.send(item.question);
       return;
     }
+    // An example fills the search in, ready to finish typing.
+    if (item.kind === "hint") {
+      searchField.text = item.example;
+      searchField.cursorPosition = searchField.text.length;
+      return;
+    }
+    if (item.kind === "note") {
+      if (!item.text)
+        return;
+      root.view = "";
+      Notes.add(item.text);
+      return;
+    }
+    if (item.kind === "command" && item.action === "notes") {
+      root.view = "";
+      Notes.edit();
+      return;
+    }
+    // The list, to tick things off; with nothing in it, the file instead.
+    if (item.kind === "command" && item.action === "list") {
+      if (Notes.items.length > 0) {
+        root.view = "memos";
+      } else {
+        root.view = "";
+        Notes.edit();
+      }
+      return;
+    }
     root.view = "";
+    if (item.kind === "command" && item.action === "panel") {
+      Moments.popupRequested("shortcuts", root.screenName());
+      return;
+    }
     Spotlight.run(item);
   }
 
@@ -339,6 +373,8 @@ PanelWindow {
       return "inbox";
     if (view === "shelf" && Shelf.count > 0)
       return "shelf";
+    if (view === "memos" && Notes.items.length > 0)
+      return "memos";
     if (view === "today" || view === "player")
       return "today";
     if (ClaudeCode.waiting)
@@ -347,6 +383,9 @@ PanelWindow {
       return "thinking";
     if (Updates.installing)
       return "installing";
+    // A meeting in the next 15 minutes beats Claude: it's the one with a time.
+    if (Calendar.soon && !musicOn)
+      return "soon";
     if (ClaudeCode.working && !musicOn)
       return "claude";
     if (musicOn)
@@ -362,7 +401,7 @@ PanelWindow {
 
   // The timer splits off into its own bubble whenever something else holds
   // the island.
-  readonly property bool bubbleShown: Tones.timing && mode !== "timer" && mode !== "player" && mode !== "today" && mode !== "inbox" && mode !== "search" && mode !== "alertCard" && mode !== "ask" && mode !== "shelf"
+  readonly property bool bubbleShown: Tones.timing && mode !== "timer" && mode !== "player" && mode !== "today" && mode !== "inbox" && mode !== "search" && mode !== "alertCard" && mode !== "ask" && mode !== "shelf" && mode !== "memos"
 
   // Claude busy while something else holds the island: a little spinning bubble.
   readonly property bool claudeBubbleShown: ClaudeCode.working !== null && mode !== "claude" && mode !== "claudeWaiting" && slim
@@ -370,8 +409,11 @@ PanelWindow {
   // A download while something else holds the island.
   readonly property bool downloadBubbleShown: Downloads.downloading && mode !== "download" && slim
 
+  // A meeting coming up while music holds the island: the minutes, in a bubble.
+  readonly property bool meetingBubbleShown: Calendar.soon !== null && mode !== "soon" && slim
+
   // Where the last round bubble ends, for the dots that sit after them.
-  readonly property real bubblesRight: downloadBubbleShown ? downloadSat.x + downloadSat.width : claudeBubbleShown ? claudeSat.x + claudeSat.width : bubbleShown ? bubble.x + bubble.width : shape.x + shape.width
+  readonly property real bubblesRight: meetingBubbleShown ? meetingSat.x + meetingSat.width : downloadBubbleShown ? downloadSat.x + downloadSat.width : claudeBubbleShown ? claudeSat.x + claudeSat.width : bubbleShown ? bubble.x + bubble.width : shape.x + shape.width
 
   // ------------------------------------------------------------- hover peek
   // Rest the pointer on the slim island and it grows a little to say more. The
@@ -382,7 +424,7 @@ PanelWindow {
   readonly property string activeKey: peeking ? "peek" : mode
 
   function canPeek(m) {
-    return ["clock", "music", "timer", "tone", "claude", "download"].includes(m);
+    return ["clock", "music", "timer", "tone", "claude", "download", "soon"].includes(m);
   }
 
   function cancelPeek() {
@@ -394,7 +436,7 @@ PanelWindow {
     id: peekDelay
     interval: 450
     onTriggered: {
-      if (root.view === "" && root.canPeek(root.mode))
+      if (root.view === "" && root.canPeek(root.mode) && islandHover.overContent)
         root.peekWanted = true;
     }
   }
@@ -413,6 +455,8 @@ PanelWindow {
       return ClaudeCode.working ? ClaudeCode.working.project || "Claude" : "Claude";
     case "download":
       return Downloads.label;
+    case "soon":
+      return Calendar.soon ? Calendar.soon.title : "";
     }
     return "";
   }
@@ -431,6 +475,8 @@ PanelWindow {
       return ClaudeCode.working ? ClaudeCode.working.detail : "";
     case "download":
       return Downloads.status;
+    case "soon":
+      return Calendar.soon ? Calendar.range(Calendar.soon) + (Calendar.soon.where ? " · " + Calendar.soon.where : "") : "";
     }
     return "";
   }
@@ -445,6 +491,8 @@ PanelWindow {
       return ClaudeCode.formatElapsed(root.claudeElapsed);
     case "download":
       return Downloads.percent;
+    case "soon":
+      return Calendar.soon ? Calendar.countdown(Calendar.soon).replace("in ", "") : "";
     }
     return "";
   }
@@ -578,6 +626,10 @@ PanelWindow {
       return [400, compactH];
     case "download":
       return [290, compactH];
+    case "soon":
+      return [290, compactH];
+    case "meeting":
+      return [430, 68];
     case "peek":
       return [mode === "claude" ? 430 : 350, 56];
     case "headphones":
@@ -588,10 +640,14 @@ PanelWindow {
       return [320, 64];
     case "shelf":
       return [420, 12 + 24 + Math.min(Shelf.count, 5) * 52 + 14];
+    case "memos":
+      return [400, 12 + 26 + Math.min(Notes.items.length, 6) * 40 + (Notes.items.length > 6 ? 22 : 0) + 14];
+    case "reminder":
+      return [reminderRow.implicitWidth + 30, compactH];
     case "ask":
       return [480, Math.min(440, 14 + 26 + 10 + Math.max(22, askBody.implicitHeight) + 18)];
     case "today":
-      return [420, 362 + (Dashboard.stocks.length > 0 ? 38 : 0)];
+      return [420, 362 + (Dashboard.stocks.length > 0 ? 38 : 0) + (dayEvents.length > 0 ? 30 + dayEvents.length * 28 : 0)];
     case "inbox":
       return [400, inboxHeight];
     case "alert":
@@ -681,8 +737,17 @@ PanelWindow {
     case "drop":
       return;
     case "shelf":
+    case "memos":
       root.view = "";
       return;
+    case "reminder": {
+      // "Done?" — yes: tick it off.
+      const i = Notes.items.findIndex(n => !n.done && n.text === root.moment.text);
+      if (i >= 0)
+        Notes.toggle(i);
+      Moments.dismiss();
+      return;
+    }
     case "answer":
     case "thinking":
       Moments.dismiss();
@@ -694,16 +759,24 @@ PanelWindow {
     case "inbox":
       root.view = "";
       return;
+    case "meeting":
+      Calendar.join(root.moment.event);
+      Moments.dismiss();
+      return;
     case "music":
     case "timer":
     case "tone":
     case "download":
+    case "soon":
     case "clock":
       if (Date.now() - root.grabClearedAt < 400)
         return;
-      // Music opens the player; otherwise waiting notifications come first.
+      // Music opens the player; a coming meeting the day's events; otherwise
+      // waiting notifications come first.
       if (mode === "music")
         root.view = "player";
+      else if (mode === "soon")
+        root.view = "today";
       else if (Notifications.count > 0)
         root.view = "inbox";
       else
@@ -718,7 +791,7 @@ PanelWindow {
   // Clicking anywhere else folds the island back up.
   HyprlandFocusGrab {
     windows: [root]
-    active: root.mode === "player" || root.mode === "today" || root.mode === "inbox" || root.mode === "search" || root.mode === "alertCard" || root.mode === "ask" || root.mode === "shelf"
+    active: root.mode === "player" || root.mode === "today" || root.mode === "inbox" || root.mode === "search" || root.mode === "alertCard" || root.mode === "ask" || root.mode === "shelf" || root.mode === "memos"
     onCleared: {
       // Dragging a file out of the shelf hands the pointer to the drag.
       if (root.shelfDragging)
@@ -733,6 +806,22 @@ PanelWindow {
     const now = Time.now;
     return new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset);
   }
+
+  // Each calendar's colour: the first is the accent; the rest come from a fixed
+  // set, the ones furthest in hue from the accent first, so they never blend in.
+  readonly property var calPalette: ["#7ab8f5", "#8ad79a", "#c79af0", "#f0c674", "#f0808f"].map(h => Qt.color(h)).sort((a, b) => root.hueGap(b) - root.hueGap(a))
+
+  function hueGap(c) {
+    const d = Math.abs(c.hsvHue - root.hot.hsvHue);
+    return Math.min(d, 1 - d);
+  }
+
+  function calColor(i) {
+    return i === 0 ? root.hot : root.calPalette[(i - 1) % root.calPalette.length];
+  }
+
+  // The Today card's events: those of the day it's showing, at most four.
+  readonly property var dayEvents: Calendar.forDay(shownDay).slice(0, 4)
 
   readonly property string shownDayLabel: {
     const base = Qt.formatDateTime(shownDay, "dddd, d MMMM");
@@ -770,6 +859,7 @@ PanelWindow {
         inMonth: d.getMonth() === first.getMonth(),
         today: d.toDateString() === now.toDateString(),
         picked: root.dayOffset !== 0 && d.toDateString() === shownDay.toDateString(),
+        cals: Calendar.busyDays[Calendar.dayKey(d)] ?? [],
         offset: Math.round((d.getTime() - midnight) / 86400000)
       });
     }
@@ -1027,16 +1117,19 @@ PanelWindow {
   }
 
   // ------------------------------------------------------------- the island
-  // Everything is centred as a group: the island, plus the timer bubble and the
-  // keep-awake dot when they're out.
-  // Built from the *animated* widths, so the group re-centres every frame as
-  // the island grows, instead of a second animation chasing the first.
-  readonly property real groupWidth: shape.width + (bubble.width > 0.5 ? bubble.width + 6 : 0) + (claudeSat.width > 0.5 ? claudeSat.width + 6 : 0) + (downloadSat.width > 0.5 ? downloadSat.width + 6 : 0) + dot.scale * 13 + micDot.scale * 14 + camDot.scale * 14
+  // The island is always centred on its own; bubbles and dots (timer, Claude,
+  // download, keep awake, mic, camera) line up to its right and never push it
+  // aside. Its own count sections (notifications, shelf, notes) are part of it.
+  readonly property real targetIslandWidth: size[0] + tailTarget
+
+  // How far the island and its bubbles reach right of the screen's centre; the
+  // bar leaves that much free for clicks (Bar.qml).
+  readonly property real rightReach: targetGroupWidth - targetIslandWidth / 2
 
   // What takes input: the island and its satellites. Sized from where the
   // island is *going*, so the input region changes once per mode rather than
   // on every animation frame.
-  readonly property real targetGroupWidth: size[0] + (bubbleShown ? compactH + 6 : 0) + (claudeBubbleShown ? compactH + 6 : 0) + (downloadBubbleShown ? compactH + 6 : 0) + tailTarget + (IdleInhibit.enabled ? 13 : 0) + (Privacy.micInUse ? 14 : 0) + (Privacy.camInUse ? 14 : 0)
+  readonly property real targetGroupWidth: size[0] + (bubbleShown ? compactH + 6 : 0) + (claudeBubbleShown ? compactH + 6 : 0) + (downloadBubbleShown ? compactH + 6 : 0) + (meetingBubbleShown ? compactH + 6 : 0) + tailTarget + (IdleInhibit.enabled ? 13 : 0) + (Privacy.micInUse ? 14 : 0) + (Privacy.camInUse ? 14 : 0)
 
   // Unread notifications: the island grows a section on its right with the
   // bell and a count. They never pop open on arrival; the bell just hops.
@@ -1067,7 +1160,7 @@ PanelWindow {
 
   Item {
     id: hit
-    x: (root.width - root.targetGroupWidth) / 2 - 4
+    x: (root.width - root.targetIslandWidth) / 2 - 4
     y: 0
     width: root.targetGroupWidth + 8
     height: shape.y + Math.max(root.size[1], root.compactH) + 6
@@ -1111,7 +1204,7 @@ PanelWindow {
   Rectangle {
     id: shape
 
-    x: (root.width - root.groupWidth) / 2
+    x: (root.width - width) / 2
     y: Math.round((Theme.barHeight - root.compactH) / 2)
     width: root.size[0] + root.tailTarget
     height: root.size[1]
@@ -1147,12 +1240,22 @@ PanelWindow {
       }
     }
 
+    // Only the main content peeks. Resting on the bell, shelf or note count
+    // must not, or the island would widen and carry the count away from the
+    // pointer just as you click it.
     HoverHandler {
       id: islandHover
-      onHoveredChanged: {
-        if (hovered)
+
+      readonly property bool overContent: hovered && point.position.x < shape.width - root.tailNow
+
+      onOverContentChanged: {
+        if (overContent)
           peekDelay.restart();
-        else
+        else if (!root.peekWanted)
+          peekDelay.stop();
+      }
+      onHoveredChanged: {
+        if (!hovered)
           root.cancelPeek();
       }
     }
@@ -1364,8 +1467,8 @@ PanelWindow {
 
         Ink {
           anchors.centerIn: parent
-          visible: root.mode === "clock" || root.mode === "tone" || root.mode === "claude"
-          text: root.mode === "clock" ? (Weather.ready ? Weather.glyph : Icons.calendar) : root.mode === "tone" ? Icons.sineWave : Icons.sparkle
+          visible: root.mode === "clock" || root.mode === "tone" || root.mode === "claude" || root.mode === "soon"
+          text: root.mode === "clock" ? (Weather.ready ? Weather.glyph : Icons.calendar) : root.mode === "soon" ? Icons.calendar : root.mode === "tone" ? Icons.sineWave : Icons.sparkle
           font.pixelSize: Theme.iconSize + 8
           color: root.hot
         }
@@ -1652,6 +1755,130 @@ PanelWindow {
           text: headphonesLayer.hasBattery ? "Connected · " + Math.round(headphonesLayer.battery * 100) + "%" : "Connected"
           color: root.inkDim
           font.pixelSize: Theme.smallSize + 1
+        }
+      }
+    }
+
+    // ------------------------------------------------- meeting coming up
+    Layer {
+      key: "soon"
+
+      Ink {
+        id: soonGlyph
+        anchors.left: parent.left
+        anchors.leftMargin: 12
+        anchors.verticalCenter: parent.verticalCenter
+        text: Icons.calendar
+        color: root.calColor(Calendar.soon ? Calendar.soon.cal ?? 0 : 0)
+        font.pixelSize: Theme.iconSize
+      }
+
+      Ink {
+        anchors.left: soonGlyph.right
+        anchors.leftMargin: 9
+        anchors.right: soonWhen.left
+        anchors.rightMargin: 10
+        anchors.verticalCenter: parent.verticalCenter
+        text: Calendar.soon ? Calendar.soon.title : ""
+        textFormat: Text.PlainText
+      }
+
+      Ink {
+        id: soonWhen
+        anchors.right: parent.right
+        anchors.rightMargin: 13
+        anchors.verticalCenter: parent.verticalCenter
+        text: Calendar.soon ? Calendar.countdown(Calendar.soon) : ""
+        font.bold: true
+        color: root.hot
+      }
+    }
+
+    // ------------------------------------------------- meeting starting
+    Layer {
+      id: meetingLayer
+      key: "meeting"
+
+      // Held, so the card doesn't blank while it shrinks away.
+      property var event: null
+      readonly property var live: root.moment && root.moment.kind === "meeting" ? root.moment.event : null
+      onLiveChanged: if (live)
+        event = live
+
+      Rectangle {
+        id: meetingBadge
+        anchors.left: parent.left
+        anchors.leftMargin: 13
+        anchors.verticalCenter: parent.verticalCenter
+        width: 40
+        height: 40
+        radius: 12
+        color: root.hot
+
+        Column {
+          anchors.centerIn: parent
+
+          Ink {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: "NOW"
+            font.pixelSize: 8
+            font.bold: true
+            font.letterSpacing: 0.5
+            color: "#140f08"
+          }
+          Ink {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: meetingLayer.event ? Calendar.clock(meetingLayer.event.start) : ""
+            font.pixelSize: Theme.smallSize + 1
+            font.bold: true
+            color: "#140f08"
+          }
+        }
+      }
+
+      Column {
+        anchors.left: meetingBadge.right
+        anchors.leftMargin: 12
+        anchors.right: meetingButtons.left
+        anchors.rightMargin: 12
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: 3
+
+        Ink {
+          width: parent.width
+          text: meetingLayer.event ? meetingLayer.event.title + " is starting" : ""
+          textFormat: Text.PlainText
+          font.bold: true
+        }
+        Ink {
+          width: parent.width
+          text: meetingLayer.event ? [meetingLayer.event.where, Calendar.length(meetingLayer.event)].filter(s => s).join(" · ") : ""
+          textFormat: Text.PlainText
+          color: root.inkDim
+          font.pixelSize: Theme.smallSize + 1
+        }
+      }
+
+      Row {
+        id: meetingButtons
+        anchors.right: parent.right
+        anchors.rightMargin: 14
+        anchors.verticalCenter: parent.verticalCenter
+        height: parent.height
+        spacing: 6
+
+        Chip {
+          visible: meetingLayer.event !== null && meetingLayer.event.link !== ""
+          label: "Join"
+          strong: true
+          onPressed: {
+            Calendar.join(meetingLayer.event);
+            Moments.dismiss();
+          }
+        }
+        Chip {
+          label: meetingLayer.event !== null && meetingLayer.event.link !== "" ? "Later" : "OK"
+          onPressed: Moments.dismiss()
         }
       }
     }
@@ -2749,6 +2976,232 @@ PanelWindow {
       }
     }
 
+    // ------------------------------------------------------------ notes
+    // Typed `noted` in the search: the notes as a list, to tick off quickly.
+    Layer {
+      key: "memos"
+
+      Column {
+        anchors.fill: parent
+        anchors.margins: 14
+        anchors.topMargin: 12
+        spacing: 2
+
+        Item {
+          width: parent.width
+          height: 26
+
+          Ink {
+            anchors.left: parent.left
+            anchors.leftMargin: 6
+            anchors.verticalCenter: parent.verticalCenter
+            text: "NOTES · " + Notes.open
+            font.pixelSize: Theme.smallSize
+            font.bold: true
+            font.letterSpacing: 1
+            color: root.inkDim
+          }
+
+          Row {
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            height: parent.height
+            spacing: 6
+
+            Chip {
+              visible: Notes.items.some(n => n.done)
+              label: "Clear done"
+              onPressed: Notes.clearDone()
+            }
+
+            Chip {
+              label: "Edit"
+              onPressed: {
+                root.view = "";
+                Notes.edit();
+              }
+            }
+          }
+        }
+
+        Repeater {
+          model: Notes.items.slice(0, 6)
+
+          delegate: Rectangle {
+            id: memoItem
+
+            required property var modelData
+            required property int index
+
+            width: parent.width
+            height: 38
+            radius: 13
+            color: memoArea.containsMouse ? Qt.rgba(1, 1, 1, 0.09) : "transparent"
+            opacity: modelData.done ? 0.45 : 1
+
+            Behavior on opacity {
+              NumberAnimation {
+                duration: 220
+              }
+            }
+
+            MouseArea {
+              id: memoArea
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: Notes.toggle(memoItem.index)
+            }
+
+            Rectangle {
+              id: memoCheck
+              anchors.left: parent.left
+              anchors.leftMargin: 9
+              anchors.verticalCenter: parent.verticalCenter
+              width: 15
+              height: 15
+              radius: 7.5
+              color: memoItem.modelData.done ? root.hot : "transparent"
+              border.width: memoItem.modelData.done ? 0 : 1.5
+              border.color: Qt.rgba(0.96, 0.94, 0.89, 0.55)
+
+              Ink {
+                anchors.centerIn: parent
+                visible: memoItem.modelData.done
+                text: "✓"
+                font.pixelSize: 10
+                font.bold: true
+                color: "#140f08"
+              }
+            }
+
+            Ink {
+              anchors.left: memoCheck.right
+              anchors.leftMargin: 11
+              anchors.right: memoEnd.left
+              anchors.rightMargin: 10
+              anchors.verticalCenter: parent.verticalCenter
+              text: memoItem.modelData.text
+              textFormat: Text.PlainText
+              font.strikeout: memoItem.modelData.done
+            }
+
+            Item {
+              id: memoEnd
+              anchors.right: parent.right
+              anchors.rightMargin: 8
+              anchors.verticalCenter: parent.verticalCenter
+              width: Math.max(memoWhen.implicitWidth, 22)
+              height: 22
+
+              Row {
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 4
+                visible: memoItem.modelData.at > 0 && !memoArea.containsMouse && !memoRemove.containsMouse
+
+                Ink {
+                  anchors.verticalCenter: parent.verticalCenter
+                  text: Icons.bell
+                  font.pixelSize: Theme.smallSize
+                  color: root.hot
+                }
+                Ink {
+                  id: memoWhen
+                  anchors.verticalCenter: parent.verticalCenter
+                  text: Notes.timeLabel(memoItem.modelData.at)
+                  font.pixelSize: Theme.smallSize
+                  font.bold: true
+                  color: root.hot
+                }
+              }
+
+              // Remove, only while hovering the row.
+              Rectangle {
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                width: 22
+                height: 22
+                radius: 11
+                visible: memoArea.containsMouse || memoRemove.containsMouse
+                color: memoRemove.containsMouse ? Qt.rgba(1, 1, 1, 0.18) : "transparent"
+
+                Ink {
+                  anchors.centerIn: parent
+                  text: "✕"
+                  font.pixelSize: Theme.smallSize
+                  color: root.inkDim
+                }
+
+                MouseArea {
+                  id: memoRemove
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: Notes.remove(memoItem.index)
+                }
+              }
+            }
+          }
+        }
+
+        Ink {
+          visible: Notes.items.length > 6
+          leftPadding: 6
+          topPadding: 4
+          text: "+" + (Notes.items.length - 6) + " more · Edit shows them all"
+          font.pixelSize: Theme.smallSize
+          color: root.inkDim
+        }
+      }
+    }
+
+    // ---------------------------------------------------------- reminder
+    Layer {
+      id: reminderLayer
+      key: "reminder"
+
+      readonly property var m: root.moment && root.moment.kind === "reminder" ? root.moment : null
+
+      Row {
+        id: reminderRow
+        anchors.centerIn: parent
+        spacing: 10
+
+        Ink {
+          anchors.verticalCenter: parent.verticalCenter
+          text: Icons.bell
+          font.pixelSize: Theme.iconSize
+          color: root.hot
+        }
+
+        Ink {
+          anchors.verticalCenter: parent.verticalCenter
+          width: Math.min(implicitWidth, 300)
+          text: reminderLayer.m ? reminderLayer.m.text : ""
+          textFormat: Text.PlainText
+          font.bold: true
+        }
+
+        Rectangle {
+          anchors.verticalCenter: parent.verticalCenter
+          width: reminderChip.implicitWidth + 14
+          height: 18
+          radius: 9
+          color: root.hot
+
+          Ink {
+            id: reminderChip
+            anchors.centerIn: parent
+            text: "DONE?"
+            font.pixelSize: Theme.smallSize
+            font.bold: true
+            color: "#140f08"
+          }
+        }
+      }
+    }
+
     // Files dragged over the island land on the shelf.
     DropArea {
       anchors.fill: parent
@@ -3066,9 +3519,31 @@ PanelWindow {
 
                 Ink {
                   anchors.centerIn: parent
+                  anchors.verticalCenterOffset: dateCell.modelData.cals.length > 0 ? -2 : 0
                   text: dateCell.modelData.day
                   font.bold: dateCell.modelData.today
                   color: dateCell.modelData.today ? "#140f08" : dateCell.modelData.inMonth ? root.ink : Qt.rgba(0.96, 0.94, 0.89, 0.28)
+                }
+
+                // Something on this day: one dot per calendar, in its colour.
+                Row {
+                  anchors.horizontalCenter: parent.horizontalCenter
+                  anchors.bottom: parent.bottom
+                  anchors.bottomMargin: 3
+                  spacing: 2
+                  opacity: dateCell.modelData.inMonth ? 1 : 0.4
+
+                  Repeater {
+                    model: dateCell.modelData.cals.slice(0, 3)
+
+                    delegate: Rectangle {
+                      required property var modelData
+                      width: 4
+                      height: 4
+                      radius: 2
+                      color: dateCell.modelData.today && modelData === 0 ? "#140f08" : root.calColor(modelData)
+                    }
+                  }
                 }
               }
 
@@ -3145,6 +3620,101 @@ PanelWindow {
             }
             TickerRow {
               x: tape.span * 2
+            }
+          }
+        }
+
+        // That day's calendar events.
+        Column {
+          visible: root.dayEvents.length > 0
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.top: ticker.visible ? ticker.bottom : monthGrid.bottom
+          anchors.topMargin: 12
+          spacing: 2
+
+          Ink {
+            leftPadding: 2
+            bottomPadding: 4
+            text: root.dayOffset === 0 ? "TODAY" : Qt.formatDateTime(root.shownDay, "dddd").toUpperCase()
+            font.pixelSize: Theme.smallSize
+            font.bold: true
+            font.letterSpacing: 1
+            color: root.inkDim
+          }
+
+          Repeater {
+            model: root.dayEvents
+
+            delegate: Rectangle {
+              id: eventRow
+
+              required property var modelData
+              readonly property bool isNext: Calendar.next !== null && Calendar.next.id === modelData.id
+              readonly property bool isPast: !modelData.allDay && modelData.end <= Calendar.now
+
+              width: parent.width
+              height: 26
+              radius: 9
+              color: isNext ? Qt.rgba(1, 1, 1, 0.07) : eventArea.containsMouse && modelData.link ? Qt.rgba(1, 1, 1, 0.05) : "transparent"
+              opacity: isPast ? 0.45 : 1
+
+              Rectangle {
+                id: eventDot
+                anchors.left: parent.left
+                anchors.leftMargin: 8
+                anchors.verticalCenter: parent.verticalCenter
+                width: 6
+                height: 6
+                radius: 3
+                color: root.calColor(eventRow.modelData.cal ?? 0)
+              }
+
+              Ink {
+                id: eventTime
+                anchors.left: eventDot.right
+                anchors.leftMargin: 8
+                anchors.verticalCenter: parent.verticalCenter
+                width: 56
+                text: eventRow.modelData.allDay ? "All day" : Calendar.clock(eventRow.modelData.start)
+                font.bold: true
+                font.pixelSize: Theme.smallSize + 1
+                color: eventRow.isNext ? root.hot : root.ink
+              }
+
+              Ink {
+                anchors.left: eventTime.right
+                anchors.leftMargin: 6
+                anchors.right: eventWhere.left
+                anchors.rightMargin: 10
+                anchors.verticalCenter: parent.verticalCenter
+                text: eventRow.modelData.title
+                textFormat: Text.PlainText
+              }
+
+              Ink {
+                id: eventWhere
+                anchors.right: parent.right
+                anchors.rightMargin: 8
+                anchors.verticalCenter: parent.verticalCenter
+                width: Math.min(implicitWidth, 120)
+                text: eventRow.modelData.link ? "Join" : eventRow.modelData.allDay ? "" : Calendar.length(eventRow.modelData)
+                font.pixelSize: Theme.smallSize
+                font.bold: eventRow.modelData.link !== ""
+                color: eventRow.modelData.link ? root.hot : root.inkDim
+              }
+
+              MouseArea {
+                id: eventArea
+                anchors.fill: parent
+                enabled: eventRow.modelData.link !== ""
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                  root.view = "";
+                  Calendar.join(eventRow.modelData);
+                }
+              }
             }
           }
         }
@@ -4161,6 +4731,53 @@ PanelWindow {
       anchors.fill: parent
       cursorShape: Qt.PointingHandCursor
       onClicked: Downloads.openFolder()
+    }
+  }
+
+  // A meeting coming up while something else holds the island: the minutes.
+  Rectangle {
+    id: meetingSat
+
+    x: (root.downloadBubbleShown ? downloadSat.x + downloadSat.width : root.claudeBubbleShown ? claudeSat.x + claudeSat.width : root.bubbleShown ? bubble.x + bubble.width : shape.x + shape.width) + (root.meetingBubbleShown ? 6 : 0)
+    y: shape.y
+    width: root.meetingBubbleShown ? root.compactH : 0
+    height: root.compactH
+    radius: height / 2
+    color: "#050403"
+    border.width: 1
+    border.color: Qt.rgba(1, 1, 1, 0.07)
+    clip: true
+    opacity: root.meetingBubbleShown ? 1 : 0
+    visible: opacity > 0.01
+
+    Behavior on width {
+      NumberAnimation {
+        duration: root.morphMs
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: root.shapeCurve
+      }
+    }
+    Behavior on opacity {
+      NumberAnimation {
+        duration: 220
+      }
+    }
+
+    Ink {
+      anchors.centerIn: parent
+      text: Calendar.soon ? Math.max(0, Calendar.minutesToNext) : ""
+      font.pixelSize: Theme.smallSize
+      font.bold: true
+      color: root.hot
+    }
+
+    MouseArea {
+      anchors.fill: parent
+      cursorShape: Qt.PointingHandCursor
+      onClicked: {
+        Moments.dismiss();
+        root.view = "today";
+      }
     }
   }
 

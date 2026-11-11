@@ -262,6 +262,73 @@ Singleton {
     }
   }
 
+  // --------------------------------------------------------------- commands
+  // Typed words that do something rather than find something. Matching a word
+  // or one of its aliases exactly puts it first; the start of the word is
+  // enough to list it alongside the apps.
+  readonly property var commands: [
+    {
+      word: "pick",
+      also: ["color", "colour", "eyedropper", "picker"],
+      title: "Pick a colour",
+      sub: "Click anywhere on screen · copies its hex",
+      glyph: Icons.eyedropper,
+      action: "pick"
+    },
+    {
+      word: "help",
+      also: ["shortcuts", "commands", "cheatsheet", "keys"],
+      title: "Shortcuts and commands",
+      sub: "Everything the island and the bar respond to",
+      glyph: Icons.keyboard,
+      action: "panel"
+    },
+    {
+      word: "notes",
+      also: [],
+      title: "Open your notes",
+      sub: "In Neovim" + (Notes.open > 0 ? " · " + Notes.open + " open" : ""),
+      glyph: Icons.note,
+      action: "notes"
+    },
+    {
+      word: "noted",
+      also: ["todo", "todos"],
+      title: "Tick off notes",
+      sub: Notes.open === 0 ? "Nothing open" : Notes.open + " open · in the island",
+      glyph: Icons.note,
+      action: "list"
+    }
+  ]
+
+  function commandItem(c, points) {
+    return {
+      kind: "command",
+      label: "Run",
+      title: c.title,
+      sub: c.sub,
+      icon: "",
+      glyph: c.glyph,
+      action: c.action,
+      points: points
+    };
+  }
+
+  // Shown for `help`: the commands, then examples that fill the search in.
+  function helpItems() {
+    const hint = (title, sub, example) => ({
+          kind: "hint",
+          label: "Try",
+          title: title,
+          sub: sub,
+          icon: "",
+          glyph: Icons.lightbulb,
+          example: example,
+          points: 0
+        });
+    return [root.commandItem(root.commands[1], 0), root.commandItem(root.commands[0], 0), hint("note call the bank", "Save a quick note · note at 15:00 … reminds you", "note "), hint("?how do I…", "Ask the AI anything", "?"), hint("200 + 15%", "Sums, copied with Enter", "200 + 15%"), hint("time in tokyo", "Also 5 km to mi, days until…", "time in tokyo")];
+  }
+
   // ----------------------------------------------------------------- search
   function appItem(entry, points) {
     return {
@@ -298,7 +365,32 @@ Singleton {
       return apps.sort((a, b) => (root.usage[root.usageKey(b)] ?? 0) - (root.usage[root.usageKey(a)] ?? 0) || a.name.localeCompare(b.name)).slice(0, root.maxResults).map(e => root.appItem(e, 0));
     }
 
+    if (q === "help")
+      return root.helpItems();
+
+    // "note …" saves whatever follows; nothing else competes with it.
+    if (q === "note" || q.startsWith("note ")) {
+      const text = rawQuery.trim().substring(4).trim();
+      return [{
+        kind: "note",
+        label: "Save",
+        title: text ? "Save note" : "Type the note after “note”",
+        sub: text || "note at 15:00 … also reminds you then",
+        icon: "",
+        glyph: Icons.note,
+        text: text,
+        points: 0
+      }];
+    }
+
     const out = [];
+
+    for (const c of root.commands) {
+      if (c.word === q || c.also.includes(q))
+        out.push(root.commandItem(c, 1100));
+      else if (q.length >= 2 && (c.word.startsWith(q) || c.also.some(a => a.startsWith(q))))
+        out.push(root.commandItem(c, 90));
+    }
 
     const answer = root.calculate(q);
     if (answer !== null) {
@@ -387,6 +479,10 @@ Singleton {
     case "calc":
     case "clip":
       Clipboard.copy(item.value);
+      break;
+    case "command":
+      if (item.action === "pick")
+        ScreenTools.pick();
       break;
     }
   }

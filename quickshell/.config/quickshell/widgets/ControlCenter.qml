@@ -932,6 +932,12 @@ MorphPanel {
       }
 
       Launcher {
+        glyph: Icons.keyboard
+        label: "Shortcuts"
+        onActivated: root.request("shortcuts")
+      }
+
+      Launcher {
         visible: Drives.hasDrives
         glyph: Icons.usbDrive
         label: "Drives"

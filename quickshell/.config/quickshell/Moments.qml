@@ -307,6 +307,47 @@ Singleton {
     }
   }
 
+  // ---------------------------------------------------------------- calendar
+  Connections {
+    target: Calendar
+
+    function onStarting(event) {
+      root.show({
+        kind: "meeting",
+        event: event
+      }, 90000);
+      Sounds.play("attention");
+    }
+  }
+
+  // ------------------------------------------------------------------- notes
+  Connections {
+    target: Notes
+
+    function onSaved(text) {
+      root.toast(Icons.note, "Note saved", Notes.open + (Notes.open === 1 ? " NOTE" : " NOTES"), true, 1800);
+    }
+
+    function onReminder(text, time) {
+      root.show({
+        kind: "reminder",
+        text: text,
+        time: time
+      }, 15000);
+      Sounds.play("attention");
+    }
+  }
+
+  // ------------------------------------------------------------ screen tools
+  // A picked colour arrives through the clipboard peek; only failure lands here.
+  Connections {
+    target: ScreenTools
+
+    function onMissing(tool) {
+      root.toast(Icons.eyedropper, "Install " + tool + " first", "MISSING", false, 3500);
+    }
+  }
+
   // ------------------------------------------------------------------ health
   // Only when something is wrong, and only once per incident: an alert re-arms
   // after the value has properly recovered. CPU and memory also have to stay

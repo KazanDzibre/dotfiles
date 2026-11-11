@@ -199,6 +199,10 @@ Singleton {
   readonly property string upToDate: String.fromCodePoint(0xf05e1)
   readonly property string refresh: String.fromCodePoint(0xf0450)
   readonly property string download: String.fromCodePoint(0xf01da)
+  readonly property string eyedropper: String.fromCodePoint(0xf020a)
+  readonly property string keyboard: String.fromCodePoint(0xf030c)
+  readonly property string note: String.fromCodePoint(0xf039b)
+  readonly property string lightbulb: String.fromCodePoint(0xf0335)
 
   // -------------------------------------------------------------- interface
   readonly property string forget: String.fromCodePoint(0xf09e7)

@@ -58,6 +58,9 @@ hl.on("hyprland.start", function()
     -- Panel off after 10 min idle — see hypridle.conf
     hl.exec_cmd("hypridle")
     hl.exec_cmd("waypaper --restore")
+    -- Shows the password window when something asks for admin rights (enrolling
+    -- a fingerprint, disk tools, ...). Without an agent those are just refused.
+    hl.exec_cmd("/usr/lib/polkit-kde-authentication-agent-1")
 end)
 
 
@@ -353,6 +356,8 @@ hl.bind(mainMod .. " + SHIFT + A", hl.dsp.global("quickshell:keepAwake"))
 hl.bind(mainMod .. " + SHIFT + W", hl.dsp.global("quickshell:wallpaperPicker"))
 -- Same region screenshot as Print, for when Print is awkward to reach.
 hl.bind(mainMod .. " + SHIFT + P", hl.dsp.global("quickshell:screenshotRegion"))
+-- Every workspace side by side (WorkspaceOverview.qml); again, or Esc, closes it.
+hl.bind(mainMod .. " + Tab",       hl.dsp.global("quickshell:overview"))
 
 
 --------------------------------
@@ -464,6 +469,17 @@ hl.layer_rule({
 
     blur         = true,
     ignore_alpha = 0.3,
+    no_anim      = true,
+})
+
+-- The workspace overview (WorkspaceOverview.qml): the whole desktop frosted
+-- behind it. Its scrim is ~58% opaque, so ignore_alpha sits well below that.
+hl.layer_rule({
+    name  = "overview",
+    match = { namespace = "^quickshell:overview$" },
+
+    blur         = true,
+    ignore_alpha = 0.1,
     no_anim      = true,
 })
 
