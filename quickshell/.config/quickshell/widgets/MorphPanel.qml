@@ -279,6 +279,12 @@ PanelWindow {
   }
 
   // ------------------------------------------------------------------ shape
+  // The island's soft edge, and a shadow: panels float over the windows.
+  Halo {
+    target: shape
+    shadow: true
+  }
+
   Rectangle {
     id: shape
 
@@ -292,7 +298,7 @@ PanelWindow {
 
     color: Theme.island
     border.width: 1
-    border.color: Theme.border
+    border.color: Theme.isLight ? Qt.rgba(0, 0, 0, 0.12) : Qt.rgba(1, 1, 1, 0.16)
 
     // Only drawn while open or on the way back; at rest the bar's pill shows.
     visible: root.opened || width > root.pillWidth + 0.5 || height > root.pillHeight + 0.5

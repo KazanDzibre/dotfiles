@@ -51,7 +51,6 @@ Singleton {
   readonly property string batteryCharging: String.fromCodePoint(0xf0084)
   readonly property string batteryAlert: String.fromCodePoint(0xf0083)
   readonly property string batteryUnknown: String.fromCodePoint(0xf0091)
-  readonly property string powerPlug: String.fromCodePoint(0xf06a5)
 
   // ---------------------------------------------------------------- network
   readonly property var wifiRamp: [String.fromCodePoint(0xf092f)  // no signal
@@ -67,17 +66,10 @@ Singleton {
   readonly property string next: String.fromCodePoint(0xf04ad)
   readonly property string prev: String.fromCodePoint(0xf04ae)
   readonly property string music: String.fromCodePoint(0xf075a)
-  readonly property string musicNote: String.fromCodePoint(0xf0387)
-  readonly property string album: String.fromCodePoint(0xf0025)
-  readonly property string repeatAll: String.fromCodePoint(0xf0456)
-  readonly property string repeatOne: String.fromCodePoint(0xf0458)
-  readonly property string repeatOff: String.fromCodePoint(0xf0457)
-  readonly property string shuffleOff: String.fromCodePoint(0xf049e)
 
   // -------------------------------------------------------------- calendar
   readonly property string calendar: String.fromCodePoint(0xf00ed)
   readonly property string chevronUp: String.fromCodePoint(0xf0143)
-  readonly property string chevronDown: String.fromCodePoint(0xf0140)
   readonly property string chevronLeft: String.fromCodePoint(0xf0141)
   readonly property string chevronRight: String.fromCodePoint(0xf0142)
 
@@ -88,11 +80,9 @@ Singleton {
   readonly property string devFeed: String.fromCodePoint(0xf0174)   // md-code_tags
   readonly property string trendUp: String.fromCodePoint(0xf0535)
   readonly property string trendDown: String.fromCodePoint(0xf0533)
-  readonly property string openExternal: String.fromCodePoint(0xf03cc)
 
   // ------------------------------------------------------ healing frequencies
   readonly property string sineWave: String.fromCodePoint(0xf095b)
-  readonly property string waveform: String.fromCodePoint(0xf1970)
 
   // ------------------------------------------------------------ screensaver
   readonly property string screensaver: String.fromCodePoint(0xf1104)   // md-monitor_shimmer
@@ -102,9 +92,7 @@ Singleton {
   readonly property string eject: String.fromCodePoint(0xf01ea)
 
   // ------------------------------------------------------------------ tools
-  readonly property string camera: String.fromCodePoint(0xf0100)
   readonly property string crop: String.fromCodePoint(0xf019e)
-  readonly property string monitorShot: String.fromCodePoint(0xf0e51)
   readonly property string clipboard: String.fromCodePoint(0xf0a38)
   readonly property string copy: String.fromCodePoint(0xf018f)
   readonly property string search: String.fromCodePoint(0xf0349)
@@ -156,7 +144,6 @@ Singleton {
 
   // ------------------------------------------------------------- wallpaper
   readonly property string wallpaper: String.fromCodePoint(0xf0e09)
-  readonly property string palette: String.fromCodePoint(0xf03d8)
   readonly property string timer: String.fromCodePoint(0xf051b)
   readonly property string sparkle: String.fromCodePoint(0xf0674)
   readonly property string record: String.fromCodePoint(0xf044a)
@@ -169,7 +156,6 @@ Singleton {
   readonly property string weatherSnowy: String.fromCodePoint(0xf0598)
   readonly property string weatherSunny: String.fromCodePoint(0xf0599)
   readonly property string bolt: String.fromCodePoint(0xf140b)
-  readonly property string shuffle: String.fromCodePoint(0xf049f)
 
   // ------------------------------------------------------------ system info
   readonly property string cpu: String.fromCodePoint(0xf0ee0)

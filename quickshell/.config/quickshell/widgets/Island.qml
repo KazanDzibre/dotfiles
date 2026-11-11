@@ -19,9 +19,42 @@ Rectangle {
   implicitHeight: Theme.islandHeight
   radius: height / 2
 
-  color: Theme.island
+  // Brighter on hover, pressed in a touch while clicked: the same feel on every
+  // pill. The rim is the island's: a light line (dark in light mode) with a
+  // faint halo just outside it, so the pill keeps its shape on any wallpaper.
+  readonly property color rimTone: Theme.isLight ? Qt.rgba(0, 0, 0, 1) : Qt.rgba(1, 1, 1, 1)
+
+  color: hover.hovered ? Qt.tint(Theme.island, Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.07)) : Theme.island
   border.width: 1
-  border.color: Theme.border
+  border.color: Qt.rgba(rimTone.r, rimTone.g, rimTone.b, (Theme.isLight ? 0.12 : 0.16) + (hover.hovered ? 0.06 : 0))
+
+  HoverHandler {
+    id: hover
+  }
+
+  // Passive: sees the press without taking it from the widget inside.
+  PointHandler {
+    id: press
+  }
+
+  Repeater {
+    model: [[1.5, 0.08], [3, 0.04], [5, 0.018]]
+
+    delegate: Rectangle {
+      required property var modelData
+      readonly property real d: modelData[0]
+
+      x: -d
+      y: -d
+      z: -1
+      width: root.width + d * 2
+      height: root.height + d * 2
+      radius: root.radius + d
+      color: "transparent"
+      border.width: 1.5
+      border.color: Qt.rgba(root.rimTone.r, root.rimTone.g, root.rimTone.b, modelData[1] * (Theme.isLight ? 0.7 : 1))
+    }
+  }
 
   opacity: shown ? 1 : 0
 
@@ -49,7 +82,7 @@ Rectangle {
       easing.bezierCurve: [0.34, 1.32, 0.5, 1, 1, 1]
     }
   }
-  scale: shown ? 1 : 0.9
+  scale: (shown ? 1 : 0.9) * (press.active ? 0.97 : 1)
   visible: opacity > 0.01
 
   // For a pill that opens something when clicked anywhere on it.
@@ -64,14 +97,19 @@ Rectangle {
     onClicked: root.tapped()
   }
 
-  Row {
-    id: layout
-    anchors.centerIn: parent
-    spacing: root.spacing
-  }
+  // Content can be wider than the pill for a moment while it shrinks, so it's
+  // clipped here rather than on the pill itself, which would also cut off the
+  // halo around it.
+  Item {
+    anchors.fill: parent
+    clip: true
 
-  // Content can be wider than the pill for a moment while it shrinks.
-  clip: true
+    Row {
+      id: layout
+      anchors.centerIn: parent
+      spacing: root.spacing
+    }
+  }
 
   Behavior on implicitWidth {
     NumberAnimation {
@@ -87,8 +125,9 @@ Rectangle {
   }
   Behavior on scale {
     NumberAnimation {
-      duration: Theme.animFast
-      easing.type: Easing.OutBack
+      duration: press.active ? 90 : 380
+      easing.type: Easing.BezierSpline
+      easing.bezierCurve: press.active ? [0.2, 0, 0.4, 1, 1, 1] : [0.34, 1.56, 0.64, 1, 1, 1]
     }
   }
   Behavior on color {

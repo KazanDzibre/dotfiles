@@ -4,10 +4,6 @@ import qs.widgets
 ShellRoot {
   Bar {}
 
-  // Notifications pop out of the bar's island now (Moments.qml), so the corner
-  // toasts are off. Put this back to have both.
-  // NotificationToasts {}
-
   // Fullscreen, and only mapped while a capture is in progress.
   ScreenshotOverlay {}
 

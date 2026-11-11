@@ -798,8 +798,6 @@ PanelWindow {
       // waiting notifications come first.
       if (mode === "music")
         root.view = "player";
-      else if (mode === "soon")
-        root.view = "today";
       else if (Notifications.count > 0)
         root.view = "inbox";
       else
@@ -1228,13 +1226,54 @@ PanelWindow {
     autoPaddingEnabled: true
     // The player's glow waits for the morph to finish; blurring a resizing
     // shape every frame is what made this stutter before.
-    opacity: root.mode === "charging" || root.mode === "thinking" || (root.mode === "alert" && root.settled) || (root.mode === "alertCard" && root.settled) || (root.mode === "claudeWaiting" && root.settled) ? 0.7 : root.mode === "player" && root.settled && Media.hasCoverTint ? 0.42 : root.musicGlowing ? root.musicGlow : 0
+    opacity: root.mode === "charging" || (root.mode === "alert" && root.settled) || (root.mode === "alertCard" && root.settled) || (root.mode === "claudeWaiting" && root.settled) ? 0.7 : root.mode === "player" && root.settled && Media.hasCoverTint ? 0.42 : root.musicGlowing ? root.musicGlow : 0
 
     // Quick while it follows the beat, slow for everything else.
     Behavior on opacity {
       NumberAnimation {
         duration: root.musicGlowing ? 110 : 500
         easing.type: Easing.OutQuad
+      }
+    }
+  }
+
+  // A thin light rim and, outside it, a few ever fainter outlines that read as
+  // a soft halo, so the island keeps its shape on a black wallpaper too. Plain
+  // outlines rather than a blur: they follow every resize for free, where
+  // blurring a moving shape is what used to make the island stutter.
+  readonly property color rim: Qt.rgba(1, 1, 1, 0.2)
+
+  Repeater {
+    model: [
+      {
+        d: 1.5,
+        a: 0.09
+      },
+      {
+        d: 3,
+        a: 0.045
+      },
+      {
+        d: 5,
+        a: 0.02
+      }
+    ]
+
+    delegate: Rectangle {
+      required property var modelData
+
+      x: shape.x - modelData.d
+      y: shape.y - modelData.d
+      width: shape.width + modelData.d * 2
+      height: shape.height + modelData.d * 2
+      radius: shape.radius + modelData.d
+      scale: shape.scale
+      color: "transparent"
+      border.width: 1.5
+      border.color: Qt.rgba(1, 1, 1, modelData.a)
+      transform: Translate {
+        x: root.nudge
+        y: islandDrop.y
       }
     }
   }
@@ -1249,7 +1288,7 @@ PanelWindow {
     radius: Math.min(height / 2, 30)
     color: "#050403"
     border.width: 1
-    border.color: Qt.rgba(1, 1, 1, 0.07)
+    border.color: root.rim
     clip: true
     scale: tapArea.pressed ? 0.96 : 1
     transform: Translate {
@@ -1494,22 +1533,10 @@ PanelWindow {
           corner: 8
         }
 
-        Ring {
-          anchors.fill: parent
-          visible: root.mode === "timer"
-          thickness: 3
-        }
-
-        DownloadRing {
-          anchors.fill: parent
-          visible: root.mode === "download"
-          thickness: 3
-        }
-
         Ink {
           anchors.centerIn: parent
-          visible: root.mode === "clock" || root.mode === "tone" || root.mode === "claude" || root.mode === "soon"
-          text: root.mode === "clock" ? (Weather.ready ? Weather.glyph : Icons.calendar) : root.mode === "soon" ? Icons.calendar : root.mode === "tone" ? Icons.sineWave : Icons.sparkle
+          visible: root.mode === "clock"
+          text: Weather.ready ? Weather.glyph : Icons.calendar
           font.pixelSize: Theme.iconSize + 8
           color: root.hot
         }
@@ -1625,7 +1652,7 @@ PanelWindow {
           anchors.centerIn: parent
           text: root.peekRight
           font.bold: true
-          color: root.mode === "clock" ? root.ink : root.mode === "claude" ? root.inkDim : root.hot
+          color: root.mode === "clock" ? root.ink : root.hot
         }
       }
     }
@@ -4801,7 +4828,7 @@ PanelWindow {
       radius: height / 2
       color: "#050403"
       border.width: 1
-      border.color: Qt.rgba(1, 1, 1, 0.07)
+      border.color: root.rim
       opacity: bub.on ? 1 : 0
       scale: bub.on ? (bubArea.pressed ? 0.88 : 1) : 0.3
 
