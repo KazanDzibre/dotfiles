@@ -24,6 +24,31 @@ Rectangle {
   border.color: Theme.border
 
   opacity: shown ? 1 : 0
+
+  // At login (Welcome.qml) each pill drops in from above the bar, a beat after
+  // the one before it; -1 opts a pill out.
+  property int dropDelay: -1
+  readonly property bool dropping: Welcome.entrance && dropDelay >= 0
+
+  transform: Translate {
+    id: drop
+    y: root.dropping ? -60 : 0
+  }
+
+  SequentialAnimation {
+    running: root.dropping
+    PauseAnimation {
+      duration: 350 + Math.max(0, root.dropDelay)
+    }
+    NumberAnimation {
+      target: drop
+      property: "y"
+      to: 0
+      duration: 700
+      easing.type: Easing.BezierSpline
+      easing.bezierCurve: [0.34, 1.32, 0.5, 1, 1, 1]
+    }
+  }
   scale: shown ? 1 : 0.9
   visible: opacity > 0.01
 

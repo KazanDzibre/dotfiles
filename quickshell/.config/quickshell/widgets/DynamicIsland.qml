@@ -379,41 +379,39 @@ PanelWindow {
       return "today";
     if (ClaudeCode.waiting)
       return "claudeWaiting";
-    if (AiChat.streaming && !AiChat.open)
-      return "thinking";
-    if (Updates.installing)
-      return "installing";
-    // A meeting in the next 15 minutes beats Claude: it's the one with a time.
-    if (Calendar.soon && !musicOn)
-      return "soon";
-    if (ClaudeCode.working && !musicOn)
-      return "claude";
+    // Everything that runs for a while (Claude working, the AI answering,
+    // updates, a download, the focus timer, a tone, a meeting coming up) sits
+    // beside the island as a bubble instead, so the island stays yours.
     if (musicOn)
       return "music";
-    if (Downloads.downloading && !musicOn)
-      return "download";
-    if (Tones.timing)
-      return "timer";
-    if (Tones.active)
-      return "tone";
     return "clock";
   }
 
-  // The timer splits off into its own bubble whenever something else holds
-  // the island.
-  readonly property bool bubbleShown: Tones.timing && mode !== "timer" && mode !== "player" && mode !== "today" && mode !== "inbox" && mode !== "search" && mode !== "alertCard" && mode !== "ask" && mode !== "shelf" && mode !== "memos"
+  // The bubbles beside the island, left to right, for whatever is running.
+  // Only beside the slim island: a big card has the screen's attention.
+  readonly property var bubbleKeys: {
+    if (!slim)
+      return [];
+    const keys = [];
+    if (ClaudeCode.working)
+      keys.push("claude");
+    if (AiChat.streaming && !AiChat.open)
+      keys.push("thinking");
+    if (Updates.installing)
+      keys.push("updates");
+    if (Downloads.downloading)
+      keys.push("download");
+    if (Tones.timing)
+      keys.push("timer");
+    if (Tones.active)
+      keys.push("tone");
+    if (Calendar.soon)
+      keys.push("meeting");
+    return keys;
+  }
 
-  // Claude busy while something else holds the island: a little spinning bubble.
-  readonly property bool claudeBubbleShown: ClaudeCode.working !== null && mode !== "claude" && mode !== "claudeWaiting" && slim
-
-  // A download while something else holds the island.
-  readonly property bool downloadBubbleShown: Downloads.downloading && mode !== "download" && slim
-
-  // A meeting coming up while music holds the island: the minutes, in a bubble.
-  readonly property bool meetingBubbleShown: Calendar.soon !== null && mode !== "soon" && slim
-
-  // Where the last round bubble ends, for the dots that sit after them.
-  readonly property real bubblesRight: meetingBubbleShown ? meetingSat.x + meetingSat.width : downloadBubbleShown ? downloadSat.x + downloadSat.width : claudeBubbleShown ? claudeSat.x + claudeSat.width : bubbleShown ? bubble.x + bubble.width : shape.x + shape.width
+  // Where the last bubble ends, for the dots that sit after them.
+  readonly property real bubblesRight: bubbleRow.x + bubbleRow.width
 
   // ------------------------------------------------------------- hover peek
   // Rest the pointer on the slim island and it grows a little to say more. The
@@ -424,7 +422,7 @@ PanelWindow {
   readonly property string activeKey: peeking ? "peek" : mode
 
   function canPeek(m) {
-    return ["clock", "music", "timer", "tone", "claude", "download", "soon"].includes(m);
+    return ["clock", "music"].includes(m);
   }
 
   function cancelPeek() {
@@ -447,16 +445,6 @@ PanelWindow {
       return Qt.formatDateTime(Time.now, "dddd, d MMMM");
     case "music":
       return Media.title;
-    case "timer":
-      return "Focus session";
-    case "tone":
-      return Tones.nameFor(Tones.playing);
-    case "claude":
-      return ClaudeCode.working ? ClaudeCode.working.project || "Claude" : "Claude";
-    case "download":
-      return Downloads.label;
-    case "soon":
-      return Calendar.soon ? Calendar.soon.title : "";
     }
     return "";
   }
@@ -467,16 +455,6 @@ PanelWindow {
       return Weather.ready ? Weather.tempC + "° · " + Weather.description : Notifications.count > 0 ? Notifications.count + " waiting" : "Nothing waiting";
     case "music":
       return Media.artist;
-    case "timer":
-      return "Ends at " + Qt.formatDateTime(new Date(Time.now.getTime() + Tones.timerLeft * 1000), "HH:mm");
-    case "tone":
-      return Tones.playing + " Hz";
-    case "claude":
-      return ClaudeCode.working ? ClaudeCode.working.detail : "";
-    case "download":
-      return Downloads.status;
-    case "soon":
-      return Calendar.soon ? Calendar.range(Calendar.soon) + (Calendar.soon.where ? " · " + Calendar.soon.where : "") : "";
     }
     return "";
   }
@@ -485,14 +463,6 @@ PanelWindow {
     switch (mode) {
     case "clock":
       return Time.time;
-    case "timer":
-      return Tones.formatLeft(Tones.timerLeft);
-    case "claude":
-      return ClaudeCode.formatElapsed(root.claudeElapsed);
-    case "download":
-      return Downloads.percent;
-    case "soon":
-      return Calendar.soon ? Calendar.countdown(Calendar.soon).replace("in ", "") : "";
     }
     return "";
   }
@@ -502,6 +472,22 @@ PanelWindow {
     settleTimer.restart();
     if (mode === "shot" && !moment.title)
       shutter.restart();
+  }
+
+  // At login the island drops in with the bar's pills (Welcome.qml).
+  SequentialAnimation {
+    running: Welcome.entrance
+    PauseAnimation {
+      duration: 350 + 160
+    }
+    NumberAnimation {
+      target: islandDrop
+      property: "y"
+      to: 0
+      duration: 700
+      easing.type: Easing.BezierSpline
+      easing.bezierCurve: root.shapeCurve
+    }
   }
 
   // Close the player if the music goes away under it.
@@ -611,27 +597,16 @@ PanelWindow {
       return [clockRow.implicitWidth + 34, compactH];
     case "music":
       return [200, compactH];
-    case "timer":
-    case "tone":
-      return [236, compactH];
-    case "thinking":
-      return [thinkingRow.implicitWidth + 36, compactH];
-    case "installing":
-      return [300, compactH];
     case "player":
       return [400, 154 + (Lyrics.available ? 76 : 0)];
-    case "claude":
-      return [340, compactH];
     case "claudeWaiting":
       return [400, compactH];
-    case "download":
-      return [290, compactH];
-    case "soon":
-      return [290, compactH];
     case "meeting":
       return [430, 68];
+    case "welcome":
+      return [Math.max(300, welcomeText.implicitWidth + 80), 56];
     case "peek":
-      return [mode === "claude" ? 430 : 350, 56];
+      return [350, 56];
     case "headphones":
       return [340, 76];
     case "downloaded":
@@ -728,10 +703,17 @@ PanelWindow {
         Quickshell.execDetached(["xdg-open", root.moment.open ?? root.moment.image]);
       Moments.dismiss();
       return;
-    case "claude":
+    // Claude waiting on you: a click takes you to it. Merely working, it
+    // doesn't hold the island hostage: the click opens the cards as on the
+    // clock, and the sparkle itself jumps to the terminal.
     case "claudeWaiting":
       if (ClaudeCode.current)
         ClaudeCode.focus(ClaudeCode.current.window);
+      return;
+    case "welcome":
+      Moments.dismiss();
+      if (root.moment && root.moment.inbox)
+        root.view = "inbox";
       return;
     case "ask":
     case "drop":
@@ -749,7 +731,6 @@ PanelWindow {
       return;
     }
     case "answer":
-    case "thinking":
       Moments.dismiss();
       if (!AiChat.open)
         AiChat.toggle();
@@ -764,10 +745,6 @@ PanelWindow {
       Moments.dismiss();
       return;
     case "music":
-    case "timer":
-    case "tone":
-    case "download":
-    case "soon":
     case "clock":
       if (Date.now() - root.grabClearedAt < 400)
         return;
@@ -1129,7 +1106,7 @@ PanelWindow {
   // What takes input: the island and its satellites. Sized from where the
   // island is *going*, so the input region changes once per mode rather than
   // on every animation frame.
-  readonly property real targetGroupWidth: size[0] + (bubbleShown ? compactH + 6 : 0) + (claudeBubbleShown ? compactH + 6 : 0) + (downloadBubbleShown ? compactH + 6 : 0) + (meetingBubbleShown ? compactH + 6 : 0) + tailTarget + (IdleInhibit.enabled ? 13 : 0) + (Privacy.micInUse ? 14 : 0) + (Privacy.camInUse ? 14 : 0)
+  readonly property real targetGroupWidth: size[0] + bubbleKeys.length * (compactH + 6) + tailTarget + (IdleInhibit.enabled ? 13 : 0) + (Privacy.micInUse ? 14 : 0) + (Privacy.camInUse ? 14 : 0)
 
   // Unread notifications: the island grows a section on its right with the
   // bell and a count. They never pop open on arrival; the bell just hops.
@@ -1215,7 +1192,9 @@ PanelWindow {
     clip: true
     scale: tapArea.pressed ? 0.96 : 1
     transform: Translate {
+      id: islandDrop
       x: root.nudge
+      y: Welcome.entrance ? -60 : 0
     }
 
     Behavior on width {
@@ -1589,40 +1568,6 @@ PanelWindow {
       }
     }
 
-    // ------------------------------------------------------------ download
-    Layer {
-      key: "download"
-
-      DownloadRing {
-        id: downloadRing
-        anchors.left: parent.left
-        anchors.leftMargin: 5
-        anchors.verticalCenter: parent.verticalCenter
-        width: 20
-        height: 20
-      }
-
-      Ink {
-        anchors.left: downloadRing.right
-        anchors.leftMargin: 8
-        anchors.right: downloadPercent.left
-        anchors.rightMargin: 8
-        anchors.verticalCenter: parent.verticalCenter
-        text: Downloads.label
-        textFormat: Text.PlainText
-      }
-
-      Ink {
-        id: downloadPercent
-        anchors.right: parent.right
-        anchors.rightMargin: 13
-        anchors.verticalCenter: parent.verticalCenter
-        text: Downloads.percent
-        font.bold: true
-        color: root.hot
-      }
-    }
-
     // -------------------------------------------------------- download done
     Layer {
       key: "downloaded"
@@ -1759,38 +1704,57 @@ PanelWindow {
       }
     }
 
-    // ------------------------------------------------- meeting coming up
+    // ------------------------------------------------------------ welcome
     Layer {
-      key: "soon"
+      id: welcomeLayer
+      key: "welcome"
+
+      readonly property var m: root.moment && root.moment.kind === "welcome" ? root.moment : null
 
       Ink {
-        id: soonGlyph
+        id: welcomeGlyph
         anchors.left: parent.left
-        anchors.leftMargin: 12
+        anchors.leftMargin: 18
         anchors.verticalCenter: parent.verticalCenter
-        text: Icons.calendar
-        color: root.calColor(Calendar.soon ? Calendar.soon.cal ?? 0 : 0)
-        font.pixelSize: Theme.iconSize
-      }
-
-      Ink {
-        anchors.left: soonGlyph.right
-        anchors.leftMargin: 9
-        anchors.right: soonWhen.left
-        anchors.rightMargin: 10
-        anchors.verticalCenter: parent.verticalCenter
-        text: Calendar.soon ? Calendar.soon.title : ""
-        textFormat: Text.PlainText
-      }
-
-      Ink {
-        id: soonWhen
-        anchors.right: parent.right
-        anchors.rightMargin: 13
-        anchors.verticalCenter: parent.verticalCenter
-        text: Calendar.soon ? Calendar.countdown(Calendar.soon) : ""
-        font.bold: true
+        text: welcomeLayer.m ? welcomeLayer.m.glyph : ""
+        font.pixelSize: Theme.iconSize + 8
         color: root.hot
+        scale: welcomeLayer.shown ? 1 : 0.4
+        rotation: welcomeLayer.shown ? 0 : -40
+
+        Behavior on scale {
+          NumberAnimation {
+            duration: 760
+            easing.type: Easing.OutBack
+            easing.overshoot: 2
+          }
+        }
+        Behavior on rotation {
+          NumberAnimation {
+            duration: 760
+            easing.type: Easing.OutBack
+          }
+        }
+      }
+
+      Column {
+        id: welcomeText
+        anchors.left: welcomeGlyph.right
+        anchors.leftMargin: 14
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: 2
+
+        Ink {
+          text: welcomeLayer.m ? welcomeLayer.m.title : ""
+          font.bold: true
+          textFormat: Text.PlainText
+        }
+        Ink {
+          text: welcomeLayer.m ? welcomeLayer.m.sub : ""
+          color: root.inkDim
+          font.pixelSize: Theme.smallSize + 1
+          textFormat: Text.PlainText
+        }
       }
     }
 
@@ -1879,180 +1843,6 @@ PanelWindow {
         Chip {
           label: meetingLayer.event !== null && meetingLayer.event.link !== "" ? "Later" : "OK"
           onPressed: Moments.dismiss()
-        }
-      }
-    }
-
-    // ------------------------------------------------------------- timer
-    Layer {
-      key: "timer"
-
-      Ring {
-        anchors.left: parent.left
-        anchors.leftMargin: 5
-        anchors.verticalCenter: parent.verticalCenter
-        width: 20
-        height: 20
-      }
-
-      Ink {
-        anchors.centerIn: parent
-        text: Time.time
-        font.bold: true
-      }
-
-      Ink {
-        anchors.right: parent.right
-        anchors.rightMargin: 12
-        anchors.verticalCenter: parent.verticalCenter
-        text: Tones.formatLeft(Tones.timerLeft)
-        font.bold: true
-        color: root.hot
-      }
-    }
-
-    // -------------------------------------------------------------- tone
-    // A healing tone is sounding (and nothing louder holds the island).
-    Layer {
-      key: "tone"
-
-      Ink {
-        anchors.left: parent.left
-        anchors.leftMargin: 10
-        anchors.verticalCenter: parent.verticalCenter
-        text: Icons.sineWave
-        color: root.hot
-        font.pixelSize: Theme.iconSize
-
-        SequentialAnimation on opacity {
-          running: root.mode === "tone"
-          loops: Animation.Infinite
-          NumberAnimation {
-            to: 0.4
-            duration: 1400
-            easing.type: Easing.InOutSine
-          }
-          NumberAnimation {
-            to: 1
-            duration: 1400
-            easing.type: Easing.InOutSine
-          }
-        }
-      }
-
-      Ink {
-        anchors.centerIn: parent
-        text: Time.time
-        font.bold: true
-      }
-
-      Ink {
-        anchors.right: parent.right
-        anchors.rightMargin: 12
-        anchors.verticalCenter: parent.verticalCenter
-        text: Tones.playing + " Hz"
-        font.bold: true
-        color: root.hot
-      }
-    }
-
-    // ---------------------------------------------------------- thinking
-    Layer {
-      key: "thinking"
-
-      Row {
-        id: thinkingRow
-        anchors.centerIn: parent
-        spacing: 8
-
-        Ink {
-          text: Icons.ai
-          color: root.hot
-          font.pixelSize: Theme.iconSize
-
-          SequentialAnimation on scale {
-            running: root.mode === "thinking"
-            loops: Animation.Infinite
-            NumberAnimation {
-              to: 0.7
-              duration: 600
-              easing.type: Easing.InOutSine
-            }
-            NumberAnimation {
-              to: 1
-              duration: 600
-              easing.type: Easing.InOutSine
-            }
-          }
-        }
-
-        Ink {
-          text: "Thinking…"
-
-          SequentialAnimation on opacity {
-            running: root.mode === "thinking"
-            loops: Animation.Infinite
-            NumberAnimation {
-              to: 0.45
-              duration: 700
-              easing.type: Easing.InOutSine
-            }
-            NumberAnimation {
-              to: 1
-              duration: 700
-              easing.type: Easing.InOutSine
-            }
-          }
-        }
-      }
-    }
-
-    // -------------------------------------------------------- installing
-    Layer {
-      key: "installing"
-
-      Row {
-        anchors.centerIn: parent
-        spacing: 10
-
-        Ink {
-          anchors.verticalCenter: parent.verticalCenter
-          text: Icons.download
-          color: root.hot
-          font.pixelSize: Theme.iconSize
-        }
-
-        Ink {
-          anchors.verticalCenter: parent.verticalCenter
-          text: Updates.count > 0 ? "Installing " + Updates.count + " update" + (Updates.count === 1 ? "" : "s") : "Installing updates"
-        }
-
-        // Indeterminate: a segment sliding along the track.
-        Rectangle {
-          anchors.verticalCenter: parent.verticalCenter
-          width: 80
-          height: 5
-          radius: 2.5
-          color: Qt.rgba(1, 1, 1, 0.14)
-          clip: true
-
-          Rectangle {
-            width: 28
-            height: parent.height
-            radius: 2.5
-            color: root.hot
-
-            SequentialAnimation on x {
-              running: root.mode === "installing"
-              loops: Animation.Infinite
-              NumberAnimation {
-                from: -28
-                to: 80
-                duration: 1100
-                easing.type: Easing.InOutCubic
-              }
-            }
-          }
         }
       }
     }
@@ -2541,56 +2331,6 @@ PanelWindow {
             }
           }
         }
-      }
-    }
-
-    // ---------------------------------------------------------- claude
-    Layer {
-      key: "claude"
-
-      Ink {
-        id: claudeSpark
-        anchors.left: parent.left
-        anchors.leftMargin: 12
-        anchors.verticalCenter: parent.verticalCenter
-        text: Icons.sparkle
-        font.pixelSize: Theme.iconSize + 1
-        color: root.hot
-
-        SequentialAnimation on opacity {
-          running: root.mode === "claude"
-          loops: Animation.Infinite
-          NumberAnimation {
-            to: 0.4
-            duration: 800
-            easing.type: Easing.InOutSine
-          }
-          NumberAnimation {
-            to: 1
-            duration: 800
-            easing.type: Easing.InOutSine
-          }
-        }
-      }
-
-      Ink {
-        anchors.left: claudeSpark.right
-        anchors.leftMargin: 9
-        anchors.right: claudeTime.left
-        anchors.rightMargin: 10
-        anchors.verticalCenter: parent.verticalCenter
-        text: ClaudeCode.working ? ClaudeCode.working.detail : ""
-        textFormat: Text.PlainText
-      }
-
-      Ink {
-        id: claudeTime
-        anchors.right: parent.right
-        anchors.rightMargin: 13
-        anchors.verticalCenter: parent.verticalCenter
-        text: ClaudeCode.formatElapsed(root.claudeElapsed)
-        color: root.inkDim
-        font.pixelSize: Theme.smallSize + 1
       }
     }
 
@@ -4588,21 +4328,23 @@ PanelWindow {
   }
 
   // ------------------------------------------------------------ satellites
-  // The focus timer, split off into its own bubble.
-  Rectangle {
-    id: bubble
+  // One bubble beside the island for something that runs a while. Width
+  // animates between 0 and its slot, so bubbles slide apart and together as
+  // others come and go; the island itself never moves. Hover for what it is.
+  component Bubble: Item {
+    id: bub
 
-    x: shape.x + shape.width + (root.bubbleShown ? 6 : 0)
-    y: shape.y
-    width: root.bubbleShown ? root.compactH : 0
+    required property string key
+    property string label: ""
+    property string detail: ""
+    signal activated
+
+    default property alias content: face.data
+    readonly property bool on: root.bubbleKeys.includes(key)
+
+    width: on ? root.compactH + 6 : 0
     height: root.compactH
-    radius: height / 2
-    color: "#050403"
-    border.width: 1
-    border.color: Qt.rgba(1, 1, 1, 0.07)
-    opacity: root.bubbleShown ? 1 : 0
-    scale: root.bubbleShown ? (bubbleArea.pressed ? 0.88 : 1) : 0.3
-    visible: opacity > 0.01
+    visible: width > 0.5
 
     Behavior on width {
       NumberAnimation {
@@ -4611,172 +4353,235 @@ PanelWindow {
         easing.bezierCurve: root.shapeCurve
       }
     }
-    Behavior on scale {
-      NumberAnimation {
-        duration: root.morphMs
-        easing.type: Easing.BezierSpline
-        easing.bezierCurve: root.popCurve
-      }
-    }
-    Behavior on opacity {
-      NumberAnimation {
-        duration: 220
-      }
-    }
 
-    Ring {
-      anchors.centerIn: parent
-      width: 18
-      height: 18
+    Rectangle {
+      id: face
+      x: 6
+      width: root.compactH
+      height: root.compactH
+      radius: height / 2
+      color: "#050403"
+      border.width: 1
+      border.color: Qt.rgba(1, 1, 1, 0.07)
+      opacity: bub.on ? 1 : 0
+      scale: bub.on ? (bubArea.pressed ? 0.88 : 1) : 0.3
+
+      Behavior on opacity {
+        NumberAnimation {
+          duration: 220
+        }
+      }
+      Behavior on scale {
+        NumberAnimation {
+          duration: root.morphMs
+          easing.type: Easing.BezierSpline
+          easing.bezierCurve: root.popCurve
+        }
+      }
     }
 
     MouseArea {
-      id: bubbleArea
-      anchors.fill: parent
+      id: bubArea
+      x: face.x
+      width: face.width
+      height: face.height
+      hoverEnabled: true
       cursorShape: Qt.PointingHandCursor
-      onClicked: Moments.popupRequested("tones", root.screenName())
+      onClicked: bub.activated()
+    }
+
+    // What it is, under the bubble while hovered.
+    Rectangle {
+      x: face.x + face.width / 2 - width / 2
+      y: root.compactH + 6
+      width: tipColumn.implicitWidth + 22
+      height: tipColumn.implicitHeight + 12
+      radius: 11
+      color: "#050403"
+      border.width: 1
+      border.color: Qt.rgba(1, 1, 1, 0.08)
+      opacity: bubArea.containsMouse && bub.on ? 1 : 0
+      visible: opacity > 0.01
+
+      Behavior on opacity {
+        NumberAnimation {
+          duration: 140
+        }
+      }
+
+      Column {
+        id: tipColumn
+        anchors.centerIn: parent
+        spacing: 1
+
+        Ink {
+          anchors.horizontalCenter: parent.horizontalCenter
+          text: bub.label
+          font.bold: true
+          font.pixelSize: Theme.smallSize + 1
+          textFormat: Text.PlainText
+        }
+        Ink {
+          anchors.horizontalCenter: parent.horizontalCenter
+          visible: bub.detail.length > 0
+          width: Math.min(implicitWidth, 300)
+          text: bub.detail
+          color: root.inkDim
+          font.pixelSize: Theme.smallSize
+          textFormat: Text.PlainText
+        }
+      }
     }
   }
 
-  // Claude busy while music or something else holds the island.
-  Rectangle {
-    id: claudeSat
+  // A glyph that keeps turning while its bubble is out.
+  component Spinner: Ink {
+    id: spinner
+    property bool running: true
+    anchors.centerIn: parent
+    font.pixelSize: Theme.iconSize + 1
+    color: root.hot
 
-    x: (root.bubbleShown ? bubble.x + bubble.width : shape.x + shape.width) + (root.claudeBubbleShown ? 6 : 0)
+    RotationAnimation on rotation {
+      running: spinner.running
+      loops: Animation.Infinite
+      from: 0
+      to: 360
+      duration: 2400
+    }
+  }
+
+  // A glyph that breathes while its bubble is out.
+  component Breather: Ink {
+    id: breather
+    property bool running: true
+    anchors.centerIn: parent
+    font.pixelSize: Theme.iconSize
+    color: root.hot
+
+    SequentialAnimation on opacity {
+      running: breather.running
+      loops: Animation.Infinite
+      NumberAnimation {
+        to: 0.35
+        duration: 900
+        easing.type: Easing.InOutSine
+      }
+      NumberAnimation {
+        to: 1
+        duration: 900
+        easing.type: Easing.InOutSine
+      }
+    }
+  }
+
+  Row {
+    id: bubbleRow
+
+    x: shape.x + shape.width
     y: shape.y
-    width: root.claudeBubbleShown ? root.compactH : 0
     height: root.compactH
-    radius: height / 2
-    color: "#050403"
-    border.width: 1
-    border.color: Qt.rgba(1, 1, 1, 0.07)
-    clip: true
-    opacity: root.claudeBubbleShown ? 1 : 0
-    visible: opacity > 0.01
+    spacing: 0
 
-    Behavior on width {
-      NumberAnimation {
-        duration: root.morphMs
-        easing.type: Easing.BezierSpline
-        easing.bezierCurve: root.shapeCurve
-      }
-    }
-    Behavior on opacity {
-      NumberAnimation {
-        duration: 220
-      }
-    }
-
-    Ink {
-      anchors.centerIn: parent
-      text: Icons.sparkle
-      font.pixelSize: Theme.iconSize + 1
-      color: root.hot
-
-      RotationAnimation on rotation {
-        running: root.claudeBubbleShown
-        loops: Animation.Infinite
-        from: 0
-        to: 360
-        duration: 2400
-      }
-    }
-
-    MouseArea {
-      anchors.fill: parent
-      cursorShape: Qt.PointingHandCursor
-      onClicked: {
+    Bubble {
+      id: claudeBubble
+      key: "claude"
+      label: ClaudeCode.working ? ClaudeCode.working.project || "Claude" : "Claude"
+      detail: ClaudeCode.working ? (ClaudeCode.working.detail ? ClaudeCode.working.detail + " · " : "") + ClaudeCode.formatElapsed(root.claudeElapsed) : ""
+      onActivated: {
         if (ClaudeCode.working)
           ClaudeCode.focus(ClaudeCode.working.window);
       }
-    }
-  }
 
-  // A download while something else holds the island.
-  Rectangle {
-    id: downloadSat
-
-    x: (root.claudeBubbleShown ? claudeSat.x + claudeSat.width : root.bubbleShown ? bubble.x + bubble.width : shape.x + shape.width) + (root.downloadBubbleShown ? 6 : 0)
-    y: shape.y
-    width: root.downloadBubbleShown ? root.compactH : 0
-    height: root.compactH
-    radius: height / 2
-    color: "#050403"
-    border.width: 1
-    border.color: Qt.rgba(1, 1, 1, 0.07)
-    clip: true
-    opacity: root.downloadBubbleShown ? 1 : 0
-    visible: opacity > 0.01
-
-    Behavior on width {
-      NumberAnimation {
-        duration: root.morphMs
-        easing.type: Easing.BezierSpline
-        easing.bezierCurve: root.shapeCurve
-      }
-    }
-    Behavior on opacity {
-      NumberAnimation {
-        duration: 220
+      Spinner {
+        text: Icons.sparkle
+        running: claudeBubble.on
       }
     }
 
-    DownloadRing {
-      anchors.centerIn: parent
-      width: 18
-      height: 18
-    }
-
-    MouseArea {
-      anchors.fill: parent
-      cursorShape: Qt.PointingHandCursor
-      onClicked: Downloads.openFolder()
-    }
-  }
-
-  // A meeting coming up while something else holds the island: the minutes.
-  Rectangle {
-    id: meetingSat
-
-    x: (root.downloadBubbleShown ? downloadSat.x + downloadSat.width : root.claudeBubbleShown ? claudeSat.x + claudeSat.width : root.bubbleShown ? bubble.x + bubble.width : shape.x + shape.width) + (root.meetingBubbleShown ? 6 : 0)
-    y: shape.y
-    width: root.meetingBubbleShown ? root.compactH : 0
-    height: root.compactH
-    radius: height / 2
-    color: "#050403"
-    border.width: 1
-    border.color: Qt.rgba(1, 1, 1, 0.07)
-    clip: true
-    opacity: root.meetingBubbleShown ? 1 : 0
-    visible: opacity > 0.01
-
-    Behavior on width {
-      NumberAnimation {
-        duration: root.morphMs
-        easing.type: Easing.BezierSpline
-        easing.bezierCurve: root.shapeCurve
+    Bubble {
+      id: thinkingBubble
+      key: "thinking"
+      label: "AI is answering"
+      detail: "Click to open the chat"
+      onActivated: {
+        if (!AiChat.open)
+          AiChat.toggle();
       }
-    }
-    Behavior on opacity {
-      NumberAnimation {
-        duration: 220
+
+      Breather {
+        text: Icons.ai
+        running: thinkingBubble.on
       }
     }
 
-    Ink {
-      anchors.centerIn: parent
-      text: Calendar.soon ? Math.max(0, Calendar.minutesToNext) : ""
-      font.pixelSize: Theme.smallSize
-      font.bold: true
-      color: root.hot
+    Bubble {
+      id: updatesBubble
+      key: "updates"
+      label: Updates.count > 0 ? "Installing " + Updates.count + " update" + (Updates.count === 1 ? "" : "s") : "Installing updates"
+      detail: "Click for details"
+      onActivated: Moments.popupRequested("updates", root.screenName())
+
+      Spinner {
+        text: Icons.updates
+        running: updatesBubble.on
+      }
     }
 
-    MouseArea {
-      anchors.fill: parent
-      cursorShape: Qt.PointingHandCursor
-      onClicked: {
+    Bubble {
+      key: "download"
+      label: Downloads.label
+      detail: Downloads.status
+      onActivated: Downloads.openFolder()
+
+      DownloadRing {
+        anchors.centerIn: parent
+        width: 18
+        height: 18
+      }
+    }
+
+    Bubble {
+      key: "timer"
+      label: "Focus"
+      detail: Tones.formatLeft(Tones.timerLeft) + " left"
+      onActivated: Moments.popupRequested("tones", root.screenName())
+
+      Ring {
+        anchors.centerIn: parent
+        width: 18
+        height: 18
+      }
+    }
+
+    Bubble {
+      id: toneBubble
+      key: "tone"
+      label: Tones.active ? Tones.nameFor(Tones.playing) : ""
+      detail: Tones.active ? Tones.playing + " Hz" : ""
+      onActivated: Moments.popupRequested("tones", root.screenName())
+
+      Breather {
+        text: Icons.sineWave
+        running: toneBubble.on
+      }
+    }
+
+    Bubble {
+      key: "meeting"
+      label: Calendar.soon ? Calendar.soon.title : ""
+      detail: Calendar.soon ? Calendar.countdown(Calendar.soon) + " · " + Calendar.range(Calendar.soon) : ""
+      onActivated: {
         Moments.dismiss();
         root.view = "today";
+      }
+
+      Ink {
+        anchors.centerIn: parent
+        text: Calendar.soon ? Math.max(0, Calendar.minutesToNext) : ""
+        font.pixelSize: Theme.smallSize
+        font.bold: true
+        color: root.calColor(Calendar.soon ? Calendar.soon.cal ?? 0 : 0)
       }
     }
   }

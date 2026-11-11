@@ -94,7 +94,8 @@ hl.config({
         gaps_in  = 2,
         gaps_out = 2,
 
-        border_size = 1,
+        -- 2px so the focused window's slowly turning gradient can be seen.
+        border_size = 2,
 
         col = {
             active_border   = { colors = { theme.active_a, theme.active_b }, angle = 45 },
@@ -108,11 +109,16 @@ hl.config({
     },
 
     decoration = {
-        rounding       = 5,
+        -- Rounder, to sit with the bar's pills.
+        rounding       = 10,
         rounding_power = 2,
 
         active_opacity   = 1.0,
         inactive_opacity = 1.0,
+
+        -- Windows you're not in step back a little, so focus reads at a glance.
+        dim_inactive = true,
+        dim_strength = 0.08,
 
         shadow = {
             enabled      = true,
@@ -142,23 +148,32 @@ hl.curve("quick",          { type = "bezier", points = { {0.15, 0},    {0.1, 1} 
 -- A little past the target and back — gives the AI panel a physical settle
 -- instead of a dead stop.
 hl.curve("overshoot",      { type = "bezier", points = { {0.05, 0.9},  {0.1, 1.08}  } })
+-- The island's own spring (DynamicIsland.qml: cubic-bezier(.34,1.32,.5,1)), so
+-- windows move the way the bar does: a touch past the target, then settle.
+hl.curve("spring",         { type = "bezier", points = { {0.34, 1.32}, {0.5, 1}     } })
+-- Quick off the mark and soft on landing, for sliding between workspaces.
+hl.curve("swift",          { type = "bezier", points = { {0.2, 0.8},   {0.2, 1}     } })
 
 hl.animation({ leaf = "global",        enabled = true, speed = 10,   bezier = "default" })
 hl.animation({ leaf = "border",        enabled = true, speed = 5.39, bezier = "easeOutQuint" })
-hl.animation({ leaf = "windows",       enabled = true, speed = 4.79, bezier = "easeOutQuint" })
-hl.animation({ leaf = "windowsIn",     enabled = true, speed = 4.1,  bezier = "easeOutQuint", style = "popin 87%" })
-hl.animation({ leaf = "windowsOut",    enabled = true, speed = 1.49, bezier = "linear",       style = "popin 87%" })
+-- The focused window's gradient turns, slowly, all the time.
+hl.animation({ leaf = "borderangle",   enabled = true, speed = 100,  bezier = "linear",       style = "loop" })
+hl.animation({ leaf = "windows",       enabled = true, speed = 5,    bezier = "spring" })
+hl.animation({ leaf = "windowsIn",     enabled = true, speed = 4.5,  bezier = "spring",       style = "popin 80%" })
+hl.animation({ leaf = "windowsOut",    enabled = true, speed = 2.4,  bezier = "quick",        style = "popin 90%" })
 hl.animation({ leaf = "fadeIn",        enabled = true, speed = 1.73, bezier = "almostLinear" })
-hl.animation({ leaf = "fadeOut",       enabled = true, speed = 1.46, bezier = "almostLinear" })
+hl.animation({ leaf = "fadeOut",       enabled = true, speed = 2.2,  bezier = "almostLinear" })
 hl.animation({ leaf = "fade",          enabled = true, speed = 3.03, bezier = "quick" })
 hl.animation({ leaf = "layers",        enabled = true, speed = 3.81, bezier = "easeOutQuint" })
 hl.animation({ leaf = "layersIn",      enabled = true, speed = 4,    bezier = "easeOutQuint", style = "fade" })
 hl.animation({ leaf = "layersOut",     enabled = true, speed = 1.5,  bezier = "linear",       style = "fade" })
 hl.animation({ leaf = "fadeLayersIn",  enabled = true, speed = 1.79, bezier = "almostLinear" })
 hl.animation({ leaf = "fadeLayersOut", enabled = true, speed = 1.39, bezier = "almostLinear" })
-hl.animation({ leaf = "workspaces",    enabled = true, speed = 1.94, bezier = "almostLinear", style = "fade" })
-hl.animation({ leaf = "workspacesIn",  enabled = true, speed = 1.21, bezier = "almostLinear", style = "fade" })
-hl.animation({ leaf = "workspacesOut", enabled = true, speed = 1.94, bezier = "almostLinear", style = "fade" })
+-- Workspaces slide the way you're going: left for a lower one, right for a
+-- higher one, the same order as the dots and the overview.
+hl.animation({ leaf = "workspaces",    enabled = true, speed = 3.6,  bezier = "swift",        style = "slidefade 18%" })
+hl.animation({ leaf = "workspacesIn",  enabled = true, speed = 3.6,  bezier = "swift",        style = "slidefade 18%" })
+hl.animation({ leaf = "workspacesOut", enabled = true, speed = 3.6,  bezier = "swift",        style = "slidefade 18%" })
 hl.animation({ leaf = "zoomFactor",    enabled = true, speed = 7,    bezier = "quick" })
 
 -- The AI assistant (special:ai, see the window rule further down) is docked
@@ -289,7 +304,10 @@ hl.bind(mainMod .. " + P",         hl.dsp.exec_cmd("$HOME/Nuketown/rustystore/ru
 hl.bind(mainMod .. " + F",         hl.dsp.window.fullscreen({ mode = "maximized" }))
 hl.bind(mainMod .. " + SHIFT + F", hl.dsp.window.fullscreen({ mode = "fullscreen" }))
 hl.bind(mainMod .. " + SHIFT + R", hl.dsp.reload_config())
-hl.bind(mainMod .. " + SHIFT + X", hl.dsp.exec_cmd("hyprlock"))
+-- Lock. The bar is told around it, so after unlocking the island can say what
+-- happened while you were away (Welcome.qml). `pidof` keeps a second press
+-- from stacking another lock on top.
+hl.bind(mainMod .. " + SHIFT + X", hl.dsp.exec_cmd("pidof hyprlock || { qs ipc call welcome away; hyprlock; qs ipc call welcome back; }"))
 
 -- Sway-style tabbed workspace. SUPER+W stacks every tiled window on the
 -- workspace into one tabbed group; SUPER+E dissolves it back to tiling;

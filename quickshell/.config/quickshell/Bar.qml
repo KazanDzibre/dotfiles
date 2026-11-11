@@ -98,6 +98,8 @@ Scope {
         spacing: Theme.gap
 
         Island {
+
+          dropDelay: 0
           id: workspacesIsland
 
           // Each bar lists only its own screen's workspaces, so the three
@@ -109,6 +111,7 @@ Scope {
 
         // Its own pill, so a window switch only ever resizes this one.
         Island {
+          dropDelay: 70
           id: titleIsland
 
           shown: windowTitle.present
@@ -162,6 +165,7 @@ Scope {
 
         // Only while a USB drive is plugged in.
         Island {
+          dropDelay: 260
           shown: Drives.hasDrives
           padding: 8
 
@@ -169,6 +173,8 @@ Scope {
         }
 
         Island {
+
+          dropDelay: 300
           shown: tray.hasItems
           padding: 9
 
@@ -181,6 +187,7 @@ Scope {
         // Hidden while one of its panels is out: the panel grows from this exact
         // spot wearing the same face, so the pill is "in" the panel meanwhile.
         Island {
+          dropDelay: 340
           opacity: status.panelOut ? 0 : 1
           // Keep its place in the row while invisible, or the tray would
           // slide over into the gap.
@@ -195,6 +202,7 @@ Scope {
         // The screen recording lives here, not in the centre island, so the
         // island stays free while recording. Gone when not recording.
         Island {
+          dropDelay: 380
           shown: Recorder.recording
           padding: 10
 

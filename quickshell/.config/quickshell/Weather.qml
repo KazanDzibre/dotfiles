@@ -53,7 +53,7 @@ Singleton {
   // A moment after startup, so it doesn't compete with everything else.
   Timer {
     running: true
-    interval: 8000
+    interval: 2500
     onTriggered: root.refresh()
   }
 

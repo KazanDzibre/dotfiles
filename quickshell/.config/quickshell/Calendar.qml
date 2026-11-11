@@ -14,6 +14,7 @@ Singleton {
 
   property var events: []          // [{ id, title, start, end, allDay, where, link, cal }]
   property string error: ""
+  property bool loaded: false       // true once a fetch has worked
   property real now: Date.now()
 
   readonly property var timed: events.filter(e => !e.allDay)
@@ -84,10 +85,11 @@ Singleton {
     onTriggered: root.refresh()
   }
 
-  // A moment after startup, so it doesn't compete with everything else.
+  // Soon after startup: the login greeting (Welcome.qml) mentions today's
+  // meetings.
   Timer {
     running: true
-    interval: 10000
+    interval: 2500
     onTriggered: root.refresh()
   }
 
@@ -102,6 +104,7 @@ Singleton {
           if (data.events) {
             root.events = data.events;
             root.error = "";
+            root.loaded = true;
           } else {
             // Offline or similar: keep the last good list.
             root.error = data.error ?? "unknown error";

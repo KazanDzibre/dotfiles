@@ -130,12 +130,14 @@ def hyprland():
 
 
 def hyprlock():
+    # The wallpaper too: the lock screen shows it blurred behind everything.
+    wallpaper = data.get("wallpaper") or ""
     write(CACHE / "hyprlock-colors.conf", f"""$accent = rgb({bare(ACCENT)})
 $surface = rgb({bare(SURFACE)})
 $text = rgb({bare(FG)})
 $dim = rgb({bare(DIM)})
 $base = rgb({bare(BG)})
-""")
+""" + (f"$wallpaper = {wallpaper}\n" if wallpaper and os.path.isfile(wallpaper) else ""))
 
 
 def btop():
