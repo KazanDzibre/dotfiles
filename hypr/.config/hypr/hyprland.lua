@@ -501,6 +501,14 @@ hl.layer_rule({
     no_anim      = true,
 })
 
+-- The rounded screen corners (ScreenCorners.qml): just there, no fade.
+hl.layer_rule({
+    name  = "corners",
+    match = { namespace = "^quickshell:corners$" },
+
+    no_anim = true,
+})
+
 -- The island in the middle of the bar (DynamicIsland.qml) is a window that is
 -- always mapped and animates itself; Hyprland's layer fade would only add a
 -- flash when Quickshell starts.

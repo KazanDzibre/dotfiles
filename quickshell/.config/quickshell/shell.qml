@@ -14,4 +14,7 @@ ShellRoot {
   // One per screen, just above the wallpaper; only mapped while a newly
   // applied wallpaper grows in from the middle.
   WallpaperReveal {}
+
+  // The screen's four corners, rounded like everything on it.
+  ScreenCorners {}
 }
