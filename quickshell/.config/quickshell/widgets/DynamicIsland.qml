@@ -23,6 +23,8 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Widgets
 import Quickshell.Hyprland
+import Quickshell.Networking
+import Quickshell.Bluetooth
 import qs
 
 PanelWindow {
@@ -403,6 +405,8 @@ PanelWindow {
       return "memos";
     if (view.endsWith("Card") && cardLive(view))
       return view;
+    if (view === "quick")
+      return "quick";
     if (view === "today" || view === "player")
       return "today";
     if (ClaudeCode.waiting)
@@ -413,6 +417,95 @@ PanelWindow {
     if (musicOn)
       return "music";
     return "clock";
+  }
+
+  // ---------------------------------------------------------- quick actions
+  // Press and hold the island: it opens into a row of round toggles. Keep
+  // holding and slide onto one, let go, and it happens (and the island folds
+  // away, showing the usual message). Let go first and the row stays open
+  // for clicking; click elsewhere to fold it.
+  property int quickHover: -1
+  property bool quickDragging: false
+
+  readonly property var quickActions: [
+    {
+      id: "wifi",
+      name: "Wi-Fi",
+      glyph: Networking.wifiEnabled ? Icons.wifiRamp[4] : Icons.wifiOff,
+      on: Networking.wifiEnabled
+    },
+    {
+      id: "bt",
+      name: "Bluetooth",
+      glyph: Bluetooth.defaultAdapter && Bluetooth.defaultAdapter.enabled ? Icons.bluetooth : Icons.bluetoothOff,
+      on: Bluetooth.defaultAdapter ? Bluetooth.defaultAdapter.enabled : false
+    },
+    {
+      id: "dnd",
+      name: "Do not disturb",
+      glyph: Notifications.doNotDisturb ? Icons.bellOff : Icons.bell,
+      on: Notifications.doNotDisturb
+    },
+    {
+      id: "awake",
+      name: "Keep awake",
+      glyph: IdleInhibit.enabled ? Icons.coffee : Icons.coffeeOff,
+      on: IdleInhibit.enabled
+    },
+    {
+      id: "shot",
+      name: "Screenshot",
+      glyph: Icons.crop,
+      on: false
+    },
+    {
+      id: "sound",
+      name: "Island sounds",
+      glyph: Sounds.enabled ? Icons.volHigh : Icons.volMute,
+      on: Sounds.enabled
+    }
+  ]
+
+  function quickRun(id, foldAfter) {
+    switch (id) {
+    case "wifi":
+      Networking.wifiEnabled = !Networking.wifiEnabled;
+      break;
+    case "bt":
+      if (Bluetooth.defaultAdapter)
+        Bluetooth.defaultAdapter.enabled = !Bluetooth.defaultAdapter.enabled;
+      break;
+    case "dnd":
+      Notifications.doNotDisturb = !Notifications.doNotDisturb;
+      break;
+    case "awake":
+      IdleInhibit.toggle();
+      break;
+    case "sound":
+      Sounds.toggle();
+      break;
+    case "shot":
+      // Fold away first, so the island isn't in the picture.
+      root.view = "";
+      quickShot.restart();
+      return;
+    }
+    if (foldAfter)
+      root.view = "";
+  }
+
+  Timer {
+    id: quickShot
+    interval: 320
+    onTriggered: Screenshot.region()
+  }
+
+  // Which button the pointer is over while still holding, from the tap
+  // area's own coordinates (it keeps the pointer for the whole hold).
+  function quickIndexAt(x) {
+    const rowLeft = (shape.width - root.sizeFor("quick")[0]) / 2 + 9;
+    const i = Math.floor((x - rowLeft + 4) / 40);
+    return i >= 0 && i < root.quickActions.length && x >= rowLeft - 4 ? i : -1;
   }
 
   // A bubble's card (opened from the bubble, shown in the island like every
@@ -660,6 +753,8 @@ PanelWindow {
       return [400, compactH];
     case "meeting":
       return [430, 68];
+    case "quick":
+      return [6 * 32 + 5 * 8 + 18, 46];
     case "claudeCard":
       return [330, 122 + Math.min(3, (ClaudeCode.working && ClaudeCode.working.steps ? ClaudeCode.working.steps.length - 1 : 0)) * 19];
     case "updatesCard":
@@ -787,6 +882,7 @@ PanelWindow {
       return;
     case "shelf":
     case "memos":
+    case "quick":
     case "claudeCard":
     case "updatesCard":
     case "downloadCard":
@@ -838,7 +934,7 @@ PanelWindow {
   // Clicking anywhere else folds the island back up.
   HyprlandFocusGrab {
     windows: [root]
-    active: root.mode === "player" || root.mode === "today" || root.mode === "inbox" || root.mode === "search" || root.mode === "alertCard" || root.mode === "ask" || root.mode === "shelf" || root.mode === "memos" || root.mode.endsWith("Card")
+    active: root.mode === "player" || root.mode === "today" || root.mode === "inbox" || root.mode === "search" || root.mode === "alertCard" || root.mode === "ask" || root.mode === "shelf" || root.mode === "memos" || root.mode === "quick" || root.mode.endsWith("Card")
     onCleared: {
       // Dragging a file out of the shelf hands the pointer to the drag.
       if (root.shelfDragging)
@@ -1386,8 +1482,34 @@ PanelWindow {
       anchors.fill: parent
       acceptedButtons: Qt.LeftButton | Qt.RightButton
       cursorShape: Qt.PointingHandCursor
+      pressAndHoldInterval: 450
       onClicked: event => root.tap(event.button)
       onWheel: wheel => root.scrolled(wheel)
+
+      // Held, on the slim island: the quick actions. (Handling this also
+      // keeps the release from counting as a click.)
+      onPressAndHold: event => {
+        if (event.button !== Qt.LeftButton || !root.slim || root.view !== "")
+          return;
+        Moments.dismiss();
+        root.cancelPeek();
+        root.quickHover = -1;
+        root.quickDragging = true;
+        root.view = "quick";
+      }
+      onPositionChanged: event => {
+        if (root.quickDragging)
+          root.quickHover = root.quickIndexAt(event.x);
+      }
+      onReleased: {
+        if (!root.quickDragging)
+          return;
+        root.quickDragging = false;
+        const i = root.quickHover;
+        root.quickHover = -1;
+        if (i >= 0)
+          root.quickRun(root.quickActions[i].id, true);
+      }
     }
 
     // ------------------------------------------------- notification tail
@@ -2151,6 +2273,64 @@ PanelWindow {
             visible: Calendar.soon === null || Calendar.soon.link === ""
             label: "Open Today"
             onPressed: root.view = "today"
+          }
+        }
+      }
+    }
+
+    // ------------------------------------------------------- quick actions
+    Layer {
+      id: quickLayer
+      key: "quick"
+
+      Row {
+        x: 9
+        y: 7
+        spacing: 8
+
+        Repeater {
+          model: root.quickActions
+
+          delegate: Rectangle {
+            id: quickButton
+
+            required property var modelData
+            required property int index
+            readonly property bool hot: root.quickHover === index || quickArea.containsMouse
+
+            width: 32
+            height: 32
+            radius: 16
+            color: modelData.on ? root.hot : hot ? Qt.rgba(1, 1, 1, 0.2) : Qt.rgba(1, 1, 1, 0.09)
+            scale: quickLayer.shown ? (root.quickHover === index ? 1.18 : 1) : 0.4
+
+            Behavior on color {
+              ColorAnimation {
+                duration: 160
+              }
+            }
+            Behavior on scale {
+              NumberAnimation {
+                duration: root.quickHover === quickButton.index ? 260 : 520
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: root.popCurve
+              }
+            }
+
+            Ink {
+              anchors.centerIn: parent
+              text: quickButton.modelData.glyph
+              font.pixelSize: Theme.iconSize
+              color: quickButton.modelData.on ? "#140f08" : root.ink
+            }
+
+            MouseArea {
+              id: quickArea
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: root.quickRun(quickButton.modelData.id, false)
+            }
           }
         }
       }
@@ -4780,6 +4960,40 @@ PanelWindow {
   }
 
   // ------------------------------------------------------------ satellites
+  // The quick action under the pointer, named just below the island.
+  Rectangle {
+    readonly property var action: {
+      if (root.mode !== "quick")
+        return null;
+      let i = root.quickHover;
+      return i >= 0 ? root.quickActions[i] : null;
+    }
+
+    x: (root.width - width) / 2
+    y: shape.y + shape.height + 8
+    width: quickName.implicitWidth + 22
+    height: 24
+    radius: 12
+    color: "#050403"
+    border.width: 1
+    border.color: root.rim
+    opacity: action ? 1 : 0
+    visible: opacity > 0.01
+
+    Behavior on opacity {
+      NumberAnimation {
+        duration: 140
+      }
+    }
+
+    Ink {
+      id: quickName
+      anchors.centerIn: parent
+      text: parent.action ? parent.action.name + (parent.action.id === "shot" ? "" : parent.action.on ? " · on" : " · off") : ""
+      font.pixelSize: Theme.smallSize + 1
+    }
+  }
+
   // A bubble on its way into the island when its card opens.
   Rectangle {
     id: flyer

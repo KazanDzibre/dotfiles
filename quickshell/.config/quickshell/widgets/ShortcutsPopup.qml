@@ -22,7 +22,7 @@ MorphPanel {
     },
     {
       title: "THE ISLAND",
-      rows: [["Click", "Player, notifications or Today"], ["Right click", "Play or pause"], ["Scroll", "Volume"], ["Swipe sideways", "Next or previous track"], ["Hover", "Peek at more detail"], ["Drop a file", "Park it on the shelf"], ["Scroll on Today", "Walk through the days"]]
+      rows: [["Click", "Player, notifications or Today"], ["Hold", "Quick toggles: Wi-Fi, Bluetooth, …"], ["Right click", "Play or pause"], ["Scroll", "Volume"], ["Swipe sideways", "Next or previous track"], ["Hover", "Peek at more detail"], ["Drop a file", "Park it on the shelf"], ["Scroll on Today", "Walk through the days"]]
     },
     {
       title: "KEYS",
