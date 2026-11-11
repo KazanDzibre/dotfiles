@@ -334,10 +334,36 @@ PanelWindow {
 
     if ((root.slim || root.mode === "player") && Moments.sink && Moments.sink.audio) {
       const audio = Moments.sink.audio;
+      // Already at the end and still pushing: the island gives a little,
+      // less the further it goes, and springs back when you stop.
+      if ((dy > 0 && audio.volume >= 0.999) || (dy < 0 && audio.volume <= 0.001)) {
+        root.stretch = Math.min(root.stretchMax, root.stretch + (root.stretchMax - root.stretch) * 0.35 + 1);
+        stretchRelease.restart();
+      }
       audio.volume = Math.max(0, Math.min(1, audio.volume + dy / 120 * 0.03));
       root.volumeShown = true;
       volumeHide.restart();
     }
+  }
+
+  // ---------------------------------------------------------- rubber band
+  // How far the island is being pulled past a limit, in px; applied as a
+  // slight horizontal scale (both sides alike, so the centre never moves).
+  property real stretch: 0
+  readonly property real stretchMax: 24
+
+  Behavior on stretch {
+    SpringAnimation {
+      spring: 5
+      damping: 0.22
+      epsilon: 0.05
+    }
+  }
+
+  Timer {
+    id: stretchRelease
+    interval: 130
+    onTriggered: root.stretch = 0
   }
   // Clicking the island while it's open clears the grab *and* lands as a tap;
   // without this the tap would open it straight back up.
@@ -1271,10 +1297,18 @@ PanelWindow {
       color: "transparent"
       border.width: 1.5
       border.color: Qt.rgba(1, 1, 1, modelData.a)
-      transform: Translate {
-        x: root.nudge
-        y: islandDrop.y
-      }
+      transform: [
+        Translate {
+          x: root.nudge
+          y: islandDrop.y
+        },
+        Scale {
+          origin.x: width / 2
+          origin.y: height / 2
+          xScale: 1 + root.stretch / Math.max(1, width)
+          yScale: 1 - root.stretch * 0.006
+        }
+      ]
     }
   }
 
@@ -1291,11 +1325,19 @@ PanelWindow {
     border.color: root.rim
     clip: true
     scale: tapArea.pressed ? 0.96 : 1
-    transform: Translate {
-      id: islandDrop
-      x: root.nudge
-      y: Welcome.entrance ? -60 : 0
-    }
+    transform: [
+      Translate {
+        id: islandDrop
+        x: root.nudge
+        y: Welcome.entrance ? -60 : 0
+      },
+      Scale {
+        origin.x: shape.width / 2
+        origin.y: shape.height / 2
+        xScale: 1 + root.stretch / Math.max(1, shape.width)
+        yScale: 1 - root.stretch * 0.006
+      }
+    ]
 
     Behavior on width {
       NumberAnimation {
