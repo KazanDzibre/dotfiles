@@ -375,6 +375,8 @@ PanelWindow {
       return "shelf";
     if (view === "memos" && Notes.items.length > 0)
       return "memos";
+    if (view.endsWith("Card") && cardLive(view))
+      return view;
     if (view === "today" || view === "player")
       return "today";
     if (ClaudeCode.waiting)
@@ -385,6 +387,32 @@ PanelWindow {
     if (musicOn)
       return "music";
     return "clock";
+  }
+
+  // A bubble's card (opened from the bubble, shown in the island like every
+  // other card) only while the thing it's about is still going.
+  function cardLive(v) {
+    switch (v) {
+    case "claudeCard":
+      return ClaudeCode.working !== null;
+    case "updatesCard":
+      return Updates.installing;
+    case "downloadCard":
+      return Downloads.downloading;
+    case "timerCard":
+      return Tones.timing;
+    case "meetingCard":
+      return Calendar.soon !== null;
+    }
+    return false;
+  }
+
+  // From a bubble: it flies into the island while the island opens its card.
+  function openCard(key, bubble) {
+    const p = bubble.mapToItem(null, 6, 0);
+    flyer.fly(p.x, p.y);
+    Moments.dismiss();
+    root.view = key + "Card";
   }
 
   // The bubbles beside the island, left to right, for whatever is running.
@@ -468,6 +496,9 @@ PanelWindow {
   }
 
   onModeChanged: {
+    // The thing a bubble card was about has finished: fold away.
+    if (view.endsWith("Card") && mode !== view && !cardLive(view))
+      view = "";
     root.settled = false;
     settleTimer.restart();
     if (mode === "shot" && !moment.title)
@@ -603,6 +634,16 @@ PanelWindow {
       return [400, compactH];
     case "meeting":
       return [430, 68];
+    case "claudeCard":
+      return [330, 122 + Math.min(3, (ClaudeCode.working && ClaudeCode.working.steps ? ClaudeCode.working.steps.length - 1 : 0)) * 19];
+    case "updatesCard":
+      return [330, 98 + Math.min(4, Updates.repo.concat(Updates.aur).length) * 19];
+    case "downloadCard":
+      return [360, 136];
+    case "timerCard":
+      return [320, 136];
+    case "meetingCard":
+      return [330, 128];
     case "welcome":
       return [Math.max(300, welcomeText.implicitWidth + 80), 56];
     case "peek":
@@ -720,6 +761,11 @@ PanelWindow {
       return;
     case "shelf":
     case "memos":
+    case "claudeCard":
+    case "updatesCard":
+    case "downloadCard":
+    case "timerCard":
+    case "meetingCard":
       root.view = "";
       return;
     case "reminder": {
@@ -768,7 +814,7 @@ PanelWindow {
   // Clicking anywhere else folds the island back up.
   HyprlandFocusGrab {
     windows: [root]
-    active: root.mode === "player" || root.mode === "today" || root.mode === "inbox" || root.mode === "search" || root.mode === "alertCard" || root.mode === "ask" || root.mode === "shelf" || root.mode === "memos"
+    active: root.mode === "player" || root.mode === "today" || root.mode === "inbox" || root.mode === "search" || root.mode === "alertCard" || root.mode === "ask" || root.mode === "shelf" || root.mode === "memos" || root.mode.endsWith("Card")
     onCleared: {
       // Dragging a file out of the shelf hands the pointer to the drag.
       if (root.shelfDragging)
@@ -1700,6 +1746,327 @@ PanelWindow {
           text: headphonesLayer.hasBattery ? "Connected · " + Math.round(headphonesLayer.battery * 100) + "%" : "Connected"
           color: root.inkDim
           font.pixelSize: Theme.smallSize + 1
+        }
+      }
+    }
+
+    // ------------------------------------------------------ bubble cards
+    // A bubble's card opens in the island, like every other card. Each fills
+    // the island with a header, a line or two, and its buttons along the bottom.
+    component CardHeader: Item {
+      id: hdr
+      property string glyph: ""
+      property bool spin: false
+      property color tone: root.hot
+      property string title: ""
+      property string end: ""
+      property color endColor: root.inkDim
+      width: parent.width
+      height: 22
+
+      Ink {
+        id: hdrGlyph
+        anchors.left: parent.left
+        anchors.verticalCenter: parent.verticalCenter
+        text: hdr.glyph
+        color: hdr.tone
+        font.pixelSize: Theme.iconSize + 2
+
+        RotationAnimation on rotation {
+          running: hdr.spin && hdr.visible
+          loops: Animation.Infinite
+          from: 0
+          to: 360
+          duration: 2400
+        }
+      }
+      Ink {
+        anchors.left: hdrGlyph.right
+        anchors.leftMargin: 10
+        anchors.right: hdrEnd.left
+        anchors.rightMargin: 10
+        anchors.verticalCenter: parent.verticalCenter
+        text: hdr.title
+        font.bold: true
+        textFormat: Text.PlainText
+      }
+      Ink {
+        id: hdrEnd
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        text: hdr.end
+        color: hdr.endColor
+        font.pixelSize: Theme.smallSize + 1
+        font.bold: hdr.endColor !== root.inkDim
+      }
+    }
+
+    Layer {
+      key: "claudeCard"
+
+      readonly property var s: ClaudeCode.working
+
+      Column {
+        anchors.fill: parent
+        anchors.margins: 16
+        anchors.topMargin: 13
+        spacing: 7
+
+        CardHeader {
+          glyph: Icons.sparkle
+          spin: true
+          title: parent.parent.s ? parent.parent.s.project || "Claude" : "Claude"
+          end: ClaudeCode.formatElapsed(root.claudeElapsed)
+        }
+        Ink {
+          width: parent.width
+          text: parent.parent.s ? parent.parent.s.detail || "Working…" : ""
+          textFormat: Text.PlainText
+        }
+        Repeater {
+          // The steps before the current one, oldest first.
+          model: parent.parent.s && parent.parent.s.steps ? parent.parent.s.steps.slice(0, -1).slice(-3) : []
+          delegate: Ink {
+            required property var modelData
+            width: parent.width
+            text: "✓  " + modelData
+            color: root.inkDim
+            font.pixelSize: Theme.smallSize + 1
+            textFormat: Text.PlainText
+          }
+        }
+        Item {
+          width: parent.width
+          height: 32
+
+          Chip {
+            anchors.horizontalCenter: parent.horizontalCenter
+            label: "Go to terminal"
+            strong: true
+            onPressed: {
+              const s = ClaudeCode.working;
+              root.view = "";
+              if (s)
+                ClaudeCode.focus(s.window);
+            }
+          }
+        }
+      }
+    }
+
+    Layer {
+      key: "updatesCard"
+
+      Column {
+        anchors.fill: parent
+        anchors.margins: 16
+        anchors.topMargin: 13
+        spacing: 7
+
+        CardHeader {
+          glyph: Icons.updates
+          spin: true
+          title: Updates.count > 0 ? "Installing " + Updates.count + " update" + (Updates.count === 1 ? "" : "s") : "Installing updates"
+        }
+        Ink {
+          width: parent.width
+          text: "In the terminal window it opened"
+          color: root.inkDim
+          font.pixelSize: Theme.smallSize + 1
+        }
+        Repeater {
+          model: Updates.repo.concat(Updates.aur).slice(0, 4)
+          delegate: Ink {
+            required property var modelData
+            width: parent.width
+            text: modelData.name + (modelData.to ? "  " + modelData.to : "")
+            font.pixelSize: Theme.smallSize + 1
+            textFormat: Text.PlainText
+          }
+        }
+        Ink {
+          visible: Updates.count > 4
+          text: "+" + (Updates.count - 4) + " more"
+          color: root.inkDim
+          font.pixelSize: Theme.smallSize
+        }
+      }
+    }
+
+    Layer {
+      key: "downloadCard"
+
+      Row {
+        id: dlCardTop
+        x: 16
+        y: 16
+        width: parent.width - 32
+        spacing: 14
+
+        Item {
+          width: 60
+          height: 60
+
+          DownloadRing {
+            anchors.fill: parent
+            thickness: 4
+          }
+          Ink {
+            anchors.centerIn: parent
+            text: Downloads.percent
+            font.bold: true
+          }
+        }
+
+        Column {
+          anchors.verticalCenter: parent.verticalCenter
+          width: parent.width - 74
+          spacing: 4
+
+          Ink {
+            width: parent.width
+            text: Downloads.label
+            font.bold: true
+            elide: Text.ElideMiddle
+            textFormat: Text.PlainText
+          }
+          Ink {
+            width: parent.width
+            text: Downloads.status
+            color: root.inkDim
+            font.pixelSize: Theme.smallSize + 1
+          }
+        }
+      }
+
+      Item {
+        x: 16
+        y: dlCardTop.y + 60 + 12
+        width: parent.width - 32
+        height: 32
+
+        Chip {
+          anchors.horizontalCenter: parent.horizontalCenter
+          label: "Show in folder"
+          onPressed: {
+            root.view = "";
+            Downloads.openFolder();
+          }
+        }
+      }
+    }
+
+    Layer {
+      key: "timerCard"
+
+      Row {
+        id: tmCardTop
+        x: 16
+        y: 16
+        spacing: 14
+
+        Ring {
+          width: 60
+          height: 60
+          thickness: 4
+        }
+
+        Column {
+          anchors.verticalCenter: parent.verticalCenter
+          spacing: 2
+
+          Ink {
+            text: Tones.formatLeft(Tones.timerLeft)
+            font.bold: true
+            font.pixelSize: 26
+          }
+          Ink {
+            text: Tones.timerPaused ? "Focus · paused" : "Focus · ends at " + Qt.formatDateTime(new Date(Time.now.getTime() + Tones.timerLeft * 1000), "HH:mm")
+            color: root.inkDim
+            font.pixelSize: Theme.smallSize + 1
+          }
+        }
+      }
+
+      Row {
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: tmCardTop.y + 60 + 12
+        height: 32
+        spacing: 6
+
+        Chip {
+          label: "+5 min"
+          onPressed: Tones.addToTimer(5)
+        }
+        Chip {
+          label: Tones.timerPaused ? "Resume" : "Pause"
+          onPressed: Tones.pauseTimer(!Tones.timerPaused)
+        }
+        Chip {
+          label: "Stop"
+          onPressed: {
+            root.view = "";
+            Tones.stopTimer();
+          }
+        }
+      }
+    }
+
+    Layer {
+      key: "meetingCard"
+
+      readonly property var e: Calendar.soon
+
+      Column {
+        anchors.fill: parent
+        anchors.margins: 16
+        anchors.topMargin: 13
+        spacing: 6
+
+        CardHeader {
+          glyph: Icons.calendar
+          tone: root.calColor(parent.parent.e ? parent.parent.e.cal ?? 0 : 0)
+          title: parent.parent.e ? parent.parent.e.title : ""
+          end: parent.parent.e ? Calendar.countdown(parent.parent.e) : ""
+          endColor: root.calColor(parent.parent.e ? parent.parent.e.cal ?? 0 : 0)
+        }
+        Ink {
+          width: parent.width
+          text: parent.parent.e ? [Calendar.range(parent.parent.e), parent.parent.e.where].filter(s => s).join(" · ") : ""
+          textFormat: Text.PlainText
+        }
+        Item {
+          width: parent.width
+          height: 4
+        }
+        Row {
+          anchors.horizontalCenter: parent.horizontalCenter
+          height: 32
+          spacing: 6
+
+          Chip {
+            visible: Calendar.soon !== null && Calendar.soon.link !== ""
+            label: "Join now"
+            strong: true
+            onPressed: {
+              const e = Calendar.soon;
+              root.view = "";
+              Calendar.join(e);
+            }
+          }
+          Chip {
+            visible: Calendar.soon !== null && Calendar.soon.link !== ""
+            label: "Copy link"
+            onPressed: {
+              Clipboard.copy(Calendar.soon.link);
+              root.view = "";
+            }
+          }
+          Chip {
+            visible: Calendar.soon === null || Calendar.soon.link === ""
+            label: "Open Today"
+            onPressed: root.view = "today"
+          }
         }
       }
     }
@@ -4328,6 +4695,62 @@ PanelWindow {
   }
 
   // ------------------------------------------------------------ satellites
+  // A bubble on its way into the island when its card opens.
+  Rectangle {
+    id: flyer
+
+    width: root.compactH
+    height: root.compactH
+    radius: height / 2
+    color: "#050403"
+    border.width: 1
+    border.color: Qt.rgba(1, 1, 1, 0.1)
+    opacity: 0
+    visible: opacity > 0.01
+    z: 30
+
+    function fly(fromX, fromY) {
+      flyAnim.stop();
+      flyer.x = fromX;
+      flyer.y = fromY;
+      flyer.scale = 1;
+      flyer.opacity = 1;
+      flyAnim.toX = (root.width - flyer.width) / 2;
+      flyAnim.start();
+    }
+
+    ParallelAnimation {
+      id: flyAnim
+      property real toX: 0
+
+      NumberAnimation {
+        target: flyer
+        property: "x"
+        to: flyAnim.toX
+        duration: 380
+        easing.type: Easing.InCubic
+      }
+      NumberAnimation {
+        target: flyer
+        property: "scale"
+        to: 0.6
+        duration: 380
+        easing.type: Easing.InCubic
+      }
+      SequentialAnimation {
+        PauseAnimation {
+          duration: 200
+        }
+        NumberAnimation {
+          target: flyer
+          property: "opacity"
+          to: 0
+          duration: 180
+        }
+      }
+    }
+  }
+
   // One bubble beside the island for something that runs a while. Width
   // animates between 0 and its slot, so bubbles slide apart and together as
   // others come and go; the island itself never moves. Hover for what it is.
@@ -4488,10 +4911,7 @@ PanelWindow {
       key: "claude"
       label: ClaudeCode.working ? ClaudeCode.working.project || "Claude" : "Claude"
       detail: ClaudeCode.working ? (ClaudeCode.working.detail ? ClaudeCode.working.detail + " · " : "") + ClaudeCode.formatElapsed(root.claudeElapsed) : ""
-      onActivated: {
-        if (ClaudeCode.working)
-          ClaudeCode.focus(ClaudeCode.working.window);
-      }
+      onActivated: root.openCard("claude", claudeBubble)
 
       Spinner {
         text: Icons.sparkle
@@ -4520,7 +4940,7 @@ PanelWindow {
       key: "updates"
       label: Updates.count > 0 ? "Installing " + Updates.count + " update" + (Updates.count === 1 ? "" : "s") : "Installing updates"
       detail: "Click for details"
-      onActivated: Moments.popupRequested("updates", root.screenName())
+      onActivated: root.openCard("updates", updatesBubble)
 
       Spinner {
         text: Icons.updates
@@ -4529,10 +4949,11 @@ PanelWindow {
     }
 
     Bubble {
+      id: downloadBubble
       key: "download"
       label: Downloads.label
       detail: Downloads.status
-      onActivated: Downloads.openFolder()
+      onActivated: root.openCard("download", downloadBubble)
 
       DownloadRing {
         anchors.centerIn: parent
@@ -4542,10 +4963,11 @@ PanelWindow {
     }
 
     Bubble {
+      id: timerBubble
       key: "timer"
       label: "Focus"
-      detail: Tones.formatLeft(Tones.timerLeft) + " left"
-      onActivated: Moments.popupRequested("tones", root.screenName())
+      detail: Tones.formatLeft(Tones.timerLeft) + (Tones.timerPaused ? " · paused" : " left")
+      onActivated: root.openCard("timer", timerBubble)
 
       Ring {
         anchors.centerIn: parent
@@ -4568,13 +4990,11 @@ PanelWindow {
     }
 
     Bubble {
+      id: meetingBubble
       key: "meeting"
       label: Calendar.soon ? Calendar.soon.title : ""
       detail: Calendar.soon ? Calendar.countdown(Calendar.soon) + " · " + Calendar.range(Calendar.soon) : ""
-      onActivated: {
-        Moments.dismiss();
-        root.view = "today";
-      }
+      onActivated: root.openCard("meeting", meetingBubble)
 
       Ink {
         anchors.centerIn: parent

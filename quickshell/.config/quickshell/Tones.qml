@@ -104,15 +104,37 @@ Singleton {
 
   signal timerFinished
 
+  // Paused, the deadline is set aside and the time left frozen; resuming sets
+  // a fresh deadline from what was left.
+  property bool timerPaused: false
+
   function startTimer(minutes) {
+    root.timerPaused = false;
     root.timerTotal = minutes * 60;
     root.timerEnd = Date.now() + root.timerTotal * 1000;
     root.timerLeft = root.timerTotal;
   }
 
   function stopTimer() {
+    root.timerPaused = false;
     root.timerTotal = 0;
     root.timerLeft = 0;
+  }
+
+  function pauseTimer(paused) {
+    if (!root.timing || paused === root.timerPaused)
+      return;
+    root.timerPaused = paused;
+    if (!paused)
+      root.timerEnd = Date.now() + root.timerLeft * 1000;
+  }
+
+  function addToTimer(minutes) {
+    if (!root.timing)
+      return;
+    root.timerTotal += minutes * 60;
+    root.timerLeft += minutes * 60;
+    root.timerEnd += minutes * 60 * 1000;
   }
 
   function formatLeft(seconds) {
@@ -122,7 +144,7 @@ Singleton {
   }
 
   Timer {
-    running: root.timing
+    running: root.timing && !root.timerPaused
     interval: 250
     repeat: true
     onTriggered: {

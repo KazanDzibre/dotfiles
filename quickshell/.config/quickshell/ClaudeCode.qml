@@ -55,8 +55,15 @@ Singleton {
     });
     if (window)
       session.window = window;
-    if (kind === "start")
+    if (kind === "start") {
       session.since = Date.now();
+      session.steps = [];
+    }
+    // The last few things it did, for the island's Claude card.
+    if (detail && kind !== "done" && kind !== "failed") {
+      const steps = (session.steps ?? []).filter(s => s !== detail);
+      session.steps = steps.concat([detail]).slice(-4);
+    }
 
     if (kind === "done" || kind === "failed") {
       const wasBusy = old && old.state !== "idle";
