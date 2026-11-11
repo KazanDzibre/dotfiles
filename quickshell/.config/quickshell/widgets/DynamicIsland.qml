@@ -4820,6 +4820,66 @@ PanelWindow {
       }
     }
 
+    // Splitting off and melting back, as on the phone: a new bubble starts
+    // inside the island's right end and springs out to its place, a black
+    // bridge between them pinching thinner until it snaps; a finished one
+    // slides back in and is absorbed. The bubble row starts at the island's
+    // right edge, so in this item's own coordinates that edge is at -x.
+    property real shift: 0
+    readonly property real islandRight: -bub.x
+    readonly property real tucked: bub.islandRight - 10 - (face.x + face.width / 2)
+
+    // Named apart from `on`, which QML reads as a keyword in handler names.
+    readonly property bool present: bub.on
+    onPresentChanged: {
+      if (present) {
+        absorb.stop();
+        bub.shift = bub.tucked;
+        emerge.restart();
+      } else {
+        emerge.stop();
+        absorb.restart();
+      }
+    }
+
+    NumberAnimation {
+      id: emerge
+      target: bub
+      property: "shift"
+      to: 0
+      duration: 700
+      easing.type: Easing.BezierSpline
+      easing.bezierCurve: [0.3, 1.45, 0.45, 1, 1, 1]
+    }
+
+    NumberAnimation {
+      id: absorb
+      target: bub
+      property: "shift"
+      to: bub.tucked
+      duration: 420
+      easing.type: Easing.InCubic
+    }
+
+    // The bridge: full height while the bubble is still in the island, then
+    // thinner as the gap opens, gone once they're about 16px apart.
+    Rectangle {
+      readonly property real gap: (face.x + bub.shift) - bub.islandRight
+      readonly property real k: Math.max(0, Math.min(1, 1 - bub.gap(gap)))
+
+      visible: k > 0.02 && (emerge.running || absorb.running)
+      x: bub.islandRight - 10
+      width: Math.max(0, face.x + face.width / 2 + bub.shift - x)
+      height: root.compactH * (0.3 + 0.7 * k)
+      y: (root.compactH - height) / 2
+      radius: height / 2
+      color: "#050403"
+    }
+
+    function gap(g) {
+      return g / 16;
+    }
+
     Rectangle {
       id: face
       x: 6
@@ -4829,19 +4889,24 @@ PanelWindow {
       color: "#050403"
       border.width: 1
       border.color: root.rim
+      transform: Translate {
+        x: bub.shift
+      }
+      // Fades only at the very end of being absorbed, once it's inside.
       opacity: bub.on ? 1 : 0
-      scale: bub.on ? (bubArea.pressed ? 0.88 : 1) : 0.3
+      scale: bub.on ? (bubArea.pressed ? 0.88 : 1) : 0.75
 
       Behavior on opacity {
         NumberAnimation {
-          duration: 220
+          duration: bub.on ? 120 : 420
+          easing.type: bub.on ? Easing.Linear : Easing.InQuart
         }
       }
       Behavior on scale {
         NumberAnimation {
-          duration: root.morphMs
+          duration: bub.on ? root.morphMs : 420
           easing.type: Easing.BezierSpline
-          easing.bezierCurve: root.popCurve
+          easing.bezierCurve: bub.on ? root.popCurve : [0.5, 0, 0.75, 0, 1, 1]
         }
       }
     }
