@@ -11,6 +11,10 @@ ShellRoot {
   // dashboard used to be one too; it is now a panel of the control center.)
   AiChatPanel {}
 
+  // The wallpaper itself, drawn by the shell so it can slide with the
+  // workspaces (hyprpaper still runs underneath as the fallback).
+  ParallaxWallpaper {}
+
   // One per screen, just above the wallpaper; only mapped while a newly
   // applied wallpaper grows in from the middle.
   WallpaperReveal {}

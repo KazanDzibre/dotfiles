@@ -746,6 +746,55 @@ MorphPanel {
       cursorShape: Qt.PointingHandCursor
       onClicked: root.request("wallpaper")
     }
+
+    // Parallax on or off: the wallpaper sliding with the workspaces.
+    Rectangle {
+      anchors.right: parent.right
+      anchors.bottom: parent.bottom
+      anchors.margins: 9
+      width: parallaxRow.implicitWidth + 18
+      height: 24
+      radius: 12
+      color: Wallpaper.parallax ? Theme.accent : parallaxArea.containsMouse ? Qt.rgba(0, 0, 0, 0.6) : Qt.rgba(0, 0, 0, 0.45)
+      border.width: 1
+      border.color: Qt.rgba(1, 1, 1, Wallpaper.parallax ? 0 : 0.25)
+
+      Behavior on color {
+        ColorAnimation {
+          duration: 180
+        }
+      }
+
+      Row {
+        id: parallaxRow
+        anchors.centerIn: parent
+        spacing: 6
+
+        Rectangle {
+          anchors.verticalCenter: parent.verticalCenter
+          width: 6
+          height: 6
+          radius: 3
+          color: Wallpaper.parallax ? Theme.base : "white"
+          opacity: Wallpaper.parallax ? 1 : 0.6
+        }
+        Label {
+          anchors.verticalCenter: parent.verticalCenter
+          text: "Parallax"
+          font.pixelSize: Theme.smallSize
+          font.bold: true
+          color: Wallpaper.parallax ? Theme.base : "white"
+        }
+      }
+
+      MouseArea {
+        id: parallaxArea
+        anchors.fill: parent
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        onClicked: Wallpaper.setParallax(!Wallpaper.parallax)
+      }
+    }
   }
 
   Row {

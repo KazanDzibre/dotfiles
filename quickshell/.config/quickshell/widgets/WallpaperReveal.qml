@@ -125,9 +125,14 @@ Scope {
         }
       }
 
+      // Sized and placed like the parallax wallpaper underneath, so when the
+      // reveal finishes and unmaps, nothing jumps.
       Image {
         id: image
-        anchors.fill: parent
+        width: win.width + Wallpaper.parallaxTravel(win.width)
+        height: win.height * (win.width + Wallpaper.parallaxTravel(win.width)) / Math.max(1, win.width)
+        y: (win.height - height) / 2
+        x: -Wallpaper.parallaxOffset(win.screen, win.width)
         visible: false
         fillMode: Image.PreserveAspectCrop
         asynchronous: true
@@ -155,7 +160,10 @@ Scope {
 
       MultiEffect {
         id: revealed
-        anchors.fill: parent
+        x: image.x
+        y: image.y
+        width: image.width
+        height: image.height
         source: image
         maskEnabled: true
         maskSource: circle

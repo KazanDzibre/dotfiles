@@ -457,6 +457,15 @@ hl.layer_rule({
     no_anim = true,
 })
 
+-- The wallpaper itself, drawn by Quickshell so it can slide with the
+-- workspaces (ParallaxWallpaper.qml). It moves itself; no layer fade.
+hl.layer_rule({
+    name  = "wallpaper",
+    match = { namespace = "^quickshell:wallpaper$" },
+
+    no_anim = true,
+})
+
 -- The bar (namespace "quickshell"): frosted glass behind its pills and behind
 -- every panel that drops out of it (control center, Wi-Fi, clipboard…), as in
 -- the design. ignore_alpha keeps the fully transparent gaps unblurred.

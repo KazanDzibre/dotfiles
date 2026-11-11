@@ -32,6 +32,55 @@ Singleton {
   property bool applying: false
   property bool scanning: false
 
+  // ------------------------------------------------------------- parallax
+  // The wallpaper slides a little with the workspace (ParallaxWallpaper.qml):
+  // one step per workspace, at most `parallaxSteps` steps, so it never runs out
+  // of picture. On by default; the switch is on the control center's
+  // wallpaper card, and the choice is remembered.
+  property bool parallax: true
+  readonly property real parallaxStep: 36
+  readonly property int parallaxSteps: 4
+
+  FileView {
+    id: parallaxFile
+    path: Quickshell.cachePath("parallax.json")
+
+    onLoaded: {
+      try {
+        root.parallax = JSON.parse(text()).enabled !== false;
+      } catch (e) {
+        root.parallax = true;
+      }
+    }
+    onLoadFailed: Qt.callLater(() => parallaxFile.setText(JSON.stringify({
+          enabled: true
+        })))
+  }
+
+  function setParallax(on) {
+    root.parallax = on;
+    parallaxFile.setText(JSON.stringify({
+      enabled: on
+    }));
+  }
+
+  // How much wider than the screen the wallpaper is drawn.
+  function parallaxTravel(screenWidth) {
+    return root.parallax ? root.parallaxStep * root.parallaxSteps : 0;
+  }
+
+  // How far left it is shifted on this screen right now: by the number of
+  // the workspace it's showing, 1 at the far left, one step per number. By
+  // number rather than by place in the list, because an empty workspace
+  // vanishes as you leave it and would shift every place after it.
+  function parallaxOffset(screen, screenWidth) {
+    if (!root.parallax || !screen)
+      return 0;
+    const monitor = Hyprland.monitorFor(screen);
+    const id = monitor && monitor.activeWorkspace ? monitor.activeWorkspace.id : 1;
+    return Math.max(0, Math.min(id - 1, root.parallaxSteps)) * root.parallaxStep;
+  }
+
   readonly property int currentIndex: files.indexOf(current)
   readonly property int count: files.length
 
