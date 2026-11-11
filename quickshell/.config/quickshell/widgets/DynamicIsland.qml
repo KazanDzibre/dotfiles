@@ -1189,6 +1189,19 @@ PanelWindow {
     height: shape.y + Math.max(root.size[1], root.compactH) + 6
   }
 
+  // While a song plays on the slim island, a halo in the cover's colour that
+  // breathes with the low end (the two lowest bars of the visualiser, from
+  // the music view or its hover peek). Still, though tinted, under Do not
+  // disturb; off while paused or while a card is open.
+  readonly property bool musicGlowing: mode === "music" && Media.playing && settled
+  readonly property real beat: {
+    const v = activeKey === "peek" ? peekSpectrum.values : musicSpectrum.values;
+    if (!v || v.length === 0)
+      return 0;
+    return Math.max(v[0] ?? 0, v[1] ?? 0);
+  }
+  readonly property real musicGlow: Notifications.doNotDisturb ? 0.34 : 0.26 + 0.46 * Math.min(1, beat)
+
   // Soft coloured light under the island while charging or thinking.
   Rectangle {
     id: glowSource
@@ -1201,7 +1214,7 @@ PanelWindow {
     // Only rendered while it can be seen; otherwise it would redraw on every
     // frame of every morph for nothing.
     layer.enabled: glow.visible
-    color: root.mode === "charging" ? root.good : root.mode === "player" ? root.tint : root.mode === "alert" || root.mode === "alertCard" ? root.alertColor : root.mode === "claudeWaiting" ? "#f0c674" : root.hot
+    color: root.mode === "charging" ? root.good : root.mode === "player" || root.mode === "music" ? root.tint : root.mode === "alert" || root.mode === "alertCard" ? root.alertColor : root.mode === "claudeWaiting" ? "#f0c674" : root.hot
   }
 
   MultiEffect {
@@ -1215,11 +1228,13 @@ PanelWindow {
     autoPaddingEnabled: true
     // The player's glow waits for the morph to finish; blurring a resizing
     // shape every frame is what made this stutter before.
-    opacity: root.mode === "charging" || root.mode === "thinking" || (root.mode === "alert" && root.settled) || (root.mode === "alertCard" && root.settled) || (root.mode === "claudeWaiting" && root.settled) ? 0.7 : root.mode === "player" && root.settled && Media.hasCoverTint ? 0.42 : 0
+    opacity: root.mode === "charging" || root.mode === "thinking" || (root.mode === "alert" && root.settled) || (root.mode === "alertCard" && root.settled) || (root.mode === "claudeWaiting" && root.settled) ? 0.7 : root.mode === "player" && root.settled && Media.hasCoverTint ? 0.42 : root.musicGlowing ? root.musicGlow : 0
 
+    // Quick while it follows the beat, slow for everything else.
     Behavior on opacity {
       NumberAnimation {
-        duration: 500
+        duration: root.musicGlowing ? 110 : 500
+        easing.type: Easing.OutQuad
       }
     }
   }
@@ -1450,6 +1465,7 @@ PanelWindow {
       }
 
       Spectrum {
+        id: musicSpectrum
         anchors.right: parent.right
         anchors.rightMargin: 12
         anchors.verticalCenter: parent.verticalCenter
