@@ -516,6 +516,21 @@ Singleton {
     }
   }
 
+  // -------------------------------------------------------------- caps lock
+  // Say so when it flips, so a password isn't typed in capitals by accident.
+  // The first report is the starting state, which `show` drops during startup.
+  Process {
+    running: true
+    command: ["python3", Quickshell.shellPath("scripts/capslock.py")]
+
+    stdout: SplitParser {
+      onRead: line => {
+        const on = line.trim() === "1";
+        root.toast(Icons.keyboard, "Caps Lock", on ? "ON" : "OFF", on, 1400);
+      }
+    }
+  }
+
   // ------------------------------------------------------------ panels & apps
   Connections {
     target: AiAssistant
