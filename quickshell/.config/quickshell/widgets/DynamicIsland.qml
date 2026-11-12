@@ -415,6 +415,8 @@ PanelWindow {
       return "memos";
     if (view === "wifiqr")
       return "wifiqr";
+    if (view === "weather" && Weather.ready)
+      return "weather";
     if (view.endsWith("Card") && cardLive(view))
       return view;
     if (view === "quick")
@@ -832,6 +834,8 @@ PanelWindow {
       return [320, 64];
     case "shelf":
       return [420, 12 + 24 + Math.min(Shelf.count, 5) * 52 + 14];
+    case "weather":
+      return [420, 306];
     case "wifiqr":
       return [300, 12 + 26 + 8 + 192 + 10 + 18 + 16];
     case "memos":
@@ -942,6 +946,9 @@ PanelWindow {
       return;
     case "shelf":
     case "memos":
+    case "weather":
+      root.view = "today";
+      return;
     case "wifiqr":
     case "quick":
     case "claudeCard":
@@ -997,7 +1004,7 @@ PanelWindow {
   // Clicking anywhere else folds the island back up.
   HyprlandFocusGrab {
     windows: [root]
-    active: root.mode === "player" || root.mode === "today" || root.mode === "inbox" || root.mode === "search" || root.mode === "alertCard" || root.mode === "ask" || root.mode === "shelf" || root.mode === "memos" || root.mode === "wifiqr" || root.mode === "quick" || root.mode.endsWith("Card")
+    active: root.mode === "player" || root.mode === "today" || root.mode === "inbox" || root.mode === "search" || root.mode === "alertCard" || root.mode === "ask" || root.mode === "shelf" || root.mode === "memos" || root.mode === "wifiqr" || root.mode === "weather" || root.mode === "quick" || root.mode.endsWith("Card")
     onCleared: {
       // Dragging a file out of the shelf hands the pointer to the drag.
       if (root.shelfDragging)
@@ -3429,6 +3436,167 @@ PanelWindow {
       }
     }
 
+    // ----------------------------------------------------------- weather
+    // Opened by clicking the weather on the Today card: how it feels, wind,
+    // sun, and the next few hours. Clicking the card goes back to Today.
+    Layer {
+      key: "weather"
+
+      Item {
+        anchors.fill: parent
+        anchors.margins: 16
+        anchors.leftMargin: 18
+        anchors.rightMargin: 18
+
+        Row {
+          id: wxHead
+          anchors.left: parent.left
+          anchors.top: parent.top
+          spacing: 14
+
+          Ink {
+            anchors.verticalCenter: parent.verticalCenter
+            text: Weather.glyph
+            font.pixelSize: 44
+            color: root.hot
+          }
+
+          Column {
+            anchors.verticalCenter: parent.verticalCenter
+
+            Ink {
+              text: Weather.tempC + "°"
+              font.bold: true
+              font.pixelSize: 34
+            }
+          }
+        }
+
+        Column {
+          anchors.right: parent.right
+          anchors.verticalCenter: wxHead.verticalCenter
+          spacing: 2
+
+          Ink {
+            anchors.right: parent.right
+            text: Weather.description
+            font.bold: true
+          }
+          Ink {
+            anchors.right: parent.right
+            text: "Feels like " + Weather.feelsC + "° · " + Weather.place
+            color: root.inkDim
+            font.pixelSize: Theme.smallSize + 1
+          }
+          Ink {
+            anchors.right: parent.right
+            text: "High " + Weather.highC + "° · Low " + Weather.lowC + "°"
+            color: root.inkDim
+            font.pixelSize: Theme.smallSize + 1
+          }
+        }
+
+        // Humidity, wind, UV, pressure and the sun, two rows of three.
+        Grid {
+          id: wxStats
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.top: wxHead.bottom
+          anchors.topMargin: 14
+          columns: 3
+          rowSpacing: 8
+
+          Repeater {
+            model: [
+              {
+                k: "HUMIDITY",
+                v: Weather.humidity + "%"
+              },
+              {
+                k: "WIND",
+                v: Weather.windKmh + " km/h " + Weather.windDir
+              },
+              {
+                k: "UV INDEX",
+                v: String(Weather.uv)
+              },
+              {
+                k: "PRESSURE",
+                v: Weather.pressure + " hPa"
+              },
+              {
+                k: "SUNRISE",
+                v: Weather.sunrise
+              },
+              {
+                k: "SUNSET",
+                v: Weather.sunset
+              }
+            ]
+
+            delegate: Column {
+              required property var modelData
+              width: wxStats.width / 3
+              spacing: 1
+
+              Ink {
+                text: parent.modelData.k
+                color: root.inkDim
+                font.pixelSize: Theme.smallSize - 1
+                font.letterSpacing: 1
+              }
+              Ink {
+                text: parent.modelData.v
+                font.bold: true
+              }
+            }
+          }
+        }
+
+        // The next few three-hour slots.
+        Row {
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.bottom: parent.bottom
+
+          Repeater {
+            model: Weather.hours
+
+            delegate: Column {
+              required property var modelData
+              required property int index
+              width: (parent.width) / Math.max(1, Weather.hours.length)
+              spacing: 3
+
+              Ink {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: index === 0 ? "Now" : parent.modelData.label
+                color: root.inkDim
+                font.pixelSize: Theme.smallSize
+              }
+              Ink {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: Weather.glyphFor(parent.modelData.code)
+                font.pixelSize: 20
+                color: index === 0 ? root.hot : root.ink
+              }
+              Ink {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: parent.modelData.tempC + "°"
+                font.bold: true
+              }
+              Ink {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: parent.modelData.rain + "%"
+                color: parent.modelData.rain >= 40 ? root.hot : root.inkDim
+                font.pixelSize: Theme.smallSize - 1
+              }
+            }
+          }
+        }
+      }
+    }
+
     // ------------------------------------------------------------ wifi QR
     // Typed `wifiqr`: a code a phone camera scans to join the network this
     // machine is on.
@@ -3914,11 +4082,13 @@ PanelWindow {
         }
 
         Row {
+          id: weatherChip
           visible: Weather.ready
           anchors.right: parent.right
           anchors.top: parent.top
           anchors.topMargin: 4
           spacing: 10
+          opacity: weatherHover.containsMouse ? 1 : 0.85
 
           Ink {
             anchors.verticalCenter: parent.verticalCenter
@@ -3942,6 +4112,20 @@ PanelWindow {
               color: root.inkDim
               font.pixelSize: Theme.smallSize
             }
+          }
+        }
+
+        // Click the weather for today's details.
+        MouseArea {
+          id: weatherHover
+          visible: Weather.ready
+          anchors.fill: weatherChip
+          anchors.margins: -6
+          hoverEnabled: true
+          cursorShape: Qt.PointingHandCursor
+          onClicked: {
+            Weather.refresh();
+            root.view = "weather";
           }
         }
 
