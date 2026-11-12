@@ -73,6 +73,37 @@ hl.env("HYPRCURSOR_SIZE", "14")
 -- Lets Qt and KDE apps (Dolphin, Ark…) use the colour scheme theme-sync writes.
 hl.env("QT_QPA_PLATFORMTHEME", "kde")
 
+-- API keys for the shell (QS_AI_API_KEY, QS_GIPHY_API_KEY...), from
+-- ~/.config/hypr/secrets*.conf: kept out of the repo (see .gitignore), and read
+-- here because Quickshell is started by Hyprland, so it never sees variables
+-- set in fish. Same `env = NAME,value` lines as hyprland.conf sources on the
+-- Ubuntu laptop, so one file works on both. No file is fine.
+do
+    local dir = os.getenv("HOME") .. "/.config/hypr/"
+    local files = {}
+    local ok, listing = pcall(io.popen, "ls -1 " .. dir .. "secrets*.conf 2>/dev/null")
+    if ok and listing then
+        for path in listing:lines() do
+            table.insert(files, path)
+        end
+        listing:close()
+    else
+        table.insert(files, dir .. "secrets.conf")
+    end
+    for _, path in ipairs(files) do
+        local file = io.open(path, "r")
+        if file then
+            for line in file:lines() do
+                local name, value = line:match("^%s*env%s*=%s*([%w_]+)%s*,%s*(.-)%s*$")
+                if name and value ~= "" then
+                    hl.env(name, value)
+                end
+            end
+            file:close()
+        end
+    end
+end
+
 
 -----------------------
 ----- PERMISSIONS -----
