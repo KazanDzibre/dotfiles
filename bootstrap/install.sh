@@ -99,6 +99,10 @@ fprintd libpam-fprintd
 # whose program is missing without complaining, so without this it shows nothing.
 cmatrix
 
+# The island's Google Calendar (scripts/calendar_feed.py) reads secret iCal links
+# from ~/.local/share/quickshell/calendar-url; these two parse and expand them.
+python3-icalendar python3-recurring-ical-events
+
 python3-pip python3-venv pipx
 
 build-essential cmake ninja-build pkg-config
