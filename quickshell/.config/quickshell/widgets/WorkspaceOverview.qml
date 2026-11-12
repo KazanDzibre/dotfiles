@@ -1,4 +1,4 @@
-// WorkspaceOverview.qml — every workspace on this screen side by side, as live
+// WorkspaceOverview.qml — every workspace, on any screen, side by side as live
 // miniatures, over a frosted copy of the desktop. SUPER+Tab (Overview.qml).
 //
 // Click a workspace and it zooms up to fill the screen as you land on it.
@@ -43,15 +43,25 @@ PanelWindow {
   readonly property var zoomCurve: [0.2, 0.8, 0.2, 1, 1, 1]
 
   // ------------------------------------------------------------------ data
-  readonly property var workspaces: Array.from(Hyprland.workspaces.values).filter(w => w.id > 0 && (!root.monitor || (w.monitor && w.monitor.name === root.monitor.name))).sort((a, b) => a.id - b.id)
+  // Every workspace on every screen, not just this one's: the overview is for
+  // seeing what is open anywhere. Ones living on another screen carry that
+  // screen's name on their card, and landing on one moves you to that screen
+  // instead of zooming this one.
+  readonly property var workspaces: Array.from(Hyprland.workspaces.values).filter(w => w.id > 0).sort((a, b) => a.id - b.id)
+
+  function isLocal(ws) {
+    return !ws || !root.monitor || !ws.monitor || ws.monitor.name === root.monitor.name;
+  }
 
   // One slot per workspace, then the "+" one.
   readonly property var slots: workspaces.map(w => ({
         ws: w,
-        isNew: false
+        isNew: false,
+        local: root.isLocal(w)
       })).concat([{
         ws: null,
-        isNew: true
+        isNew: true,
+        local: true
       }])
 
   readonly property int nextId: Array.from(Hyprland.workspaces.values).reduce((m, w) => Math.max(m, w.id), 0) + 1
@@ -132,7 +142,10 @@ PanelWindow {
     root.query = "";
     field.text = "";
     root.zoomIndex = -1;
-    const active = root.workspaces.findIndex(w => w.active);
+    // Start on the workspace you are in (the focused one, on whichever screen).
+    let active = root.workspaces.findIndex(w => w.focused);
+    if (active < 0)
+      active = root.workspaces.findIndex(w => w.active && root.isLocal(w));
     root.selected = Math.max(0, active);
     root.shown = true;
     focusRetry.attempts = 0;
@@ -188,6 +201,12 @@ PanelWindow {
       return;
     }
     root.dispatchFocus(slot.ws.name);
+    // Another screen's workspace opens over there; zooming this screen up to it
+    // would be showing the wrong thing.
+    if (!slot.local) {
+      root.close();
+      return;
+    }
     root.zoomIndex = i;
     root.shown = false;
     zoomDone.restart();
@@ -203,7 +222,7 @@ PanelWindow {
     const i = root.slots.findIndex(s => s.ws && t.workspace && s.ws.id === t.workspace.id);
     if (t.wayland)
       t.wayland.activate();
-    if (i >= 0) {
+    if (i >= 0 && root.slots[i].local) {
       root.zoomIndex = i;
       root.shown = false;
       zoomDone.restart();
@@ -353,6 +372,18 @@ PanelWindow {
 
       readonly property var ws: modelData.ws
       readonly property bool isNew: modelData.isNew
+
+      // The screen this workspace lives on: its windows' positions are relative
+      // to that screen, which can differ in size and shape from this one. Scaled
+      // evenly and centred, so a 16:10 screen's windows are not stretched into a
+      // 16:9 card.
+      readonly property var mon: ws && ws.monitor ? ws.monitor : root.monitor
+      readonly property real monScale: mon && mon.lastIpcObject && mon.lastIpcObject.scale ? mon.lastIpcObject.scale : 1
+      readonly property real monW: mon ? mon.width / monScale : root.width
+      readonly property real monH: mon ? mon.height / monScale : root.height
+      readonly property real fit: monW > 0 && monH > 0 ? Math.min(root.cardW / monW, root.cardH / monH) : root.factor
+      readonly property real offX: (root.cardW - monW * fit) / 2
+      readonly property real offY: (root.cardH - monH * fit) / 2
       readonly property var wins: root.visible ? root.windowsOf(ws) : []
       readonly property bool anyMatch: !root.q || wins.some(t => root.matches(t))
       readonly property bool zooming: root.zoomIndex === index
@@ -461,10 +492,10 @@ PanelWindow {
             readonly property var info: modelData.lastIpcObject
             readonly property bool lit: root.matches(modelData)
 
-            x: info && info.at && root.monitor ? (info.at[0] - root.monitor.x) * root.factor : 0
-            y: info && info.at && root.monitor ? (info.at[1] - root.monitor.y) * root.factor : 0
-            width: info && info.size ? info.size[0] * root.factor : thumb.width
-            height: info && info.size ? info.size[1] * root.factor : thumb.height
+            x: info && info.at && card.mon ? (info.at[0] - card.mon.x) * card.fit + card.offX : 0
+            y: info && info.at && card.mon ? (info.at[1] - card.mon.y) * card.fit + card.offY : 0
+            width: info && info.size ? info.size[0] * card.fit : thumb.width
+            height: info && info.size ? info.size[1] * card.fit : thumb.height
             radius: 4
             color: Theme.base
             border.width: root.q && lit ? 1.5 : 0
@@ -604,7 +635,7 @@ PanelWindow {
         }
         Text {
           anchors.verticalCenter: parent.verticalCenter
-          text: card.isNew ? "New workspace" : root.appName(card.app)
+          text: card.isNew ? "New workspace" : root.appName(card.app) + (root.slots[card.index] && !root.slots[card.index].local && card.mon ? "  ·  " + card.mon.name : "")
           font.family: Theme.fontFamily
           font.pixelSize: Theme.fontSize
           color: root.inkDim
