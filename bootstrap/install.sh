@@ -103,6 +103,9 @@ cmatrix
 # from ~/.local/share/quickshell/calendar-url; these two parse and expand them.
 python3-icalendar python3-recurring-ical-events
 
+# The island's wifiqr view (scripts/wifi_qr.py) draws the join QR code with this.
+qrencode
+
 python3-pip python3-venv pipx
 
 build-essential cmake ninja-build pkg-config

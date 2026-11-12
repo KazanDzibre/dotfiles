@@ -290,6 +290,14 @@ Singleton {
       action: "panel"
     },
     {
+      word: "wifiqr",
+      also: ["qr", "wifi qr", "sharewifi", "wifishare", "wifi"],
+      title: "Share this Wi-Fi",
+      sub: "A QR code a phone scans to join",
+      glyph: Icons.wifiRamp[4],
+      action: "wifiqr"
+    },
+    {
       word: "notes",
       also: [],
       title: "Open your notes",

@@ -194,6 +194,12 @@ PanelWindow {
       }
       return;
     }
+    // The QR code that joins the network you are on, drawn on this island.
+    if (item.kind === "command" && item.action === "wifiqr") {
+      WifiShare.start();
+      root.view = "wifiqr";
+      return;
+    }
     root.view = "";
     if (item.kind === "command" && item.action === "panel") {
       Moments.popupRequested("shortcuts", root.screenName());
@@ -248,6 +254,8 @@ PanelWindow {
     else if (view === "" && previousView !== "")
       Sounds.play("close");
     previousView = view;
+    if (view !== "wifiqr")
+      WifiShare.clear();
     if (view !== "today") {
       dayOffset = 0;
       monthOffset = 0;
@@ -405,6 +413,8 @@ PanelWindow {
       return "shelf";
     if (view === "memos" && Notes.items.length > 0)
       return "memos";
+    if (view === "wifiqr")
+      return "wifiqr";
     if (view.endsWith("Card") && cardLive(view))
       return view;
     if (view === "quick")
@@ -822,6 +832,8 @@ PanelWindow {
       return [320, 64];
     case "shelf":
       return [420, 12 + 24 + Math.min(Shelf.count, 5) * 52 + 14];
+    case "wifiqr":
+      return [300, 12 + 26 + 8 + 192 + 10 + 18 + 16];
     case "memos":
       return [400, 12 + 26 + Math.min(Notes.items.length, 6) * 40 + (Notes.items.length > 6 ? 22 : 0) + 14];
     case "reminder":
@@ -930,6 +942,7 @@ PanelWindow {
       return;
     case "shelf":
     case "memos":
+    case "wifiqr":
     case "quick":
     case "claudeCard":
     case "updatesCard":
@@ -984,7 +997,7 @@ PanelWindow {
   // Clicking anywhere else folds the island back up.
   HyprlandFocusGrab {
     windows: [root]
-    active: root.mode === "player" || root.mode === "today" || root.mode === "inbox" || root.mode === "search" || root.mode === "alertCard" || root.mode === "ask" || root.mode === "shelf" || root.mode === "memos" || root.mode === "quick" || root.mode.endsWith("Card")
+    active: root.mode === "player" || root.mode === "today" || root.mode === "inbox" || root.mode === "search" || root.mode === "alertCard" || root.mode === "ask" || root.mode === "shelf" || root.mode === "memos" || root.mode === "wifiqr" || root.mode === "quick" || root.mode.endsWith("Card")
     onCleared: {
       // Dragging a file out of the shelf hands the pointer to the drag.
       if (root.shelfDragging)
@@ -3412,6 +3425,78 @@ PanelWindow {
         onClicked: {
           Moments.dismiss();
           root.view = "shelf";
+        }
+      }
+    }
+
+    // ------------------------------------------------------------ wifi QR
+    // Typed `wifiqr`: a code a phone camera scans to join the network this
+    // machine is on.
+    Layer {
+      key: "wifiqr"
+
+      Column {
+        anchors.fill: parent
+        anchors.margins: 14
+        anchors.topMargin: 12
+        spacing: 8
+
+        Item {
+          width: parent.width
+          height: 26
+
+          Ink {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.leftMargin: 6
+            anchors.verticalCenter: parent.verticalCenter
+            text: "WI-FI" + (WifiShare.ssid ? " · " + WifiShare.ssid : "")
+            elide: Text.ElideRight
+            font.pixelSize: Theme.smallSize
+            font.bold: true
+            font.letterSpacing: 1
+            color: root.inkDim
+          }
+        }
+
+        // White card: scanners want dark modules on a light background.
+        Rectangle {
+          anchors.horizontalCenter: parent.horizontalCenter
+          width: 192
+          height: 192
+          radius: 12
+          color: WifiShare.path.length > 0 ? "white" : Qt.rgba(1, 1, 1, 0.08)
+
+          Image {
+            anchors.fill: parent
+            anchors.margins: 4
+            source: WifiShare.path.length > 0 ? "file://" + WifiShare.path : ""
+            cache: false
+            smooth: false
+            fillMode: Image.PreserveAspectFit
+
+            // The code holds the password, so the file goes the moment it is read.
+            onStatusChanged: {
+              if (status === Image.Ready || status === Image.Error)
+                WifiShare.shred();
+            }
+          }
+
+          Ink {
+            anchors.centerIn: parent
+            visible: WifiShare.path.length === 0
+            text: WifiShare.busy ? "Making the code…" : ""
+            color: root.inkDim
+          }
+        }
+
+        Ink {
+          width: parent.width
+          horizontalAlignment: Text.AlignHCenter
+          wrapMode: Text.WordWrap
+          text: WifiShare.error.length > 0 ? WifiShare.error : "Point a phone camera here to join"
+          color: WifiShare.error.length > 0 ? Theme.crit : root.inkDim
+          font.pixelSize: Theme.smallSize + 1
         }
       }
     }
