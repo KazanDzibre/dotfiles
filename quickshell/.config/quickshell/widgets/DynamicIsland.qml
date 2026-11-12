@@ -414,9 +414,43 @@ PanelWindow {
     // Everything that runs for a while (Claude working, the AI answering,
     // updates, a download, the focus timer, a tone, a meeting coming up) sits
     // beside the island as a bubble instead, so the island stays yours.
-    if (musicOn)
+    // Music is the exception: it has its own bubble, and only borrows the
+    // island while you hover that bubble (or the island it opened into).
+    if (Media.hasPlayer && musicPeekHeld)
       return "music";
     return "clock";
+  }
+
+  // ------------------------------------------------------------ music bubble
+  // The player sits beside the island as a bubble (the cover) for as long as
+  // it is open, playing or paused, so search, notifications and the rest stay
+  // available. Rest the pointer on the bubble and it melts into the island,
+  // which shows the music, until the pointer leaves; click either and the
+  // player opens.
+  //
+  // The bubble keeps its slot while it is melted in (it just fades toward the
+  // island), so the pointer stays over something and nothing around it moves.
+  // The peek is kept while the pointer is on that slot OR on the island, and
+  // let go of only a moment after both are left.
+  property bool musicPeekHeld: false
+  readonly property bool musicHoverNow: Media.hasPlayer && (musicBubble.hovered || (mode === "music" && islandHover.hovered))
+
+  onMusicHoverNowChanged: {
+    if (musicHoverNow) {
+      musicRelease.stop();
+      musicPeekHeld = true;
+    } else {
+      musicRelease.restart();
+    }
+  }
+
+  Timer {
+    id: musicRelease
+    interval: 450
+    onTriggered: {
+      if (!root.musicHoverNow)
+        root.musicPeekHeld = false;
+    }
   }
 
   // ---------------------------------------------------------- quick actions
@@ -540,6 +574,9 @@ PanelWindow {
     if (!slim)
       return [];
     const keys = [];
+    // Nearest the island: it is the one that is on for hours.
+    if (Media.hasPlayer)
+      keys.push("music");
     if (ClaudeCode.working)
       keys.push("claude");
     if (AiChat.streaming && !AiChat.open)
@@ -919,14 +956,17 @@ PanelWindow {
     case "clock":
       if (Date.now() - root.grabClearedAt < 400)
         return;
-      // Music opens the player; a coming meeting the day's events; otherwise
-      // waiting notifications come first.
+      // The island is not the player's: that is the music bubble's job, so a
+      // song being open changes nothing here. The exception is the island while
+      // it is showing the music (hovering the bubble melts the bubble into it);
+      // clicking that is clicking the bubble. Otherwise waiting notifications
+      // come first, then the calendar.
       if (mode === "music")
         root.view = "player";
       else if (Notifications.count > 0)
         root.view = "inbox";
       else
-        root.view = Media.hasPlayer ? "player" : "today";
+        root.view = "today";
       return;
     }
     if (root.moment && root.moment.window)
@@ -3735,10 +3775,16 @@ PanelWindow {
       key: "today"
 
       Item {
+        id: todayBody
         anchors.fill: parent
         anchors.margins: 16
         anchors.leftMargin: 18
         anchors.rightMargin: 18
+
+        // The height the card needs: its top margin, everything down to the
+        // last block above the focus row, a gap, the focus row, bottom margin.
+        readonly property real contentBottom: eventsList.visible ? eventsList.y + eventsList.height : ticker.visible ? ticker.y + ticker.height : monthGrid.y + monthGrid.height
+        readonly property real needed: 16 + contentBottom + 14 + focusRow.height + 16
 
         Column {
           id: todayTime
@@ -3775,17 +3821,11 @@ PanelWindow {
             anchors.verticalCenter: parent.verticalCenter
 
             Ink {
-        id: todayBody
               anchors.right: parent.right
               text: Weather.tempC + "°"
               font.bold: true
               font.pixelSize: 18
             }
-        // The height the card needs: its top margin, everything down to the
-        // last block above the focus row, a gap, the focus row, bottom margin.
-        readonly property real contentBottom: eventsList.visible ? eventsList.y + eventsList.height : ticker.visible ? ticker.y + ticker.height : monthGrid.y + monthGrid.height
-        readonly property real needed: 16 + contentBottom + 14 + focusRow.height + 16
-
             Ink {
               anchors.right: parent.right
               text: Weather.place
@@ -4007,6 +4047,7 @@ PanelWindow {
 
         // That day's calendar events.
         Column {
+          id: eventsList
           visible: root.dayEvents.length > 0
           anchors.left: parent.left
           anchors.right: parent.right
@@ -4047,7 +4088,6 @@ PanelWindow {
                 anchors.verticalCenter: parent.verticalCenter
                 width: 6
                 height: 6
-          id: eventsList
                 radius: 3
                 color: root.calColor(eventRow.modelData.cal ?? 0)
               }
@@ -4103,6 +4143,7 @@ PanelWindow {
 
         // The focus timer: presets, or the time left and a stop.
         Row {
+          id: focusRow
           anchors.left: parent.left
           anchors.bottom: parent.bottom
           spacing: 8
@@ -4143,7 +4184,6 @@ PanelWindow {
               scale: focusArea.pressed ? 0.9 : 1
 
               Behavior on scale {
-          id: focusRow
                 NumberAnimation {
                   duration: 260
                   easing.type: Easing.BezierSpline
@@ -5074,6 +5114,11 @@ PanelWindow {
 
     default property alias content: face.data
     readonly property bool on: root.bubbleKeys.includes(key)
+    readonly property bool hovered: bubArea.containsMouse
+    // Melted into the island: the face fades toward it, the slot stays.
+    property bool absorbed: false
+    // The music bubble shows its track in the island itself, so it needs no tip.
+    property bool showTip: true
 
     width: on ? root.compactH + 6 : 0
     height: root.compactH
@@ -5089,15 +5134,22 @@ PanelWindow {
 
     Rectangle {
       id: face
-      x: 6
+      x: bub.absorbed ? -6 : 6
       width: root.compactH
       height: root.compactH
       radius: height / 2
       color: "#050403"
       border.width: 1
       border.color: root.rim
-      opacity: bub.on ? 1 : 0
-      scale: bub.on ? (bubArea.pressed ? 0.88 : 1) : 0.3
+      opacity: bub.on && !bub.absorbed ? 1 : 0
+      scale: bub.on && !bub.absorbed ? (bubArea.pressed ? 0.88 : 1) : 0.3
+
+      Behavior on x {
+        NumberAnimation {
+          duration: 380
+          easing.type: Easing.OutCubic
+        }
+      }
 
       Behavior on opacity {
         NumberAnimation {
@@ -5115,9 +5167,11 @@ PanelWindow {
 
     MouseArea {
       id: bubArea
-      x: face.x
-      width: face.width
-      height: face.height
+      // The slot, not the face: the face slides away while melted in, and the
+      // pointer must still count as over the bubble.
+      x: 6
+      width: root.compactH
+      height: root.compactH
       hoverEnabled: true
       cursorShape: Qt.PointingHandCursor
       onClicked: bub.activated()
@@ -5133,7 +5187,7 @@ PanelWindow {
       color: "#050403"
       border.width: 1
       border.color: Qt.rgba(1, 1, 1, 0.08)
-      opacity: bubArea.containsMouse && bub.on ? 1 : 0
+      opacity: bubArea.containsMouse && bub.on && bub.showTip ? 1 : 0
       visible: opacity > 0.01
 
       Behavior on opacity {
@@ -5215,6 +5269,30 @@ PanelWindow {
     y: shape.y
     height: root.compactH
     spacing: 0
+
+    Bubble {
+      id: musicBubble
+      key: "music"
+      showTip: false
+      absorbed: root.musicPeekHeld
+      label: Media.title
+      detail: Media.artist
+      onActivated: {
+        const p = musicBubble.mapToItem(null, 6, 0);
+        flyer.fly(p.x, p.y);
+        Moments.dismiss();
+        root.view = "player";
+      }
+
+      // The cover, round like the bubble; dimmed while paused.
+      Art {
+        anchors.centerIn: parent
+        width: root.compactH - 6
+        height: root.compactH - 6
+        corner: width / 2
+        opacity: Media.playing ? 1 : 0.5
+      }
+    }
 
     Bubble {
       id: claudeBubble
