@@ -784,7 +784,10 @@ PanelWindow {
     case "ask":
       return [480, Math.min(440, 14 + 26 + 10 + Math.max(22, askBody.implicitHeight) + 18)];
     case "today":
-      return [420, 362 + (Dashboard.stocks.length > 0 ? 38 : 0) + (dayEvents.length > 0 ? 30 + dayEvents.length * 28 : 0)];
+      // From where the content actually ends rather than a sum of guesses: a
+      // six-row month, the market ticker and the events list each add height,
+      // and the focus row sits under all of them.
+      return [420, Math.ceil(Math.max(300, todayBody.needed))];
     case "inbox":
       return [400, inboxHeight];
     case "alert":
@@ -3772,11 +3775,17 @@ PanelWindow {
             anchors.verticalCenter: parent.verticalCenter
 
             Ink {
+        id: todayBody
               anchors.right: parent.right
               text: Weather.tempC + "°"
               font.bold: true
               font.pixelSize: 18
             }
+        // The height the card needs: its top margin, everything down to the
+        // last block above the focus row, a gap, the focus row, bottom margin.
+        readonly property real contentBottom: eventsList.visible ? eventsList.y + eventsList.height : ticker.visible ? ticker.y + ticker.height : monthGrid.y + monthGrid.height
+        readonly property real needed: 16 + contentBottom + 14 + focusRow.height + 16
+
             Ink {
               anchors.right: parent.right
               text: Weather.place
@@ -4038,6 +4047,7 @@ PanelWindow {
                 anchors.verticalCenter: parent.verticalCenter
                 width: 6
                 height: 6
+          id: eventsList
                 radius: 3
                 color: root.calColor(eventRow.modelData.cal ?? 0)
               }
@@ -4133,6 +4143,7 @@ PanelWindow {
               scale: focusArea.pressed ? 0.9 : 1
 
               Behavior on scale {
+          id: focusRow
                 NumberAnimation {
                   duration: 260
                   easing.type: Easing.BezierSpline
