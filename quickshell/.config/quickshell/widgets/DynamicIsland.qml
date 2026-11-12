@@ -379,6 +379,8 @@ PanelWindow {
       clipType = moment.type;
   }
   readonly property bool musicOn: Media.hasPlayer && Media.playing
+  // A song is playing: it lives in the island. Otherwise (paused) it is a bubble.
+  readonly property bool musicMerged: Media.hasPlayer && Media.playing
 
   readonly property string mode: {
     if (dragOver)
@@ -414,19 +416,24 @@ PanelWindow {
     // Everything that runs for a while (Claude working, the AI answering,
     // updates, a download, the focus timer, a tone, a meeting coming up) sits
     // beside the island as a bubble instead, so the island stays yours.
-    // Music is the exception: it has its own bubble, and only borrows the
-    // island while you hover that bubble (or the island it opened into).
-    if (Media.hasPlayer && musicPeekHeld)
+    // Music is the one thing that merges into the island: while a song plays the
+    // island wears it (cover, clock, visualiser, the glow). Paused, it steps out
+    // as a bubble and only comes back in while you hover that bubble.
+    if (Media.hasPlayer && (musicMerged || musicPeekHeld))
       return "music";
     return "clock";
   }
 
   // ------------------------------------------------------------ music bubble
-  // The player sits beside the island as a bubble (the cover) for as long as
-  // it is open, playing or paused, so search, notifications and the rest stay
-  // available. Rest the pointer on the bubble and it melts into the island,
-  // which shows the music, until the pointer leaves; click either and the
-  // player opens.
+  // A song that is playing is part of the island: the cover, the clock, the
+  // visualiser and the glow. Paused (or any time the island is busy with
+  // something else), the player waits beside it as a bubble. Rest the pointer on
+  // that bubble and it melts into the island, which shows the music, until the
+  // pointer leaves.
+  //
+  // Clicking the island while it wears the music opens the player. Paused, the
+  // island is free again (notifications, then the calendar) and the bubble is
+  // the way to the player.
   //
   // The bubble keeps its slot while it is melted in (it just fades toward the
   // island), so the pointer stays over something and nothing around it moves.
@@ -574,8 +581,9 @@ PanelWindow {
     if (!slim)
       return [];
     const keys = [];
-    // Nearest the island: it is the one that is on for hours.
-    if (Media.hasPlayer)
+    // Nearest the island. Only while the song is not playing: playing, it is
+    // inside the island instead.
+    if (Media.hasPlayer && !musicMerged)
       keys.push("music");
     if (ClaudeCode.working)
       keys.push("claude");
@@ -956,11 +964,10 @@ PanelWindow {
     case "clock":
       if (Date.now() - root.grabClearedAt < 400)
         return;
-      // The island is not the player's: that is the music bubble's job, so a
-      // song being open changes nothing here. The exception is the island while
-      // it is showing the music (hovering the bubble melts the bubble into it);
-      // clicking that is clicking the bubble. Otherwise waiting notifications
-      // come first, then the calendar.
+      // While a song plays it lives in the island, so clicking the island opens
+      // the player. Paused, the player is the bubble's (and the island it melts
+      // into on hover, which is the same click), and the island goes back to
+      // notifications first, then the calendar.
       if (mode === "music")
         root.view = "player";
       else if (Notifications.count > 0)
