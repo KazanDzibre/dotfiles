@@ -30,73 +30,110 @@ MorphPanel {
     }
   ]
 
-  Repeater {
-    model: root.sections
+  // Taller than the screen allows? Scroll. The cap leaves room for the bar above
+  // and some air below; the thin bar beside the list only shows when there is
+  // more to see.
+  readonly property real maxSheetHeight: Math.max(220, Math.min(660, (root.screen ? root.screen.height : 900) - Theme.barHeight - 170))
 
-    delegate: Column {
-      id: section
+  Item {
+    width: parent.width
+    height: Math.min(flick.contentHeight, root.maxSheetHeight)
 
-      required property var modelData
-      required property int index
+    Flickable {
+      id: flick
 
-      width: parent.width
-      spacing: 4
-      topPadding: index === 0 ? 0 : 10
+      anchors.fill: parent
+      contentHeight: sheet.implicitHeight
+      clip: true
+      boundsBehavior: Flickable.StopAtBounds
 
-      Text {
-        text: section.modelData.title
-        font.family: Theme.fontFamily
-        font.pixelSize: Theme.smallSize
-        font.bold: true
-        font.letterSpacing: 1
-        color: Theme.fgDim
-        bottomPadding: 2
-      }
+      Column {
+        id: sheet
 
-      Repeater {
-        model: section.modelData.rows
+        width: flick.width
+        spacing: root.contentSpacing
 
-        delegate: Item {
-          id: line
+        Repeater {
+          model: root.sections
 
-          required property var modelData
+          delegate: Column {
+            id: section
 
-          width: section.width
-          height: 26
+            required property var modelData
+            required property int index
 
-          Rectangle {
-            id: chip
-            anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
-            width: chipText.implicitWidth + 16
-            height: 22
-            radius: 7
-            color: Theme.raised
+            width: parent.width
+            spacing: 4
+            topPadding: index === 0 ? 0 : 10
 
             Text {
-              id: chipText
-              anchors.centerIn: parent
-              text: line.modelData[0]
+              text: section.modelData.title
               font.family: Theme.fontFamily
-              font.pixelSize: Theme.smallSize + 1
+              font.pixelSize: Theme.smallSize
               font.bold: true
-              color: Theme.accent
+              font.letterSpacing: 1
+              color: Theme.fgDim
+              bottomPadding: 2
             }
-          }
 
-          Text {
-            anchors.left: parent.left
-            anchors.leftMargin: 150
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            text: line.modelData[1]
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSize
-            color: Theme.fg
-            elide: Text.ElideRight
+            Repeater {
+              model: section.modelData.rows
+
+              delegate: Item {
+                id: line
+
+                required property var modelData
+
+                width: section.width
+                height: 26
+
+                Rectangle {
+                  id: chip
+                  anchors.left: parent.left
+                  anchors.verticalCenter: parent.verticalCenter
+                  width: chipText.implicitWidth + 16
+                  height: 22
+                  radius: 7
+                  color: Theme.raised
+
+                  Text {
+                    id: chipText
+                    anchors.centerIn: parent
+                    text: line.modelData[0]
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.smallSize + 1
+                    font.bold: true
+                    color: Theme.accent
+                  }
+                }
+
+                Text {
+                  anchors.left: parent.left
+                  anchors.leftMargin: 150
+                  anchors.right: parent.right
+                  anchors.verticalCenter: parent.verticalCenter
+                  text: line.modelData[1]
+                  font.family: Theme.fontFamily
+                  font.pixelSize: Theme.fontSize
+                  color: Theme.fg
+                  elide: Text.ElideRight
+                }
+              }
+            }
           }
         }
       }
+    }
+
+    Rectangle {
+      visible: flick.contentHeight > flick.height + 1
+      x: parent.width + 4
+      y: flick.visibleArea.yPosition * flick.height
+      width: 3
+      height: Math.max(24, flick.visibleArea.heightRatio * flick.height)
+      radius: 1.5
+      color: Theme.fgDim
+      opacity: 0.5
     }
   }
 }
