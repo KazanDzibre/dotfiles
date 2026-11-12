@@ -122,6 +122,12 @@ Singleton {
   function ask(query) {
     const q = query.trim();
     root.pendingQuery = q;
+    const gif = root.gifTerm(q.toLowerCase());
+    if (gif !== null && root.gifConfigured) {
+      root.gifPending = gif;
+      if (gif !== root.gifsFor)
+        gifDelay.restart();
+    }
     if (!root.answerable(q.toLowerCase())) {
       root.answer = null;
       root.answerFor = "";
@@ -326,7 +332,202 @@ Singleton {
           example: example,
           points: 0
         });
-    return [root.commandItem(root.commands[1], 0), root.commandItem(root.commands[0], 0), hint("note call the bank", "Save a quick note · note at 15:00 … reminds you", "note "), hint("?how do I…", "Ask the AI anything", "?"), hint("200 + 15%", "Sums, copied with Enter", "200 + 15%"), hint("time in tokyo", "Also 5 km to mi, days until…", "time in tokyo")];
+    return [root.commandItem(root.commands[1], 0), root.commandItem(root.commands[0], 0), hint("note call the bank", "Save a quick note · note at 15:00 … reminds you", "note "), hint("?how do I…", "Ask the AI anything", "?"), hint("200 + 15%", "Sums, copied with Enter", "200 + 15%"), hint("time in tokyo", "Also 5 km to mi, days until…", "time in tokyo"), hint(":fire", "Find an emoji · Enter copies it", ":"), hint("gif cats", "Search GIFs · Enter copies the link", "gif ")];
+  }
+
+  // ------------------------------------------------------------------ emoji
+  // ":fire" or "emoji fire". The list is scripts/emoji.tsv (character, name,
+  // group, keywords), searched here rather than in a helper process so the
+  // results follow every keystroke. Enter copies the emoji; the ones used
+  // most recently come first when nothing has been typed after the colon.
+  property var emojis: []
+  property var emojiRecent: []
+
+  FileView {
+    id: emojiFile
+    path: Quickshell.shellPath("scripts/emoji.tsv")
+
+    onLoaded: {
+      const rows = [];
+      for (const line of text().split("\n")) {
+        const f = line.split("\t");
+        if (f.length >= 4)
+          rows.push({
+            char: f[0],
+            name: f[1],
+            group: f[2],
+            words: f[3].split(" ").filter(w => w.length > 0),
+            hay: (f[1] + " " + f[3]).toLowerCase()
+          });
+      }
+      root.emojis = rows;
+    }
+  }
+
+  FileView {
+    id: emojiRecentFile
+    path: Quickshell.cachePath("emoji-recent.json")
+
+    onLoaded: {
+      try {
+        const saved = JSON.parse(text());
+        root.emojiRecent = Array.isArray(saved) ? saved.slice(0, 12) : [];
+      } catch (e) {
+        root.emojiRecent = [];
+      }
+    }
+    onLoadFailed: Qt.callLater(() => emojiRecentFile.setText("[]"))
+  }
+
+  // The text after the trigger, or null if this isn't an emoji search.
+  function emojiTerm(q) {
+    if (q.startsWith(":"))
+      return q.substring(1).trim();
+    if (q === "emoji" || q.startsWith("emoji "))
+      return q.substring(5).trim();
+    return null;
+  }
+
+  function emojiItem(e, points) {
+    return {
+      kind: "emoji",
+      label: "Copy",
+      title: e.name,
+      sub: e.group,
+      icon: "",
+      glyph: "",
+      emoji: e.char,
+      value: e.char,
+      points: points
+    };
+  }
+
+  function emojiScore(e, tokens, whole) {
+    let total = 0;
+    for (const t of tokens) {
+      if (!e.hay.includes(t))
+        return 0;
+      if (e.name === whole)
+        total += 100;
+      else if (e.name.startsWith(t))
+        total += 80;
+      else if (e.words.some(w => w.toLowerCase() === t))
+        total += 60;
+      else if (e.words.some(w => w.toLowerCase().startsWith(t)))
+        total += 45;
+      else
+        total += 20;
+    }
+    return total / tokens.length;
+  }
+
+  function emojiResults(term) {
+    if (term.length === 0)
+      return root.emojiRecent.map(c => root.emojis.find(e => e.char === c)).filter(e => e).slice(0, root.maxResults).map((e, i) => root.emojiItem(e, 100 - i));
+    const tokens = term.toLowerCase().split(/\s+/);
+    const hits = [];
+    for (const e of root.emojis) {
+      const s = root.emojiScore(e, tokens, term.toLowerCase());
+      if (s > 0)
+        hits.push(root.emojiItem(e, s + (root.emojiRecent.includes(e.char) ? 15 : 0)));
+    }
+    return hits.sort((a, b) => b.points - a.points).slice(0, root.maxResults);
+  }
+
+  function rememberEmoji(c) {
+    root.emojiRecent = [c].concat(root.emojiRecent.filter(x => x !== c)).slice(0, 12);
+    emojiRecentFile.setText(JSON.stringify(root.emojiRecent));
+  }
+
+  // --------------------------------------------------------------------- gifs
+  // "gif cats" searches GIPHY through scripts/gifs.py (bare "gif" is trending).
+  // Needs QS_GIPHY_API_KEY. Enter copies the media link, which chat apps
+  // unfurl into the animation. Debounced harder than answers, since each
+  // search is a network request.
+  property var gifs: []
+  property string gifsFor: ""
+  property string gifError: ""
+  property string gifPending: ""
+  property string gifRunning: ""
+  readonly property bool gifConfigured: Quickshell.env("QS_GIPHY_API_KEY") !== null && Quickshell.env("QS_GIPHY_API_KEY") !== ""
+
+  // The search text after "gif", or null if this isn't a gif search.
+  function gifTerm(q) {
+    if (q === "gif" || q === "gifs")
+      return "";
+    if (q.startsWith("gif "))
+      return q.substring(4).trim();
+    return null;
+  }
+
+  Timer {
+    id: gifDelay
+    interval: 450
+    onTriggered: root.startGif()
+  }
+
+  function startGif() {
+    if (gifProc.running || !root.gifConfigured || root.gifPending === null)
+      return;
+    root.gifRunning = root.gifPending;
+    gifProc.command = ["python3", Quickshell.shellPath("scripts/gifs.py")].concat(root.gifRunning.length > 0 ? [root.gifRunning] : []);
+    gifProc.running = true;
+  }
+
+  Process {
+    id: gifProc
+
+    stdout: StdioCollector {
+      onStreamFinished: {
+        try {
+          const parsed = JSON.parse(text);
+          root.gifError = parsed.error ?? "";
+          root.gifs = parsed.results ?? [];
+        } catch (e) {
+          root.gifError = "No answer from GIPHY";
+          root.gifs = [];
+        }
+        root.gifsFor = root.gifRunning;
+      }
+    }
+
+    onExited: {
+      if (root.gifPending !== root.gifRunning)
+        root.startGif();
+    }
+  }
+
+  function gifResults(term) {
+    if (!root.gifConfigured)
+      return [root.gifNote("Set QS_GIPHY_API_KEY", "Free key at developers.giphy.com")];
+    if (root.gifError.length > 0 && root.gifsFor === term)
+      return [root.gifNote(root.gifError, "")];
+    if (root.gifsFor !== term && root.gifs.length === 0)
+      return [root.gifNote("Searching…", term || "Trending")];
+    return root.gifs.map((g, i) => ({
+          kind: "gif",
+          label: "Copy",
+          title: g.title,
+          sub: "GIPHY",
+          icon: "",
+          glyph: Icons.copy,
+          thumb: g.thumb,
+          value: g.url,
+          points: 100 - i
+        }));
+  }
+
+  function gifNote(title, sub) {
+    return {
+      kind: "hint",
+      label: "GIF",
+      title: title,
+      sub: sub,
+      icon: "",
+      glyph: Icons.lightbulb,
+      example: "gif ",
+      points: 0
+    };
   }
 
   // ----------------------------------------------------------------- search
@@ -367,6 +568,14 @@ Singleton {
 
     if (q === "help")
       return root.helpItems();
+
+    const gifTerm = root.gifTerm(q);
+    if (gifTerm !== null)
+      return root.gifResults(gifTerm);
+
+    const emojiTerm = root.emojiTerm(q);
+    if (emojiTerm !== null)
+      return root.emojiResults(emojiTerm);
 
     // "note …" saves whatever follows; nothing else competes with it.
     if (q === "note" || q.startsWith("note ")) {
@@ -475,6 +684,12 @@ Singleton {
       break;
     case "window":
       item.toplevel.activate();
+      break;
+    case "gif":
+    case "emoji":
+      if (item.kind === "emoji")
+        root.rememberEmoji(item.value);
+      Clipboard.copy(item.value);
       break;
     case "calc":
     case "clip":

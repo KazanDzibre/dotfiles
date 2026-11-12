@@ -2641,9 +2641,27 @@ PanelWindow {
 
               Ink {
                 anchors.centerIn: parent
-                visible: resultRow.modelData.icon.length === 0
+                visible: resultRow.modelData.icon.length === 0 && !resultRow.modelData.emoji && !resultRow.modelData.thumb
                 text: resultRow.modelData.glyph
                 font.pixelSize: Theme.iconSize + 1
+              }
+
+              // GIF results show a still of the first frame.
+              Image {
+                anchors.fill: parent
+                visible: !!resultRow.modelData.thumb
+                source: resultRow.modelData.thumb ?? ""
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+              }
+
+              // Emoji results show the emoji itself where an app icon would be.
+              Text {
+                anchors.centerIn: parent
+                visible: !!resultRow.modelData.emoji
+                text: resultRow.modelData.emoji ?? ""
+                font.pixelSize: 20
+                renderType: Text.NativeRendering
               }
             }
 
