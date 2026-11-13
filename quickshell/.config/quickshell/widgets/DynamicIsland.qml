@@ -575,6 +575,8 @@ PanelWindow {
       return Tones.timing;
     case "meetingCard":
       return Calendar.soon !== null;
+    case "driveCard":
+      return Drives.hasDrives;
     }
     return false;
   }
@@ -611,6 +613,9 @@ PanelWindow {
       keys.push("tone");
     if (Calendar.soon)
       keys.push("meeting");
+    // A USB drive stays as a bubble for as long as it is plugged in.
+    if (Drives.hasDrives)
+      keys.push("drive");
     return keys;
   }
 
@@ -822,6 +827,13 @@ PanelWindow {
       return [320, 136];
     case "meetingCard":
       return [330, 128];
+    case "driveCard": {
+      // Header, then a block per drive (taller with an error line under it).
+      let h = 16 + 26;
+      for (const d of Drives.drives)
+        h += 58 + ((Drives.errors[d.path] ?? "") !== "" ? 20 : 0);
+      return [400, h + 10];
+    }
     case "welcome":
       return [Math.max(300, welcomeText.implicitWidth + 80), 56];
     case "peek":
@@ -956,6 +968,7 @@ PanelWindow {
     case "downloadCard":
     case "timerCard":
     case "meetingCard":
+    case "driveCard":
       root.view = "";
       return;
     case "reminder": {
@@ -2228,6 +2241,129 @@ PanelWindow {
           onPressed: {
             root.view = "";
             Downloads.openFolder();
+          }
+        }
+      }
+    }
+
+    // ----------------------------------------------------------- usb drives
+    // From the drive bubble: every plugged-in drive, with the safe eject.
+    Layer {
+      key: "driveCard"
+
+      Column {
+        x: 16
+        y: 14
+        width: parent.width - 32
+        spacing: 0
+
+        Item {
+          width: parent.width
+          height: 26
+
+          Ink {
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+            text: "USB · " + Drives.drives.length
+            font.pixelSize: Theme.smallSize
+            font.bold: true
+            font.letterSpacing: 1
+            color: root.inkDim
+          }
+        }
+
+        Repeater {
+          model: Drives.drives
+
+          delegate: Column {
+            id: driveBlock
+
+            required property var modelData
+            readonly property bool busy: Drives.ejecting === modelData.path
+            readonly property string error: Drives.errors[modelData.path] ?? ""
+
+            width: parent.width
+
+            Item {
+              width: parent.width
+              height: 58
+
+              Ink {
+                id: driveGlyph
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                text: Icons.usbDrive
+                font.pixelSize: 26
+                color: driveBlock.modelData.mounted ? root.hot : root.inkDim
+                opacity: driveBlock.busy ? 0.5 : 1
+              }
+
+              Column {
+                anchors.left: driveGlyph.right
+                anchors.leftMargin: 12
+                anchors.right: driveButtons.left
+                anchors.rightMargin: 10
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 2
+
+                Ink {
+                  width: parent.width
+                  text: driveBlock.modelData.name
+                  font.bold: true
+                  elide: Text.ElideRight
+                  textFormat: Text.PlainText
+                }
+                Ink {
+                  width: parent.width
+                  text: driveBlock.busy ? "Ejecting…" : driveBlock.modelData.size + " · " + (driveBlock.modelData.mounted ? "Mounted" : "Not mounted")
+                  color: root.inkDim
+                  font.pixelSize: Theme.smallSize + 1
+                  elide: Text.ElideRight
+                }
+              }
+
+              Row {
+                id: driveButtons
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                height: 26
+                spacing: 6
+
+                Chip {
+                  visible: driveBlock.modelData.mounted && !driveBlock.busy
+                  label: "Open"
+                  onPressed: {
+                    const mp = driveBlock.modelData.partitions.find(p => p.mountpoints.length > 0);
+                    if (mp)
+                      Quickshell.execDetached(["xdg-open", mp.mountpoints[0]]);
+                    root.view = "";
+                  }
+                }
+
+                Chip {
+                  visible: !driveBlock.modelData.mounted && !driveBlock.busy
+                  label: "Mount"
+                  onPressed: Drives.mount(driveBlock.modelData)
+                }
+
+                Chip {
+                  strong: true
+                  label: driveBlock.busy ? "Ejecting…" : "Eject"
+                  opacity: Drives.ejecting === "" || driveBlock.busy ? 1 : 0.5
+                  onPressed: Drives.eject(driveBlock.modelData)
+                }
+              }
+            }
+
+            Ink {
+              width: parent.width
+              visible: driveBlock.error !== ""
+              height: visible ? 20 : 0
+              text: driveBlock.error
+              color: Theme.crit
+              elide: Text.ElideRight
+              font.pixelSize: Theme.smallSize
+            }
           }
         }
       }
@@ -5668,6 +5804,19 @@ PanelWindow {
       Breather {
         text: Icons.sineWave
         running: toneBubble.on
+      }
+    }
+
+    Bubble {
+      id: driveBubble
+      key: "drive"
+      label: Drives.drives.length > 1 ? Drives.drives.length + " USB drives" : Drives.drives.length === 1 ? Drives.drives[0].name : ""
+      detail: Drives.ejecting !== "" ? "Ejecting…" : "Click to eject safely"
+      onActivated: root.openCard("drive", driveBubble)
+
+      Breather {
+        text: Icons.usbDrive
+        running: Drives.ejecting !== ""
       }
     }
 

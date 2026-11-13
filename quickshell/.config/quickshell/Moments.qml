@@ -816,7 +816,7 @@ Singleton {
 
   onDriveCountChanged: {
     if (root.driveCount > root.lastDriveCount)
-      root.toast(Icons.usbDrive, "USB drive connected", "NEW", true, 2200);
+      root.toast(Icons.usbDrive, Drives.drives.length > 0 ? Drives.drives[Drives.drives.length - 1].name : "USB drive", "PLUGGED IN", true, 2400);
     else if (root.driveCount < root.lastDriveCount)
       root.toast(Icons.eject, "USB drive removed", "OFF", false);
     root.lastDriveCount = root.driveCount;

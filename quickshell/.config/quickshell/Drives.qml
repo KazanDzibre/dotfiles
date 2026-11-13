@@ -58,6 +58,23 @@ Singleton {
     ejector.running = true;
   }
 
+  // Mounts every partition on the drive that isn't mounted yet.
+  function mount(drive) {
+    if (root.ejecting !== "" || mounter.running)
+      return;
+    const steps = [];
+    for (const part of drive.partitions) {
+      if (part.mountpoints.length === 0)
+        steps.push("udisksctl mount --no-user-interaction -b " + root.quote(part.path));
+    }
+    if (steps.length === 0)
+      return;
+    root.setError(drive.path, "");
+    mounter.drivePath = drive.path;
+    mounter.command = ["sh", "-c", steps.join("\n")];
+    mounter.running = true;
+  }
+
   function finishEject(code) {
     const path = root.ejecting;
     root.ejecting = "";
@@ -181,6 +198,22 @@ Singleton {
 
     // Deferred a turn so the stderr collector has definitely finished.
     onExited: code => Qt.callLater(() => root.finishEject(code))
+  }
+
+  Process {
+    id: mounter
+
+    property string drivePath: ""
+
+    stderr: StdioCollector {
+      id: mountErrors
+    }
+
+    onExited: code => Qt.callLater(() => {
+      if (code !== 0)
+        root.setError(mounter.drivePath, root.friendlyError(mountErrors.text) || "Couldn't mount the drive.");
+      root.refresh();
+    })
   }
 
   Process {
