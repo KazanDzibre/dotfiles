@@ -94,6 +94,15 @@ Scope {
         sourceSize.width: win.width * 1.6
         sourceSize.height: win.height * 1.6
 
+        // A video wallpaper plays over its still, which is its first frame.
+        // Its own file, loaded on demand: if Qt Multimedia isn't installed
+        // only this fails, and the still stays.
+        Loader {
+          anchors.fill: parent
+          active: Wallpaper.liveRunning
+          source: "LiveVideo.qml"
+        }
+
         // Slower and softer than the windows' slide, which is what makes it
         // read as depth.
         Behavior on x {

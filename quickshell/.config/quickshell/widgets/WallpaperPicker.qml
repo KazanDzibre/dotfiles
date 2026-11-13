@@ -91,7 +91,7 @@ PanelWindow {
   function applySelected() {
     if (selectedPath.length === 0 || Wallpaper.applying)
       return;
-    if (selectedPath !== Wallpaper.current)
+    if (selectedPath !== Wallpaper.currentSource)
       Wallpaper.apply(selectedPath);
     root.close();
   }
@@ -118,7 +118,7 @@ PanelWindow {
   Timer {
     id: peekTimer
     interval: 500
-    onTriggered: root.peeking = root.hovering && root.opened && root.selectedPath !== Wallpaper.current
+    onTriggered: root.peeking = root.hovering && root.opened && root.selectedPath !== Wallpaper.currentSource
   }
 
   // ----------------------------------------------------------------- window
@@ -304,7 +304,7 @@ PanelWindow {
           }
           readonly property int k: Math.min(Math.abs(d), 4)
           readonly property bool isFront: d === 0
-          readonly property bool isCurrent: modelData === Wallpaper.current
+          readonly property bool isCurrent: modelData === Wallpaper.currentSource
           readonly property bool tilting: isFront && root.hovering
 
           // Once a card has been near the front its thumbnail stays loaded.

@@ -106,6 +106,10 @@ python3-icalendar python3-recurring-ical-events
 # The island's wifiqr view (scripts/wifi_qr.py) draws the join QR code with this.
 qrencode
 
+# Video wallpapers: Qt Multimedia plays them in the shell (widgets/LiveVideo.qml), and
+# ffmpeg pulls the first frame that hyprpaper, pywal and the reveal use.
+qml6-module-qtmultimedia ffmpeg
+
 python3-pip python3-venv pipx
 
 build-essential cmake ninja-build pkg-config

@@ -14,6 +14,7 @@ pragma Singleton
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
+import Quickshell.Services.UPower
 import QtQuick
 
 Singleton {
@@ -24,6 +25,9 @@ Singleton {
   readonly property string cacheDir: home + "/.cache/quickshell/wallpaper-thumbs"
 
   property string folder: home + "/Nuketown/Wallpapers"
+  // First frames of the video wallpapers: what hyprpaper, pywal and the reveal
+  // animation see, since none of them can read a video.
+  readonly property string framesDir: home + "/.cache/quickshell/video-frames"
 
   property var files: []           // absolute source paths, sorted by name
   property var thumbs: ({})        // source path -> path to load for display
@@ -81,7 +85,55 @@ Singleton {
     return Math.max(0, Math.min(id - 1, root.parallaxSteps)) * root.parallaxStep;
   }
 
-  readonly property int currentIndex: files.indexOf(current)
+  // ------------------------------------------------------------ live video
+  // A video wallpaper is a still (its first frame) applied exactly like any
+  // other wallpaper, with the video played over it by ParallaxWallpaper. So the
+  // theme, the reveal and the fallback all keep working, and a video is live
+  // only while its own still is the wallpaper: pick anything else, from here or
+  // from waypaper, and it stops by itself.
+  property string liveVideo: ""
+  property string liveStill: ""
+  readonly property bool liveActive: liveVideo !== "" && liveStill === current
+  // Decoding video costs power: on battery the still is shown instead.
+  readonly property bool liveRunning: liveActive && !UPower.onBattery
+  // What the picker should call "current": the video, not its still.
+  readonly property string currentSource: liveActive ? liveVideo : current
+
+  function isVideo(path) {
+    return /\.(mp4|webm|mkv|mov)$/i.test(path);
+  }
+
+  function stillFor(path) {
+    return root.framesDir + "/" + root.baseName(path) + ".png";
+  }
+
+  FileView {
+    id: liveFile
+    path: Quickshell.cachePath("live-wallpaper.json")
+
+    onLoaded: {
+      try {
+        const saved = JSON.parse(text());
+        root.liveVideo = saved.video ?? "";
+        root.liveStill = saved.still ?? "";
+      } catch (e) {
+        root.liveVideo = "";
+        root.liveStill = "";
+      }
+    }
+    onLoadFailed: Qt.callLater(() => liveFile.setText("{}"))
+  }
+
+  function setLive(video) {
+    root.liveVideo = video;
+    root.liveStill = video.length > 0 ? root.stillFor(video) : "";
+    liveFile.setText(JSON.stringify({
+      video: root.liveVideo,
+      still: root.liveStill
+    }));
+  }
+
+  readonly property int currentIndex: files.indexOf(currentSource)
   readonly property int count: files.length
 
   function baseName(path) {
@@ -128,11 +180,19 @@ Singleton {
   // five hex colours ImageMagick quantises the thumbnail down to. Both caches
   // persist, so this is slow only the first time an image is seen.
   readonly property string scanScript: [
-    'CACHE="$1"; DIR="$2"; mkdir -p "$CACHE"',
-    "find \"$DIR\" -maxdepth 1 -type f \\( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' -o -iname '*.bmp' \\) | sort | while IFS= read -r f; do",
+    'CACHE="$1"; DIR="$2"; FRAMES="$3"; mkdir -p "$CACHE" "$FRAMES"',
+    "find \"$DIR\" -maxdepth 1 -type f \\( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' -o -iname '*.bmp' -o -iname '*.mp4' -o -iname '*.webm' -o -iname '*.mkv' -o -iname '*.mov' \\) | sort | while IFS= read -r f; do",
+    // A video is shown by its first frame, pulled out once.
+    '  case "$f" in',
+    '    *.[mM][pP]4|*.[wW][eE][bB][mM]|*.[mM][kK][vV]|*.[mM][oO][vV])',
+    '      src="$FRAMES/$(basename "$f").png"',
+    '      if [ ! -s "$src" ] || [ "$f" -nt "$src" ]; then nice -n 19 ffmpeg -y -loglevel error -i "$f" -frames:v 1 "$src" </dev/null; fi',
+    '      [ -s "$src" ] || continue;;',
+    '    *) src="$f";;',
+    '  esac',
     '  out="$CACHE/$(basename "$f").jpg"; pal="$CACHE/$(basename "$f").pal"',
-    '  if [ ! -f "$out" ] || [ "$f" -nt "$out" ]; then nice -n 19 magick "$f" -resize 720x -quality 82 "$out" >/dev/null 2>&1; fi',
-    '  [ -f "$out" ] && show="$out" || show="$f"',
+    '  if [ ! -f "$out" ] || [ "$src" -nt "$out" ]; then nice -n 19 magick "$src" -resize 720x -quality 82 "$out" >/dev/null 2>&1; fi',
+    '  [ -f "$out" ] && show="$out" || show="$src"',
     '  if [ ! -s "$pal" ] || [ "$show" -nt "$pal" ]; then nice -n 19 magick "$show" -resize 64x -colors 5 -unique-colors txt:- 2>/dev/null | grep -o "#[0-9A-Fa-f]\\{6\\}" | tr "\\n" " " > "$pal"; fi',
     '  printf "%s\\t%s\\t%s\\n" "$f" "$show" "$(cat "$pal" 2>/dev/null)"',
     'done'
@@ -141,7 +201,7 @@ Singleton {
   Process {
     id: scanner
 
-    command: ["sh", "-c", root.scanScript, "sh", root.cacheDir, root.folder]
+    command: ["sh", "-c", root.scanScript, "sh", root.cacheDir, root.folder, root.framesDir]
 
     stdout: SplitParser {
       splitMarker: "\n"
@@ -280,6 +340,7 @@ Singleton {
   signal revealRequested(string path)
 
   property string queuedPath: ""
+  property string queuedVideo: ""
   property int coveredCount: 0
 
   function revealCovered() {
@@ -293,10 +354,15 @@ Singleton {
   function launchQueued() {
     coverFallback.stop();
     const path = root.queuedPath;
+    const video = root.queuedVideo;
     root.queuedPath = "";
+    root.queuedVideo = "";
     root.coveredCount = 0;
     if (path.length === 0)
       return;
+    // Remembered before waypaper writes its config, so the video is ready to
+    // start the moment its still becomes the current wallpaper.
+    root.setLive(video);
     setter.command = ["waypaper", "--wallpaper", path];
     setter.running = true;
   }
@@ -310,11 +376,16 @@ Singleton {
   function apply(path) {
     if (setter.running || root.queuedPath.length > 0 || path.length === 0)
       return;
+    const video = root.isVideo(path);
+    // A video that hasn't had its first frame pulled out yet can't be applied.
+    if (video && root.thumbs[path] === undefined)
+      return;
     root.applying = true;
-    root.queuedPath = path;
+    root.queuedVideo = video ? path : "";
+    root.queuedPath = video ? root.stillFor(path) : path;
     root.coveredCount = 0;
     coverFallback.restart();
-    root.revealRequested(path);
+    root.revealRequested(root.queuedPath);
   }
 
   function random() {
