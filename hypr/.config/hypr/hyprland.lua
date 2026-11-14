@@ -61,6 +61,9 @@ hl.on("hyprland.start", function()
     -- Shows the password window when something asks for admin rights (enrolling
     -- a fingerprint, disk tools, ...). Without an agent those are just refused.
     hl.exec_cmd("/usr/lib/polkit-kde-authentication-agent-1")
+    -- KDE Connect, for the phone in the island (Phone.qml). Its own autostart
+    -- entry is for KDE's session, which Hyprland doesn't run.
+    hl.exec_cmd("kdeconnectd")
 end)
 
 

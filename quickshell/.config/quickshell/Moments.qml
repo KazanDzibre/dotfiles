@@ -320,6 +320,19 @@ Singleton {
     }
   }
 
+  // ------------------------------------------------------------------- phone
+  Connections {
+    target: Phone
+
+    function onArrived(name) {
+      root.toast(Icons.phone, name, "CONNECTED", true, 1800);
+    }
+
+    function onSending(what) {
+      root.toast(Icons.phone, what.length > 24 ? what.substring(0, 23) + "…" : what, "TO " + (Phone.name.length > 10 ? "PHONE" : Phone.name.toUpperCase()), true, 2200);
+    }
+  }
+
   // ------------------------------------------------------------------- notes
   Connections {
     target: Notes

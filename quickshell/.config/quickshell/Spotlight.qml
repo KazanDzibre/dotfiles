@@ -312,6 +312,14 @@ Singleton {
       sub: Notes.open === 0 ? "Nothing open" : Notes.open + " open · in the island",
       glyph: Icons.note,
       action: "list"
+    },
+    {
+      word: "ping",
+      also: ["phone", "findphone"],
+      title: "Ping your phone",
+      sub: Phone.connected ? Phone.name + " shows a notification" : "Not connected · open KDE Connect on the phone",
+      glyph: Icons.phone,
+      action: "ping"
     }
   ]
 
@@ -706,6 +714,8 @@ Singleton {
     case "command":
       if (item.action === "pick")
         ScreenTools.pick();
+      else if (item.action === "ping")
+        Phone.ping();
       break;
     }
   }
