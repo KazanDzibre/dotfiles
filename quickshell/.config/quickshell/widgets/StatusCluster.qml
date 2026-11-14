@@ -112,7 +112,7 @@ Item {
     onClicked: event => {
       if (event.button === Qt.RightButton) {
         if (root.audio)
-          root.audio.muted = !root.audio.muted;
+          Volume.toggleMute(face.sink);
         return;
       }
       cc.toggle();
@@ -122,7 +122,7 @@ Item {
       if (!root.audio)
         return;
       const step = wheel.angleDelta.y > 0 ? 0.02 : -0.02;
-      root.audio.volume = Math.max(0, Math.min(1, root.audio.volume + step));
+      Volume.nudge(face.sink, step);
     }
   }
 

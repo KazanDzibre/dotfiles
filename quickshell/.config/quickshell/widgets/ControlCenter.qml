@@ -634,10 +634,10 @@ MorphPanel {
       value: root.audio ? root.audio.volume : 0
       readout: !root.audio ? "--" : root.audio.muted ? "off" : Math.round(root.audio.volume * 100)
       enabled: root.audio !== null
-      onMoved: v => root.audio.volume = v
+      onMoved: v => Volume.set(root.sink, v)
       onGlyphClicked: button => {
         if (button === Qt.RightButton)
-          root.audio.muted = !root.audio.muted;
+          Volume.toggleMute(root.sink);
         else
           root.request("volume");
       }

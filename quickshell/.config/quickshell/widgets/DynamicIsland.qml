@@ -350,7 +350,7 @@ PanelWindow {
         root.stretch = Math.min(root.stretchMax, root.stretch + (root.stretchMax - root.stretch) * 0.35 + 1);
         stretchRelease.restart();
       }
-      audio.volume = Math.max(0, Math.min(1, audio.volume + dy / 120 * 0.03));
+      Volume.nudge(Moments.sink, dy / 120 * 0.03);
       root.volumeShown = true;
       volumeHide.restart();
     }
