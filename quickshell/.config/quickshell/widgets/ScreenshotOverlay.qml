@@ -64,7 +64,7 @@ PanelWindow {
   Timer {
     id: wholeScreenTimer
     interval: 120
-    onTriggered: root.commit(0, 0, capture.sourceSize.width, capture.sourceSize.height)
+    onTriggered: root.commit(0, 0, root.width, root.height)
   }
 
   ScreencopyView {
@@ -177,7 +177,7 @@ PanelWindow {
       if (!root.dragging)
         return;
       root.dragging = false;
-      root.commit(root.selX * root.pixelRatio, root.selY * root.pixelRatio, root.selW * root.pixelRatio, root.selH * root.pixelRatio);
+      root.commit(root.selX, root.selY, root.selW, root.selH);
     }
   }
 
@@ -186,15 +186,24 @@ PanelWindow {
     Keys.onEscapePressed: Screenshot.cancel()
   }
 
-  // Grab the frozen frame at full resolution and hand the crop box to the
-  // cropper. Done here rather than in the singleton because grabToImage only
-  // works on an item that is actually being rendered.
+  // Grab the frozen frame and hand the selection to the cropper. Done here
+  // rather than in the singleton because grabToImage only works on an item
+  // that is actually being rendered.
+  //
+  // The selection goes over as fractions of the screen, not pixels: on a
+  // scaled display the grabbed image can come out bigger than the screen's
+  // real resolution (here 2880 wide instead of 1920), and a pixel crop then
+  // caught only the top-left part of the selection. The cropper measures the
+  // image it actually got and scales the result back to real pixels.
   function commit(x, y, width, height) {
     const path = "/tmp/quickshell-screenshot-" + Date.now() + ".png";
+    const fx = x / root.width, fy = y / root.height;
+    const fw = width / root.width, fh = height / root.height;
+    const outW = Math.round(width * root.pixelRatio), outH = Math.round(height * root.pixelRatio);
 
     capture.grabToImage(function (result) {
       result.saveToFile(path);
-      Screenshot.finish(path, x, y, width, height);
+      Screenshot.finish(path, fx, fy, fw, fh, outW, outH);
     }, Qt.size(capture.sourceSize.width, capture.sourceSize.height));
   }
 }

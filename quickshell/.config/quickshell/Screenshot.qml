@@ -39,12 +39,13 @@ Singleton {
     id: processor
   }
 
-  // Called by the overlay once it has written the full-resolution frame to
-  // `source`. Crop values are in physical pixels.
-  function finish(source, x, y, width, height) {
+  // Called by the overlay once it has written the frozen frame to `source`.
+  // The selection is in fractions of the frame (0–1), the output size in the
+  // screen's real pixels.
+  function finish(source, fx, fy, fw, fh, outW, outH) {
     root.mode = "";
 
-    if (width < 2 || height < 2) {
+    if (outW < 2 || outH < 2) {
       // A stray click rather than a drag — nothing worth saving.
       processor.command = ["rm", "-f", source];
       processor.startDetached();
@@ -55,11 +56,14 @@ Singleton {
     const target = root.saveDir + "/" + stamp + ".png";
     root.lastPath = target;
 
-    const crop = Math.round(width) + "x" + Math.round(height) + "+" + Math.round(x) + "+" + Math.round(y);
-
-    // Crop, put it on the clipboard, bin the temp frame, then tell the user via
-    // the notification server this shell now owns.
-    const script = "mkdir -p " + root.saveDir + " && " + "magick \"$1\" -crop " + crop + " +repage \"$2\" && " + "wl-copy --type image/png < \"$2\"; " + "rm -f \"$1\"; " + "notify-send -a Screenshot -i \"$2\" 'Screenshot saved' \"$(basename \"$2\") — copied to clipboard\"";
+    // Measure the frame, cut the fraction out of it, and size it to real
+    // pixels; then clipboard, bin the temp frame, notify.
+    const script = "mkdir -p " + root.saveDir + " && " +
+      "set -- \"$1\" \"$2\" $(magick identify -format '%w %h' \"$1\") && " +
+      "crop=$(awk -v W=$3 -v H=$4 'BEGIN { printf \"%dx%d+%d+%d\", W*" + fw + "+0.5, H*" + fh + "+0.5, W*" + fx + "+0.5, H*" + fy + "+0.5 }') && " +
+      "magick \"$1\" -crop $crop +repage -resize " + outW + "x" + outH + "! \"$2\" && " +
+      "wl-copy --type image/png < \"$2\"; " + "rm -f \"$1\"; " +
+      "notify-send -a Screenshot -i \"$2\" 'Screenshot saved' \"$(basename \"$2\") — copied to clipboard\"";
 
     processor.command = ["sh", "-c", script, "sh", source, target];
     processor.startDetached();
