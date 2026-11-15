@@ -54,6 +54,9 @@ PACKAGES=(
 
   # Everyday tools the binds launch
   alacritty neovim fish stow
+
+  # Zed (zed/), and stylua, which it formats Lua with on save
+  zed stylua
 )
 
 # Programs the config calls, and which package brings each: what `check` reports.
@@ -67,6 +70,7 @@ COMMANDS=(
   upower:upower nmcli:networkmanager bluetoothctl:bluez-utils qrencode:qrencode
   checkupdates:pacman-contrib curl:curl jq:jq sqlite3:sqlite python3:python
   fprintd-verify:fprintd alacritty:alacritty nvim:neovim fish:fish stow:stow
+  zeditor:zed stylua:stylua
 )
 
 say() { printf '\033[1m%s\033[0m\n' "$*"; }
@@ -138,8 +142,10 @@ check() {
       echo "  no fingerprint enrolled: run fprintd-enroll"
   fi
 
+  # -t ~ matters: the repo lives in ~/Nuketown, and stow's default target is
+  # the repo's parent, so a bare `stow` links into ~/Nuketown/.config.
   say "Configs are linked with stow from the repo root, for example:"
-  echo "  cd $(cd "$(dirname "$(readlink -f "$0")")/.." && pwd) && stow hypr quickshell nvim wal fish screensaver starship"
+  echo "  cd $(cd "$(dirname "$(readlink -f "$0")")/.." && pwd) && stow -t ~ hypr quickshell nvim wal fish screensaver starship zed wireplumber"
   echo "  (not waypaper on Arch: its config.ini points at the Ubuntu laptop's post-command"
   echo "   script, so keep a local ~/.config/waypaper/config.ini that runs post-command.sh)"
 }

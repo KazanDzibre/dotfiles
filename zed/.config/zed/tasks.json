@@ -4,9 +4,10 @@
     // <leader>H. Zed has no keymap action that opens a given file, but the CLI
     // opens one in the window it is called from. The task only exists to make
     // that call, so its terminal is never shown and closes when it is done.
+    // The CLI is `zed` on Ubuntu and `zeditor` on Arch; whichever is there.
     "label": "Cheatsheet",
-    "command": "zed",
-    "args": ["--existing", "$HOME/.config/zed/CHEATSHEET.txt"],
+    "command": "sh",
+    "args": ["-c", "$(command -v zed || command -v zeditor) --existing \"$HOME/.config/zed/CHEATSHEET.txt\""],
     "reveal": "never",
     "hide": "always",
     "use_new_terminal": false,

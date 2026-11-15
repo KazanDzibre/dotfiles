@@ -299,6 +299,8 @@
     "nvim-nightfox": true,
     // nvim-web-devicons -> matching file icons
     "catppuccin-icons": true,
+    // the icon theme in use ("icon_theme" above)
+    "material-icon-theme": true,
 
     // lsp.lua servers / treesitter.lua parsers Zed does not ship
     "lua": true, // lua_ls
