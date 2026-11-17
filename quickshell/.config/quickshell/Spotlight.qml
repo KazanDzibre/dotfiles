@@ -298,6 +298,14 @@ Singleton {
       action: "wifiqr"
     },
     {
+      word: "timer",
+      also: ["stopwatch", "lap", "laps"],
+      title: Stopwatch.running ? "Stopwatch · " + Stopwatch.format(Stopwatch.elapsed, false) : "Stopwatch",
+      sub: "Start, pause and lap in the island",
+      glyph: Icons.timer,
+      action: "stopwatch"
+    },
+    {
       word: "notes",
       also: [],
       title: "Open your notes",

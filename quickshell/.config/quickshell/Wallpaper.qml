@@ -124,6 +124,67 @@ Singleton {
     onLoadFailed: Qt.callLater(() => liveFile.setText("{}"))
   }
 
+  // What actually plays: a 30 fps copy made when the video was scanned. Half
+  // the frames to decode, which on a wallpaper nobody can tell apart.
+  function liveFileFor(video) {
+    return root.framesDir + "/" + root.baseName(video) + ".live.mp4";
+  }
+
+  // Which screens have a window on the workspace they are showing, by name.
+  // The wallpaper is hidden behind those, so the video pauses there: it only
+  // decodes while it can actually be seen. Read from Hyprland, and only when
+  // something moved, never on a timer.
+  property var coveredScreens: ({})
+
+  function checkCovered() {
+    if (root.liveRunning && !coverProbe.running)
+      coverProbe.running = true;
+  }
+
+  Process {
+    id: coverProbe
+    command: ["sh", "-c", "hyprctl monitors -j; printf '\\n=====\\n'; hyprctl clients -j"]
+
+    stdout: StdioCollector {
+      onStreamFinished: {
+        try {
+          const parts = text.split("\n=====\n");
+          const monitors = JSON.parse(parts[0]);
+          const clients = JSON.parse(parts[1]);
+          const next = {};
+          for (const m of monitors) {
+            const id = m.activeWorkspace ? m.activeWorkspace.id : -1;
+            next[m.name] = clients.some(c => c.mapped && !c.hidden && c.workspace && c.workspace.id === id);
+          }
+          if (JSON.stringify(next) !== JSON.stringify(root.coveredScreens))
+            root.coveredScreens = next;
+        } catch (e) {
+          // Keep what we knew: better to play than to freeze on a bad read.
+        }
+      }
+    }
+  }
+
+  Timer {
+    id: coverSettle
+    interval: 250
+    onTriggered: root.checkCovered()
+  }
+
+  Connections {
+    target: Hyprland
+
+    function onRawEvent(event) {
+      if (root.liveRunning)
+        coverSettle.restart();
+    }
+  }
+
+  onLiveRunningChanged: {
+    if (liveRunning)
+      root.checkCovered();
+  }
+
   function setLive(video) {
     root.liveVideo = video;
     root.liveStill = video.length > 0 ? root.stillFor(video) : "";
@@ -187,7 +248,11 @@ Singleton {
     '    *.[mM][pP]4|*.[wW][eE][bB][mM]|*.[mM][kK][vV]|*.[mM][oO][vV])',
     '      src="$FRAMES/$(basename "$f").png"',
     '      if [ ! -s "$src" ] || [ "$f" -nt "$src" ]; then nice -n 19 ffmpeg -y -loglevel error -i "$f" -frames:v 1 "$src" </dev/null; fi',
-    '      [ -s "$src" ] || continue;;',
+    '      [ -s "$src" ] || continue',
+    '      live="$FRAMES/$(basename "$f").live.mp4"',
+    '      if [ ! -s "$live" ] || [ "$f" -nt "$live" ]; then',
+    '        nice -n 19 ffmpeg -y -loglevel error -i "$f" -an -vf "fps=30,scale=-2:min(1080\\,ih)" -c:v libx264 -preset veryfast -crf 24 -pix_fmt yuv420p -movflags +faststart "$live.part.mp4" </dev/null && mv -f "$live.part.mp4" "$live" || { rm -f "$live.part.mp4"; ln -sf "$f" "$live"; }',
+    '      fi;;',
     '    *) src="$f";;',
     '  esac',
     '  out="$CACHE/$(basename "$f").jpg"; pal="$CACHE/$(basename "$f").pal"',

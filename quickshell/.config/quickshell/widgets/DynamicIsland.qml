@@ -200,6 +200,11 @@ PanelWindow {
       root.view = "wifiqr";
       return;
     }
+    // A stopwatch with laps, drawn on this island.
+    if (item.kind === "command" && item.action === "stopwatch") {
+      root.view = "stopwatch";
+      return;
+    }
     root.view = "";
     if (item.kind === "command" && item.action === "panel") {
       Moments.popupRequested("shortcuts", root.screenName());
@@ -415,6 +420,8 @@ PanelWindow {
       return "memos";
     if (view === "wifiqr")
       return "wifiqr";
+    if (view === "stopwatch")
+      return "stopwatch";
     if (view === "weather" && Weather.ready)
       return "weather";
     if (view.endsWith("Card") && cardLive(view))
@@ -613,6 +620,8 @@ PanelWindow {
       keys.push("tone");
     if (Calendar.soon)
       keys.push("meeting");
+    if (Stopwatch.active)
+      keys.push("stopwatch");
     // A USB drive stays as a bubble for as long as it is plugged in.
     if (Drives.hasDrives)
       keys.push("drive");
@@ -850,6 +859,8 @@ PanelWindow {
       return [420, 306];
     case "wifiqr":
       return [300, 12 + 26 + 8 + 192 + 10 + 18 + 16];
+    case "stopwatch":
+      return [340, 12 + 26 + 60 + 12 + 32 + 16 + Math.min(Stopwatch.laps.length, 3) * 24 + (Stopwatch.laps.length > 3 ? 20 : 0)];
     case "memos":
       return [400, 12 + 26 + Math.min(Notes.items.length, 6) * 40 + (Notes.items.length > 6 ? 22 : 0) + 14];
     case "reminder":
@@ -962,6 +973,7 @@ PanelWindow {
       root.view = "today";
       return;
     case "wifiqr":
+    case "stopwatch":
     case "quick":
     case "claudeCard":
     case "updatesCard":
@@ -1017,7 +1029,7 @@ PanelWindow {
   // Clicking anywhere else folds the island back up.
   HyprlandFocusGrab {
     windows: [root]
-    active: root.mode === "player" || root.mode === "today" || root.mode === "inbox" || root.mode === "search" || root.mode === "alertCard" || root.mode === "ask" || root.mode === "shelf" || root.mode === "memos" || root.mode === "wifiqr" || root.mode === "weather" || root.mode === "quick" || root.mode.endsWith("Card")
+    active: root.mode === "player" || root.mode === "today" || root.mode === "inbox" || root.mode === "search" || root.mode === "alertCard" || root.mode === "ask" || root.mode === "shelf" || root.mode === "memos" || root.mode === "wifiqr" || root.mode === "stopwatch" || root.mode === "weather" || root.mode === "quick" || root.mode.endsWith("Card")
     onCleared: {
       // Dragging a file out of the shelf hands the pointer to the drag.
       if (root.shelfDragging)
@@ -3805,6 +3817,169 @@ PanelWindow {
       }
     }
 
+    // ------------------------------------------------------------ stopwatch
+    // Typed `timer`: start, pause, lap and reset. Keeps running when closed, as
+    // a bubble beside the island.
+    Layer {
+      key: "stopwatch"
+
+      Column {
+        anchors.fill: parent
+        anchors.margins: 14
+        anchors.topMargin: 12
+        spacing: 0
+
+        Item {
+          width: parent.width
+          height: 26
+
+          Ink {
+            anchors.left: parent.left
+            anchors.leftMargin: 6
+            anchors.verticalCenter: parent.verticalCenter
+            text: "STOPWATCH"
+            font.pixelSize: Theme.smallSize
+            font.bold: true
+            font.letterSpacing: 1
+            color: root.inkDim
+          }
+        }
+
+        Ink {
+          width: parent.width
+          height: 60
+          horizontalAlignment: Text.AlignHCenter
+          verticalAlignment: Text.AlignVCenter
+          text: Stopwatch.format(Stopwatch.elapsed, true)
+          font.pixelSize: 44
+          font.bold: true
+          color: Stopwatch.running ? root.hot : root.ink
+        }
+
+        Item {
+          width: 1
+          height: 12
+        }
+
+        Row {
+          anchors.horizontalCenter: parent.horizontalCenter
+          height: 32
+          spacing: 10
+
+          Repeater {
+            model: [
+              {
+                id: "toggle",
+                text: Stopwatch.running ? "Pause" : (Stopwatch.elapsed > 0 ? "Resume" : "Start")
+              },
+              {
+                id: "lap",
+                text: "Lap"
+              },
+              {
+                id: "reset",
+                text: "Reset"
+              }
+            ]
+
+            delegate: Rectangle {
+              id: swChip
+
+              required property var modelData
+              readonly property bool off: (modelData.id === "lap" && !Stopwatch.running) || (modelData.id === "reset" && Stopwatch.elapsed === 0)
+
+              width: 88
+              height: 32
+              radius: 16
+              opacity: off ? 0.4 : 1
+              color: swArea.containsMouse && !off ? Qt.rgba(1, 1, 1, 0.2) : Qt.rgba(1, 1, 1, modelData.id === "toggle" ? 0.16 : 0.1)
+              scale: swArea.pressed && !off ? 0.92 : 1
+
+              Behavior on scale {
+                NumberAnimation {
+                  duration: 260
+                  easing.type: Easing.BezierSpline
+                  easing.bezierCurve: [0.34, 1.56, 0.64, 1, 1, 1]
+                }
+              }
+
+              Ink {
+                anchors.centerIn: parent
+                text: swChip.modelData.text
+                font.bold: swChip.modelData.id === "toggle"
+              }
+
+              MouseArea {
+                id: swArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: swChip.off ? Qt.ArrowCursor : Qt.PointingHandCursor
+                onClicked: {
+                  if (swChip.off)
+                    return;
+                  if (swChip.modelData.id === "toggle")
+                    Stopwatch.toggle();
+                  else if (swChip.modelData.id === "lap")
+                    Stopwatch.lap();
+                  else
+                    Stopwatch.reset();
+                }
+              }
+            }
+          }
+        }
+
+        Item {
+          width: 1
+          height: 16
+        }
+
+        Repeater {
+          model: Stopwatch.laps.slice(0, 3)
+
+          delegate: Item {
+            id: lapRow
+
+            required property var modelData
+
+            width: parent.width
+            height: 24
+
+            Ink {
+              anchors.left: parent.left
+              anchors.leftMargin: 6
+              anchors.verticalCenter: parent.verticalCenter
+              text: "Lap " + lapRow.modelData.n
+              color: root.inkDim
+              font.pixelSize: Theme.smallSize + 1
+            }
+            Ink {
+              anchors.centerIn: parent
+              text: "+" + Stopwatch.format(lapRow.modelData.split, true)
+              font.pixelSize: Theme.smallSize + 1
+            }
+            Ink {
+              anchors.right: parent.right
+              anchors.rightMargin: 6
+              anchors.verticalCenter: parent.verticalCenter
+              text: Stopwatch.format(lapRow.modelData.total, true)
+              color: root.inkDim
+              font.pixelSize: Theme.smallSize + 1
+            }
+          }
+        }
+
+        Ink {
+          visible: Stopwatch.laps.length > 3
+          width: parent.width
+          horizontalAlignment: Text.AlignHCenter
+          text: "+ " + (Stopwatch.laps.length - 3) + " earlier"
+          color: root.inkDim
+          font.pixelSize: Theme.smallSize
+        }
+      }
+    }
+
     // ------------------------------------------------------------ notes
     // Typed `noted` in the search: the notes as a list, to tick off quickly.
     Layer {
@@ -5804,6 +5979,26 @@ PanelWindow {
       Breather {
         text: Icons.sineWave
         running: toneBubble.on
+      }
+    }
+
+    Bubble {
+      id: stopwatchBubble
+      key: "stopwatch"
+      label: "Stopwatch"
+      detail: Stopwatch.format(Stopwatch.elapsed, false) + (Stopwatch.running ? "" : " · paused")
+      onActivated: {
+        const p = stopwatchBubble.mapToItem(null, 6, 0);
+        flyer.fly(p.x, p.y);
+        Moments.dismiss();
+        root.view = "stopwatch";
+      }
+
+      Ink {
+        anchors.centerIn: parent
+        text: Icons.timer
+        color: Stopwatch.running ? root.hot : root.inkDim
+        font.pixelSize: Theme.iconSize
       }
     }
 

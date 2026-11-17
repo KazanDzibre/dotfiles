@@ -98,9 +98,17 @@ Scope {
         // Its own file, loaded on demand: if Qt Multimedia isn't installed
         // only this fails, and the still stays.
         Loader {
+          id: liveLoader
           anchors.fill: parent
           active: Wallpaper.liveRunning
           source: "LiveVideo.qml"
+        }
+
+        Binding {
+          target: liveLoader.item
+          property: "paused"
+          value: Wallpaper.coveredScreens[win.screen.name] === true
+          when: liveLoader.item !== null
         }
 
         // Slower and softer than the windows' slide, which is what makes it
