@@ -568,6 +568,22 @@ PanelWindow {
     return i >= 0 && i < root.quickActions.length && x >= rowLeft - 4 ? i : -1;
   }
 
+  // The weather card's lower strip: the next hours, or the week.
+  property bool weatherWeekly: false
+
+  // After sunset or before sunrise, from the "HH:MM" times wttr.in gives; the
+  // minute clock re-evaluates it.
+  readonly property bool weatherNight: {
+    const t = Time.now;
+    const mins = t.getHours() * 60 + t.getMinutes();
+    const at = s => {
+      const m = /^(\d{1,2}):(\d{2})$/.exec(s ?? "");
+      return m ? Number(m[1]) * 60 + Number(m[2]) : -1;
+    };
+    const up = at(Weather.sunrise), down = at(Weather.sunset);
+    return up < 0 || down < 0 ? false : mins < up || mins >= down;
+  }
+
   // A bubble's card (opened from the bubble, shown in the island like every
   // other card) only while the thing it's about is still going.
   function cardLive(v) {
@@ -856,7 +872,7 @@ PanelWindow {
     case "shelf":
       return [420, 12 + 24 + Math.min(Shelf.count, 5) * 52 + 14];
     case "weather":
-      return [420, 306];
+      return [420, 316];
     case "wifiqr":
       return [300, 12 + 26 + 8 + 192 + 10 + 18 + 16];
     case "stopwatch":
@@ -3590,6 +3606,14 @@ PanelWindow {
     Layer {
       key: "weather"
 
+      // The sky outside, behind the details.
+      WeatherBackdrop {
+        anchors.fill: parent
+        radius: shape.radius
+        code: Weather.code
+        night: root.weatherNight
+      }
+
       Item {
         anchors.fill: parent
         anchors.margins: 16
@@ -3701,11 +3725,140 @@ PanelWindow {
           }
         }
 
+        // Air quality: a dot in the colour of its band, then the number.
+        Row {
+          anchors.left: parent.left
+          anchors.top: wxStats.bottom
+          anchors.topMargin: 10
+          spacing: 8
+          visible: Weather.aqi >= 0
+          height: 20
+
+          Rectangle {
+            anchors.verticalCenter: parent.verticalCenter
+            width: 14
+            height: 14
+            radius: 7
+            color: Weather.aqiBand.color
+
+            Rectangle {
+              anchors.centerIn: parent
+              width: 22
+              height: 22
+              radius: 11
+              color: "transparent"
+              border.width: 1
+              border.color: Weather.aqiBand.color
+              opacity: 0.4
+            }
+          }
+
+          Ink {
+            anchors.verticalCenter: parent.verticalCenter
+            text: "AIR " + Weather.aqi
+            font.bold: true
+          }
+          Ink {
+            anchors.verticalCenter: parent.verticalCenter
+            text: Weather.aqiBand.label + " · PM2.5 " + Weather.pm25.toFixed(1)
+            color: root.inkDim
+            font.pixelSize: Theme.smallSize + 1
+          }
+        }
+
+        // Hourly / Weekly switch.
+        Rectangle {
+          id: wxToggle
+          anchors.right: parent.right
+          anchors.verticalCenter: wxStats.bottom
+          anchors.verticalCenterOffset: 20
+          width: wxToggleText.implicitWidth + 22
+          height: 24
+          radius: 12
+          visible: Weather.days.length > 0
+          color: wxToggleArea.containsMouse ? Qt.rgba(1, 1, 1, 0.22) : Qt.rgba(1, 1, 1, 0.12)
+          scale: wxToggleArea.pressed ? 0.92 : 1
+
+          Behavior on scale {
+            NumberAnimation {
+              duration: 260
+              easing.type: Easing.BezierSpline
+              easing.bezierCurve: [0.34, 1.56, 0.64, 1, 1, 1]
+            }
+          }
+
+          Ink {
+            id: wxToggleText
+            anchors.centerIn: parent
+            text: root.weatherWeekly ? "Weekly" : "Hourly"
+            font.pixelSize: Theme.smallSize + 1
+            font.bold: true
+          }
+
+          MouseArea {
+            id: wxToggleArea
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: root.weatherWeekly = !root.weatherWeekly
+          }
+        }
+
+        // The week: a day per column.
+        Row {
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.bottom: parent.bottom
+          visible: root.weatherWeekly
+
+          Repeater {
+            model: Weather.days
+
+            delegate: Column {
+              required property var modelData
+              required property int index
+              width: parent.width / Math.max(1, Weather.days.length)
+              spacing: 3
+
+              Ink {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: parent.modelData.label
+                color: root.inkDim
+                font.pixelSize: Theme.smallSize
+              }
+              Ink {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: Weather.glyphForWmo(parent.modelData.code)
+                font.pixelSize: 20
+                color: index === 0 ? root.hot : root.ink
+              }
+              Ink {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: parent.modelData.hiC + "°"
+                font.bold: true
+              }
+              Ink {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: parent.modelData.loC + "°"
+                color: root.inkDim
+                font.pixelSize: Theme.smallSize
+              }
+              Ink {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: parent.modelData.rain + "%"
+                color: parent.modelData.rain >= 40 ? root.hot : root.inkDim
+                font.pixelSize: Theme.smallSize - 1
+              }
+            }
+          }
+        }
+
         // The next few three-hour slots.
         Row {
           anchors.left: parent.left
           anchors.right: parent.right
           anchors.bottom: parent.bottom
+          visible: !root.weatherWeekly
 
           Repeater {
             model: Weather.hours

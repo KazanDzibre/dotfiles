@@ -38,6 +38,75 @@ Singleton {
 
   readonly property string glyph: root.glyphFor(root.code)
 
+  // The week ahead from Open-Meteo: { label, code (WMO), hiC, loC, rain }.
+  property var days: []
+
+  // Open-Meteo reports WMO codes, not wttr.in's.
+  function glyphForWmo(c) {
+    if (c === 0)
+      return Icons.weatherSunny;
+    if (c === 1 || c === 2)
+      return Icons.weatherPartly;
+    if (c === 3)
+      return Icons.weatherCloudy;
+    if (c === 45 || c === 48)
+      return Icons.weatherFog;
+    if (c >= 95)
+      return Icons.weatherLightning;
+    if ((c >= 71 && c <= 77) || c === 85 || c === 86)
+      return Icons.weatherSnowy;
+    return Icons.weatherRainy;
+  }
+
+  // Air quality (US AQI) from Open-Meteo, looked up for the spot wttr.in
+  // resolved the city to. -1 until it arrives.
+  property int aqi: -1
+  property real pm25: 0
+  property real pm10: 0
+  property string lat: ""
+  property string lon: ""
+
+  // The US AQI bands: green, yellow, orange, red, purple, maroon.
+  readonly property var aqiBands: [
+    {
+      max: 50,
+      label: "Good",
+      color: "#4cc46a"
+    },
+    {
+      max: 100,
+      label: "Moderate",
+      color: "#f2d24b"
+    },
+    {
+      max: 150,
+      label: "Unhealthy for sensitive",
+      color: "#f29a3d"
+    },
+    {
+      max: 200,
+      label: "Unhealthy",
+      color: "#e5504b"
+    },
+    {
+      max: 300,
+      label: "Very unhealthy",
+      color: "#a661d6"
+    },
+    {
+      max: 100000,
+      label: "Hazardous",
+      color: "#8a2f45"
+    }
+  ]
+  readonly property var aqiBand: {
+    for (const b of root.aqiBands) {
+      if (root.aqi <= b.max)
+        return b;
+    }
+    return root.aqiBands[root.aqiBands.length - 1];
+  }
+
   function glyphFor(c) {
     if (c === 113)
       return Icons.weatherSunny;
@@ -129,9 +198,58 @@ Singleton {
           root.sunset = root.clock24(today.astronomy[0].sunset);
           root.hours = root.upcoming(data.weather);
           root.place = root.city.length > 0 ? root.city : data.nearest_area[0].areaName[0].value;
+          root.lat = data.nearest_area[0].latitude;
+          root.lon = data.nearest_area[0].longitude;
           root.ready = true;
+          if (!airFetcher.running)
+            airFetcher.running = true;
+          if (!weekFetcher.running)
+            weekFetcher.running = true;
         } catch (e) {
           // Offline or a bad reply: keep whatever was showing.
+        }
+      }
+    }
+  }
+
+  Process {
+    id: airFetcher
+    command: ["curl", "-sf", "--max-time", "15", "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=" + root.lat + "&longitude=" + root.lon + "&current=us_aqi,pm2_5,pm10"]
+
+    stdout: StdioCollector {
+      onStreamFinished: {
+        try {
+          const cur = JSON.parse(text).current;
+          if (cur.us_aqi === null || cur.us_aqi === undefined)
+            return;
+          root.aqi = Math.round(cur.us_aqi);
+          root.pm25 = cur.pm2_5;
+          root.pm10 = cur.pm10;
+        } catch (e) {
+          // Offline or no data for this spot: the row just stays hidden.
+        }
+      }
+    }
+  }
+
+  Process {
+    id: weekFetcher
+    command: ["curl", "-sf", "--max-time", "15", "https://api.open-meteo.com/v1/forecast?latitude=" + root.lat + "&longitude=" + root.lon + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=7"]
+
+    stdout: StdioCollector {
+      onStreamFinished: {
+        try {
+          const d = JSON.parse(text).daily;
+          const names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+          root.days = d.time.map((t, i) => ({
+                label: i === 0 ? "Today" : names[new Date(t + "T12:00:00").getDay()],
+                code: d.weather_code[i],
+                hiC: Math.round(d.temperature_2m_max[i]),
+                loC: Math.round(d.temperature_2m_min[i]),
+                rain: d.precipitation_probability_max[i] ?? 0
+              }));
+        } catch (e) {
+          // Offline: the Weekly view just stays empty.
         }
       }
     }
