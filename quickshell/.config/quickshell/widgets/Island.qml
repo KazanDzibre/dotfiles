@@ -28,6 +28,10 @@ Rectangle {
   border.width: 1
   border.color: Qt.rgba(rimTone.r, rimTone.g, rimTone.b, (Theme.isLight ? 0.12 : 0.16) + (hover.hovered ? 0.06 : 0))
 
+  GlassSheen {
+    radius: root.radius
+  }
+
   HoverHandler {
     id: hover
   }

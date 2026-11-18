@@ -1702,21 +1702,24 @@ PanelWindow {
       }
     }
 
-    // ----------------------------------------------------------- pointer light
-    // Rest the pointer on the island and its outline lights up where the
-    // pointer is, a white line that follows it round the edge. Drawn only while
-    // hovered; it never takes a click.
+    // ------------------------------------------------------------- edge light
+    // When the island opens into a card or closes back to its pill, a short
+    // white light runs once round the outline and fades. Nothing else lights
+    // it: hovering doesn't. It never takes a click.
     Item {
       id: pointerLight
 
-      // Also lit for one lap round the edge when the island lands at a new
-      // size (sweepT 0..1; -1 when not sweeping).
+      // How far round the edge the light is (0..1; -1 when not running).
       property real sweepT: -1
       readonly property bool sweeping: sweepT >= 0
-      readonly property bool on: (islandHover.hovered && root.settled) || sweeping
+      readonly property bool on: sweeping
       readonly property point lap: perimeterAt(sweepT, width, height)
-      readonly property real px: sweeping ? lap.x : islandHover.point.position.x
-      readonly property real py: sweeping ? lap.y : islandHover.point.position.y
+      readonly property real px: lap.x
+      readonly property real py: lap.y
+
+      // The island's height when it last settled: a big change is an open or
+      // a close; a small one (clock to music) gets no light.
+      property real lastHeight: root.compactH
 
       // A point on the outline, from the top centre clockwise.
       function perimeterAt(t, w, h) {
@@ -1754,8 +1757,11 @@ PanelWindow {
       Connections {
         target: root
         function onSettledChanged() {
-          if (root.settled && !islandHover.hovered && root.size[1] > root.compactH + 12)
+          if (!root.settled)
+            return;
+          if (Math.abs(root.size[1] - pointerLight.lastHeight) > 12)
             landSweep.restart();
+          pointerLight.lastHeight = root.size[1];
         }
       }
 

@@ -161,11 +161,13 @@ hl.config({
             color        = 0xee1a1a1a,
         },
 
+        -- Strong enough for the bar's liquid glass (Theme.island is a thin
+        -- tint over this): the wallpaper reads as soft colour, not shapes.
         blur = {
             enabled  = true,
-            size     = 3,
-            passes   = 1,
-            vibrancy = 0.1696,
+            size     = 6,
+            passes   = 3,
+            vibrancy = 0.3,
         },
     },
 

@@ -25,6 +25,12 @@ Rectangle {
   border.width: standalone ? 1 : 0
   border.color: Theme.border
 
+  GlassSheen {
+    visible: root.standalone
+    radius: root.radius
+    reach: Math.min(0.55, 50 / Math.max(1, root.height))
+  }
+
   Behavior on color {
     ColorAnimation {
       duration: Theme.animFast

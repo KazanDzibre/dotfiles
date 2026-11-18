@@ -300,6 +300,11 @@ PanelWindow {
     border.width: 1
     border.color: Theme.isLight ? Qt.rgba(0, 0, 0, 0.12) : Qt.rgba(1, 1, 1, 0.16)
 
+    GlassSheen {
+      radius: parent.radius
+      reach: Math.min(0.55, 70 / Math.max(1, parent.height))
+    }
+
     // Only drawn while open or on the way back; at rest the bar's pill shows.
     visible: root.opened || width > root.pillWidth + 0.5 || height > root.pillHeight + 0.5
 

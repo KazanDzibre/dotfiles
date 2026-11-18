@@ -110,6 +110,11 @@ PanelWindow {
     border.width: 1
     border.color: Theme.border
 
+    GlassSheen {
+      radius: parent.radius
+      reach: Math.min(0.55, 70 / Math.max(1, parent.height))
+    }
+
     opacity: 0
     scale: 0.25
     transformOrigin: Item.TopLeft

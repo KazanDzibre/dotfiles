@@ -116,8 +116,11 @@ Singleton {
 
   // ---------------------------------------------------------- derived tones
   // All relative to the four above, so they follow the mode automatically.
-  readonly property color island: Qt.rgba(base.r, base.g, base.b, isLight ? 0.86 : 0.82)
-  readonly property color raised: Qt.rgba(fg.r, fg.g, fg.b, isLight ? 0.09 : 0.10)
+  // The pills and panels are liquid glass: a thin tint of the base over
+  // Hyprland's blur of the wallpaper, with GlassSheen's light on top. (The
+  // Dynamic Island doesn't use this; it stays solid black.)
+  readonly property color island: Qt.rgba(base.r, base.g, base.b, isLight ? 0.50 : 0.36)
+  readonly property color raised: Qt.rgba(fg.r, fg.g, fg.b, isLight ? 0.12 : 0.13)
   readonly property color hover: Qt.rgba(fg.r, fg.g, fg.b, isLight ? 0.14 : 0.16)
   readonly property color border: Qt.rgba(fg.r, fg.g, fg.b, isLight ? 0.13 : 0.09)
   readonly property color accentSoft: Qt.rgba(accent.r, accent.g, accent.b, isLight ? 0.16 : 0.20)
