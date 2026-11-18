@@ -1789,7 +1789,7 @@ PanelWindow {
       }
 
       // The outline, lit only near the light: the rim is masked by a soft
-      // round spot. The textures only exist while the light runs.
+      // round spot.
       Rectangle {
         id: rimSource
         anchors.fill: parent
@@ -1798,23 +1798,22 @@ PanelWindow {
         border.width: 1.5
         border.color: Qt.rgba(1, 1, 1, 0.85)
         visible: false
-        layer.enabled: pointerLight.visible
+        layer.enabled: true
       }
 
       Item {
         id: rimMask
         anchors.fill: parent
         visible: false
-        layer.enabled: pointerLight.visible
+        layer.enabled: true
 
-        // The spot is drawn once into its own texture and then only moved,
-        // so a frame of the sweep is a cheap copy, not a new gradient.
+        // Drawn with the plain renderer: the curve renderer redid the
+        // gradient's geometry every frame of the sweep.
         Shape {
           x: pool.x
           y: pool.y
           width: 260
           height: 260
-          layer.enabled: true
 
           ShapePath {
             strokeColor: "transparent"
