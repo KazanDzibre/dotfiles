@@ -92,8 +92,10 @@ PanelWindow {
     onTriggered: root.settled = true
   }
 
-  // A file being dragged over the island.
+  // A file being dragged over the island, and which half it's over when the
+  // phone is here: "shelf" or "phone".
   property bool dragOver: false
+  property string dropSide: "shelf"
   property bool shelfDragging: false
 
   // How long the current Claude turn has been going.
@@ -355,7 +357,7 @@ PanelWindow {
         root.stretch = Math.min(root.stretchMax, root.stretch + (root.stretchMax - root.stretch) * 0.35 + 1);
         stretchRelease.restart();
       }
-      audio.volume = Math.max(0, Math.min(1, audio.volume + dy / 120 * 0.03));
+      Volume.nudge(Moments.sink, dy / 120 * 0.03);
       root.volumeShown = true;
       volumeHide.restart();
     }
@@ -641,6 +643,8 @@ PanelWindow {
     // A USB drive stays as a bubble for as long as it is plugged in.
     if (Drives.hasDrives)
       keys.push("drive");
+    if (Phone.low)
+      keys.push("phone");
     return keys;
   }
 
@@ -868,7 +872,7 @@ PanelWindow {
     case "downloaded":
       return [420, 64];
     case "drop":
-      return [320, 64];
+      return [Phone.connected ? 400 : 320, 64];
     case "shelf":
       return [420, 12 + 24 + Math.min(Shelf.count, 5) * 52 + 14];
     case "weather":
@@ -3259,6 +3263,7 @@ PanelWindow {
       key: "drop"
 
       Row {
+        visible: !Phone.connected
         anchors.centerIn: parent
         spacing: 12
 
@@ -3272,6 +3277,66 @@ PanelWindow {
           anchors.verticalCenter: parent.verticalCenter
           text: "Drop to keep it on the shelf"
           font.bold: true
+        }
+      }
+
+      // With the phone here: left half keeps it, right half sends it.
+      Row {
+        visible: Phone.connected
+        anchors.fill: parent
+        anchors.margins: 8
+        spacing: 8
+
+        Repeater {
+          model: [
+            {
+              side: "shelf",
+              glyph: Icons.shelf,
+              label: "Keep on the shelf"
+            },
+            {
+              side: "phone",
+              glyph: Icons.phone,
+              label: "Send to " + Phone.name
+            }
+          ]
+
+          delegate: Rectangle {
+            required property var modelData
+            readonly property bool picked: root.dropSide === modelData.side
+
+            width: (parent.width - 8) / 2
+            height: parent.height
+            radius: 20
+            color: picked ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.04)
+            border.width: picked ? 1.5 : 0
+            border.color: root.hot
+
+            Behavior on color {
+              ColorAnimation {
+                duration: 140
+              }
+            }
+
+            Row {
+              anchors.centerIn: parent
+              spacing: 9
+
+              Ink {
+                anchors.verticalCenter: parent.verticalCenter
+                text: modelData.glyph
+                font.pixelSize: 20
+                color: root.hot
+              }
+              Ink {
+                anchors.verticalCenter: parent.verticalCenter
+                width: Math.min(implicitWidth, 120)
+                text: modelData.label
+                font.bold: true
+                textFormat: Text.PlainText
+              }
+            }
+          }
         }
       }
     }
@@ -3386,11 +3451,38 @@ PanelWindow {
             Ink {
               anchors.left: shelfThumb.right
               anchors.leftMargin: 11
-              anchors.right: shelfCopy.left
+              anchors.right: shelfPhone.left
               anchors.rightMargin: 8
               anchors.verticalCenter: parent.verticalCenter
               text: shelfRowItem.modelData.name
               textFormat: Text.PlainText
+            }
+
+            // Send it to the phone, while one is connected.
+            Rectangle {
+              id: shelfPhone
+              anchors.right: shelfCopy.left
+              anchors.rightMargin: 4
+              anchors.verticalCenter: parent.verticalCenter
+              width: Phone.connected ? 26 : 0
+              height: 26
+              radius: 13
+              visible: Phone.connected
+              color: shelfPhoneArea.containsMouse ? Qt.rgba(1, 1, 1, 0.18) : "transparent"
+
+              Ink {
+                anchors.centerIn: parent
+                text: Icons.phone
+                font.pixelSize: Theme.iconSize - 1
+              }
+
+              MouseArea {
+                id: shelfPhoneArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: Phone.send([shelfRowItem.modelData.path])
+              }
             }
 
             Rectangle {
@@ -4365,12 +4457,16 @@ PanelWindow {
       keys: ["text/uri-list"]
       onEntered: root.dragOver = true
       onExited: root.dragOver = false
+      onPositionChanged: drag => root.dropSide = Phone.connected && drag.x > width / 2 ? "phone" : "shelf"
       onDropped: drop => {
         root.dragOver = false;
-        if (drop.hasUrls) {
+        if (!drop.hasUrls)
+          return;
+        if (root.dropSide === "phone")
+          Phone.send(Array.from(drop.urls).map(u => decodeURIComponent(String(u).replace(/^file:\/\//, ""))));
+        else
           Shelf.addUrls(drop.urls);
-          drop.accept(Qt.CopyAction);
-        }
+        drop.accept(Qt.CopyAction);
       }
     }
 
@@ -6165,6 +6261,21 @@ PanelWindow {
       Breather {
         text: Icons.usbDrive
         running: Drives.ejecting !== ""
+      }
+    }
+
+    Bubble {
+      key: "phone"
+      label: Phone.name + " · " + Phone.battery + "%"
+      detail: "Battery low · click to ping it"
+      onActivated: Phone.ping()
+
+      Ink {
+        anchors.centerIn: parent
+        text: Phone.battery >= 0 ? Phone.battery : ""
+        font.pixelSize: Theme.smallSize
+        font.bold: true
+        color: "#f0808f"
       }
     }
 

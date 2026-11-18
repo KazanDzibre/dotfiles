@@ -112,7 +112,7 @@ MorphPanel {
         cursorShape: Qt.PointingHandCursor
         onClicked: {
           if (root.sinkAudio)
-            root.sinkAudio.muted = !root.sinkAudio.muted;
+            Volume.toggleMute(root.sink);
         }
       }
     }
@@ -128,7 +128,7 @@ MorphPanel {
         enabled: root.sinkAudio !== null && !root.sinkAudio.muted
         onMoved: v => {
           if (root.sinkAudio)
-            root.sinkAudio.volume = v;
+            Volume.set(root.sink, v);
         }
       }
 
@@ -204,7 +204,7 @@ MorphPanel {
         cursorShape: Qt.PointingHandCursor
         onClicked: {
           if (root.sourceAudio)
-            root.sourceAudio.muted = !root.sourceAudio.muted;
+            Volume.toggleMute(root.source);
         }
       }
     }
@@ -216,7 +216,7 @@ MorphPanel {
       enabled: root.sourceAudio !== null && !root.sourceAudio.muted
       onMoved: v => {
         if (root.sourceAudio)
-          root.sourceAudio.volume = v;
+          Volume.set(root.source, v);
       }
     }
   }

@@ -187,6 +187,7 @@ Singleton {
   readonly property string download: String.fromCodePoint(0xf01da)
   readonly property string eyedropper: String.fromCodePoint(0xf020a)
   readonly property string keyboard: String.fromCodePoint(0xf030c)
+  readonly property string phone: String.fromCodePoint(0xf011c)
   readonly property string note: String.fromCodePoint(0xf039b)
   readonly property string lightbulb: String.fromCodePoint(0xf0335)
 
