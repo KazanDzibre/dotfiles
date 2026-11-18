@@ -94,8 +94,17 @@ Singleton {
   property string liveVideo: ""
   property string liveStill: ""
   readonly property bool liveActive: liveVideo !== "" && liveStill === current
-  // Decoding video costs power: on battery the still is shown instead.
-  readonly property bool liveRunning: liveActive && !UPower.onBattery
+  // The video is decoded by the graphics chip and only plays while the desktop
+  // is uncovered. Measured on the Arch laptop (Core Ultra, 1920x1200): about
+  // +1.3 W at 1080p/30 fps and +0.85 W at 720p/24 fps, with the CPU nowhere
+  // near warm. So it plays on battery too, from the lighter copy, and only
+  // stops once the battery is down to 20%.
+  readonly property real batteryLevel: {
+    const raw = UPower.displayDevice ? UPower.displayDevice.percentage : 1;
+    return raw <= 1 ? raw * 100 : raw;
+  }
+  readonly property bool batteryLow: UPower.onBattery && batteryLevel > 0 && batteryLevel <= 20
+  readonly property bool liveRunning: liveActive && !batteryLow
   // What the picker should call "current": the video, not its still.
   readonly property string currentSource: liveActive ? liveVideo : current
 
@@ -124,10 +133,11 @@ Singleton {
     onLoadFailed: Qt.callLater(() => liveFile.setText("{}"))
   }
 
-  // What actually plays: a 30 fps copy made when the video was scanned. Half
-  // the frames to decode, which on a wallpaper nobody can tell apart.
+  // What actually plays: copies made when the video was scanned. Plugged in, a
+  // 1080p 30 fps one (half the frames of a 60 fps original, which on a
+  // wallpaper nobody can tell apart); on battery, a 720p 24 fps one.
   function liveFileFor(video) {
-    return root.framesDir + "/" + root.baseName(video) + ".live.mp4";
+    return root.framesDir + "/" + root.baseName(video) + (UPower.onBattery ? ".battery.mp4" : ".live.mp4");
   }
 
   // Which screens have a window on the workspace they are showing, by name.
@@ -252,6 +262,10 @@ Singleton {
     '      live="$FRAMES/$(basename "$f").live.mp4"',
     '      if [ ! -s "$live" ] || [ "$f" -nt "$live" ]; then',
     '        nice -n 19 ffmpeg -y -loglevel error -i "$f" -an -vf "fps=30,scale=-2:min(1080\\,ih)" -c:v libx264 -preset veryfast -crf 24 -pix_fmt yuv420p -movflags +faststart "$live.part.mp4" </dev/null && mv -f "$live.part.mp4" "$live" || { rm -f "$live.part.mp4"; ln -sf "$f" "$live"; }',
+    '      fi',
+    '      lite="$FRAMES/$(basename "$f").battery.mp4"',
+    '      if [ ! -s "$lite" ] || [ "$f" -nt "$lite" ]; then',
+    '        nice -n 19 ffmpeg -y -loglevel error -i "$f" -an -vf "fps=24,scale=-2:min(720\\,ih)" -c:v libx264 -preset veryfast -crf 26 -pix_fmt yuv420p -movflags +faststart "$lite.part.mp4" </dev/null && mv -f "$lite.part.mp4" "$lite" || { rm -f "$lite.part.mp4"; ln -sf "$live" "$lite"; }',
     '      fi;;',
     '    *) src="$f";;',
     '  esac',
