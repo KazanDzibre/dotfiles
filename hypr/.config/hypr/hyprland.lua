@@ -154,11 +154,16 @@ hl.config({
         dim_inactive = true,
         dim_strength = 0.08,
 
+        -- The focused window glows softly in its border's first colour (from
+        -- the wallpaper, via theme-sync), subtly; the others keep a faint dark
+        -- shadow. The range is shared, so the dark one is kept light to stay a
+        -- shadow and not a smudge.
         shadow = {
-            enabled      = true,
-            range        = 4,
-            render_power = 3,
-            color        = 0xee1a1a1a,
+            enabled        = true,
+            range          = 10,
+            render_power   = 3,
+            color          = (theme.active_a:gsub("%x%x%)$", "38)")),
+            color_inactive = 0x50101010,
         },
 
         -- Strong enough for the bar's liquid glass (Theme.island is a thin
