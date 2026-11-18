@@ -12,7 +12,7 @@ Loader {
   property color accent: Theme.accent
   property color ink: Theme.fg
 
-  sourceComponent: ClockStyle.skin === "led" || ClockStyle.skin === "amber" ? segments : cards
+  sourceComponent: ClockStyle.retro ? segments : cards
 
   Component {
     id: segments
@@ -20,6 +20,10 @@ Loader {
     SegmentClock {
       text: root.text
       color: ClockStyle.skin === "amber" ? "#ffb000" : root.accent
+      digitHeight: 13
+      digitWidth: 7
+      thickness: 1.7
+      spacing: 3
     }
   }
 

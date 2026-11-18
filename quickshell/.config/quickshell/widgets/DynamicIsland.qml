@@ -835,7 +835,9 @@ PanelWindow {
   function sizeFor(m) {
     switch (m) {
     case "clock":
-      return [clockRow.implicitWidth + 34, compactH];
+      // The LED skins' smaller clock and stacked date would shrink the island;
+      // they keep the width it had with the bigger digits, centred in it.
+      return [Math.max(clockRow.implicitWidth + 34, ClockStyle.retro ? 158 : 0), compactH];
     case "music":
       return [200, compactH];
     case "player":
@@ -1869,7 +1871,18 @@ PanelWindow {
           accent: root.hot
           ink: root.ink
         }
+        // The date matches the clock's skin: the LED skins get a stacked
+        // label panel in the clock's colour, Plain keeps a line of text.
+        DateFace {
+          visible: ClockStyle.retro
+          anchors.verticalCenter: parent.verticalCenter
+          date: Time.now
+          accent: ClockStyle.skin === "amber" ? "#ffb000" : root.hot
+          ink: root.ink
+        }
         Ink {
+          visible: !ClockStyle.retro
+          anchors.verticalCenter: parent.verticalCenter
           text: Time.date
           color: root.inkDim
         }

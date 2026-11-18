@@ -26,6 +26,8 @@ Singleton {
   ]
 
   property string skin: "led"
+  // The LED skins: a seven-segment clock with the stacked date beside it.
+  readonly property bool retro: root.skin === "led" || root.skin === "amber"
   readonly property string name: (root.skins.find(s => s.id === root.skin) ?? root.skins[0]).name
 
   function next() {

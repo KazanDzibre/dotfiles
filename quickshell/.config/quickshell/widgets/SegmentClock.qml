@@ -10,9 +10,9 @@ Row {
   // "16:48" — digits and colons.
   property string text: ""
   property color color: "#ff5a3c"
-  property int digitHeight: 16
-  property int digitWidth: 9
-  property int thickness: 2
+  property real digitHeight: 16
+  property real digitWidth: 9
+  property real thickness: 2
 
   spacing: 4
 
