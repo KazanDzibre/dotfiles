@@ -1863,9 +1863,11 @@ PanelWindow {
         anchors.centerIn: parent
         spacing: 8
 
-        Ink {
+        ClockFace {
+          anchors.verticalCenter: parent.verticalCenter
           text: Time.time
-          font.bold: true
+          accent: root.hot
+          ink: root.ink
         }
         Ink {
           text: Time.date
@@ -1896,10 +1898,11 @@ PanelWindow {
         corner: 4
       }
 
-      Ink {
+      ClockFace {
         anchors.centerIn: parent
         text: Time.time
-        font.bold: true
+        accent: root.hot
+        ink: root.ink
       }
 
       Spectrum {
@@ -3848,10 +3851,11 @@ PanelWindow {
           Column {
             anchors.verticalCenter: parent.verticalCenter
 
-            Ink {
+            RollingText {
               text: Weather.tempC + "°"
-              font.bold: true
-              font.pixelSize: 34
+              bold: true
+              pixelSize: 34
+              color: root.ink
             }
           }
         }
@@ -4210,15 +4214,19 @@ PanelWindow {
           }
         }
 
-        Ink {
+        Item {
           width: parent.width
           height: 60
-          horizontalAlignment: Text.AlignHCenter
-          verticalAlignment: Text.AlignVCenter
-          text: Stopwatch.format(Stopwatch.elapsed, true)
-          font.pixelSize: 44
-          font.bold: true
-          color: Stopwatch.running ? root.hot : root.ink
+
+          RollingText {
+            anchors.centerIn: parent
+            text: Stopwatch.format(Stopwatch.elapsed, true)
+            pixelSize: 44
+            bold: true
+            instantTail: 2
+            duration: 240
+            color: Stopwatch.running ? root.hot : root.ink
+          }
         }
 
         Item {

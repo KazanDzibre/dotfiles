@@ -26,7 +26,7 @@ Item {
 
   // True while any panel is out of the pill (open, or still shrinking back).
   // The bar hides the real pill meanwhile: the panel has become it.
-  readonly property bool panelOut: cc.visible || wifiPopup.visible || bluetoothPopup.visible || volumePopup.visible || brightnessPopup.visible || tonesPopup.visible || windowsPopup.visible || clipboardPopup.visible || sysInfoPopup.visible || updatesPopup.visible || dashboardPopup.visible || drivesPopup.visible || shortcutsPopup.visible || notificationPopup.visible
+  readonly property bool panelOut: cc.visible || wifiPopup.visible || bluetoothPopup.visible || volumePopup.visible || brightnessPopup.visible || tonesPopup.visible || windowsPopup.visible || clipboardPopup.visible || sysInfoPopup.visible || updatesPopup.visible || dashboardPopup.visible || drivesPopup.visible || shortcutsPopup.visible || toolsPopup.visible || notificationPopup.visible
 
   // The bar takes keyboard focus only while one of these needs typing.
   readonly property bool wantsKeyboard: wifiPopup.wantsKeyboard || clipboardPopup.wantsKeyboard
@@ -58,7 +58,8 @@ Item {
       dashboard: dashboardPopup,
       drives: drivesPopup,
       shortcuts: shortcutsPopup,
-      notifications: notificationPopup
+      notifications: notificationPopup,
+      tools: toolsPopup
     };
     if (name === "wallpaper") {
       cc.close();
@@ -132,6 +133,15 @@ Item {
     id: cc
     screen: root.barScreen
     pillWidth: root.pillWidth
+    onPanelRequested: name => root.openPanel(name)
+  }
+
+  ToolsPopup {
+    id: toolsPopup
+    screen: root.barScreen
+    pillWidth: root.pillWidth
+    showBack: true
+    onBack: root.backToCenter(toolsPopup)
     onPanelRequested: name => root.openPanel(name)
   }
 
