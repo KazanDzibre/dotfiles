@@ -1131,7 +1131,7 @@ PanelWindow {
   // waits a beat for the island to start moving, then grows in with a little
   // overshoot.
   component Layer: Item {
-    id: layer
+    id: lyr
 
     required property string key
     readonly property bool shown: root.activeKey === key
@@ -1146,12 +1146,66 @@ PanelWindow {
     scale: 0.88
     visible: opacity > 0.01
 
+    // The island's motion when it changes what it shows:
+    //   swallow  what is leaving blurs as it shrinks and fades, as if the
+    //            island takes it in;
+    //   cascade  a card arrives top to bottom, its rows showing one after
+    //            another behind a soft edge that runs down it.
+    // The effect is only switched on while one of those runs; a layer at rest
+    // is drawn as it always was.
+    property real haze: 0      // 0..1, while leaving
+    property real reveal: 1    // 0..1, while a card arrives
+    readonly property bool tall: height > root.compactH + 12
+    readonly property int revealEdge: 56
+
+    layer.enabled: lyr.haze > 0 || lyr.reveal < 1
+    layer.effect: MultiEffect {
+      blurEnabled: lyr.haze > 0
+      blurMax: 24
+      blur: lyr.haze * 0.55
+      maskEnabled: lyr.reveal < 1
+      maskSource: revealMask
+      // Shown where the mask is above half, with the edge softened across
+      // the whole ramp.
+      maskThresholdMin: 0.5
+      maskSpreadAtMin: 1
+    }
+
+    // White down to the reveal line, fading out over revealEdge below it.
+    Item {
+      id: revealMask
+      width: lyr.width
+      height: lyr.height
+      visible: false
+      layer.enabled: lyr.reveal < 1
+
+      Rectangle {
+        width: parent.width
+        height: parent.height + lyr.revealEdge
+        y: (lyr.reveal - 1) * height
+        gradient: Gradient {
+          GradientStop {
+            position: 0
+            color: "white"
+          }
+          GradientStop {
+            position: revealMask.height / Math.max(1, revealMask.height + lyr.revealEdge)
+            color: "white"
+          }
+          GradientStop {
+            position: 1
+            color: "transparent"
+          }
+        }
+      }
+    }
+
     states: State {
       name: "on"
-      when: layer.shown
+      when: lyr.shown
       PropertyChanges {
-        layer.opacity: 1
-        layer.scale: 1
+        lyr.opacity: 1
+        lyr.scale: 1
       }
     }
 
@@ -1159,6 +1213,11 @@ PanelWindow {
       Transition {
         to: "on"
         ParallelAnimation {
+          PropertyAction {
+            target: lyr
+            property: "haze"
+            value: 0
+          }
           SequentialAnimation {
             PauseAnimation {
               duration: 140
@@ -1180,20 +1239,69 @@ PanelWindow {
               easing.bezierCurve: root.popCurve
             }
           }
+          // Cards only; the compact faces just cross over.
+          SequentialAnimation {
+            PropertyAction {
+              target: lyr
+              property: "reveal"
+              value: lyr.tall ? 0 : 1
+            }
+            PauseAnimation {
+              duration: 120
+            }
+            NumberAnimation {
+              target: lyr
+              property: "reveal"
+              to: 1
+              duration: lyr.tall ? 520 : 0
+              easing.type: Easing.OutCubic
+            }
+          }
         }
       },
       Transition {
         from: "on"
         ParallelAnimation {
+          // A card empties from the bottom up, quicker than it filled.
+          SequentialAnimation {
+            NumberAnimation {
+              target: lyr
+              property: "reveal"
+              from: 1
+              to: lyr.tall ? 0.25 : 1
+              duration: lyr.tall ? 220 : 0
+              easing.type: Easing.InCubic
+            }
+            PropertyAction {
+              target: lyr
+              property: "reveal"
+              value: 1
+            }
+          }
           NumberAnimation {
             property: "opacity"
-            duration: 180
+            duration: 200
             easing.type: Easing.OutQuad
           }
           NumberAnimation {
             property: "scale"
             duration: 380
             easing.type: Easing.InOutQuad
+          }
+          SequentialAnimation {
+            NumberAnimation {
+              target: lyr
+              property: "haze"
+              from: 0
+              to: 1
+              duration: 200
+              easing.type: Easing.OutQuad
+            }
+            PropertyAction {
+              target: lyr
+              property: "haze"
+              value: 0
+            }
           }
         }
       }
@@ -1601,9 +1709,55 @@ PanelWindow {
     Item {
       id: pointerLight
 
-      readonly property bool on: islandHover.hovered && root.settled
-      readonly property real px: islandHover.point.position.x
-      readonly property real py: islandHover.point.position.y
+      // Also lit for one lap round the edge when the island lands at a new
+      // size (sweepT 0..1; -1 when not sweeping).
+      property real sweepT: -1
+      readonly property bool sweeping: sweepT >= 0
+      readonly property bool on: (islandHover.hovered && root.settled) || sweeping
+      readonly property point lap: perimeterAt(sweepT, width, height)
+      readonly property real px: sweeping ? lap.x : islandHover.point.position.x
+      readonly property real py: sweeping ? lap.y : islandHover.point.position.y
+
+      // A point on the outline, from the top centre clockwise.
+      function perimeterAt(t, w, h) {
+        let d = Math.max(0, t) * 2 * (w + h);
+        const steps = [[w / 2, 1, 0], [h, 0, 1], [w, -1, 0], [h, 0, -1], [w / 2, 1, 0]];
+        let x = w / 2, y = 0;
+        for (const [len, dx, dy] of steps) {
+          const run = Math.min(d, len);
+          x += dx * run;
+          y += dy * run;
+          d -= run;
+          if (d <= 0)
+            break;
+        }
+        return Qt.point(x, y);
+      }
+
+      SequentialAnimation {
+        id: landSweep
+        NumberAnimation {
+          target: pointerLight
+          property: "sweepT"
+          from: 0
+          to: 1
+          duration: 950
+          easing.type: Easing.InOutCubic
+        }
+        PropertyAction {
+          target: pointerLight
+          property: "sweepT"
+          value: -1
+        }
+      }
+
+      Connections {
+        target: root
+        function onSettledChanged() {
+          if (root.settled && !islandHover.hovered && root.size[1] > root.compactH + 12)
+            landSweep.restart();
+        }
+      }
 
       anchors.fill: parent
       z: 20
