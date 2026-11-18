@@ -18,7 +18,7 @@ MorphPanel {
   readonly property var sections: [
     {
       title: "SEARCH  ·  SUPER + SHIFT + D",
-      rows: [["pick", "Pick a colour anywhere on screen"], ["note …", "Save a quick note"], ["note at 15:00 …", "A note that reminds you"], ["notes", "Open your notes in Neovim"], ["noted", "Tick notes off in the island"], ["?question", "Ask the AI"], ["200 + 15%", "Sums, copied with Enter"], ["time in tokyo", "Time zones, units and dates"], [":fire", "Find an emoji, Enter copies it"], ["gif cats", "Search GIFs, Enter copies the link"], ["gif", "Trending GIFs"], ["wifiqr", "QR code that joins this Wi-Fi"], ["timer", "Stopwatch with laps"], ["help", "This list"]]
+      rows: [["pick", "Pick a colour anywhere on screen"], ["note …", "Save a quick note"], ["note at 15:00 …", "A note that reminds you"], ["notes", "Open your notes in Neovim"], ["noted", "Tick notes off in the island"], ["?question", "Ask the AI"], ["200 + 15%", "Sums, copied with Enter"], ["time in tokyo", "Time zones, units and dates"], [":fire", "Find an emoji, Enter copies it"], ["gif cats", "Search GIFs, Enter copies the link"], ["gif", "Trending GIFs"], ["wifiqr", "QR code that joins this Wi-Fi"], ["timer", "Stopwatch with laps"], ["kill", "Heaviest programs, Enter quits one"], ["help", "This list"]]
     },
     {
       title: "THE ISLAND",

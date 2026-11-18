@@ -21,6 +21,14 @@ MorphPanel {
   // Every sink that is a real device rather than an application stream.
   readonly property var sinks: Pipewire.ready ? Array.from(Pipewire.nodes.values).filter(n => n.isSink && !n.isStream) : []
 
+  // Programs currently playing sound: playback streams, not devices. Each gets
+  // its own slider, so one can be turned down without touching the rest.
+  readonly property var apps: Pipewire.ready ? Array.from(Pipewire.nodes.values).filter(n => n.isStream && !n.isSink && (n.properties["media.class"] ?? "") === "Stream/Output/Audio") : []
+
+  function appLabel(node) {
+    return node.properties["application.name"] || node.nickname || node.description || node.name || "Unknown";
+  }
+
   function nodeLabel(node) {
     if (!node)
       return "No device";
@@ -29,7 +37,7 @@ MorphPanel {
 
   PwObjectTracker {
     objects: {
-      const list = root.sinks.slice();
+      const list = root.sinks.concat(root.apps);
       if (root.source)
         list.push(root.source);
       return list;
@@ -150,6 +158,113 @@ MorphPanel {
             NumberAnimation {
               duration: 70
             }
+          }
+        }
+      }
+    }
+  }
+
+  // --------------------------------------------------------------------- apps
+  Rectangle {
+    width: parent.width
+    height: 1
+    color: Theme.border
+    visible: root.apps.length > 0
+  }
+
+  Text {
+    text: "APPS"
+    font.family: Theme.fontFamily
+    font.pixelSize: Theme.smallSize
+    font.bold: true
+    font.letterSpacing: 1
+    color: Theme.fgDim
+    visible: root.apps.length > 0
+  }
+
+  Column {
+    width: parent.width
+    spacing: 8
+    visible: root.apps.length > 0
+
+    Repeater {
+      model: root.apps
+
+      delegate: Row {
+        id: appRow
+
+        required property var modelData
+        readonly property var audio: modelData.audio
+
+        width: parent.width
+        spacing: 10
+
+        Rectangle {
+          anchors.verticalCenter: parent.verticalCenter
+          width: 26
+          height: 26
+          radius: 13
+          color: appRow.audio && appRow.audio.muted ? Theme.crit : appHover.containsMouse ? Theme.hover : Theme.raised
+
+          Behavior on color {
+            ColorAnimation {
+              duration: Theme.animFast
+            }
+          }
+
+          Text {
+            anchors.centerIn: parent
+            text: appRow.audio && appRow.audio.muted ? Icons.volMute : Icons.volHigh
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.iconSize - 2
+            color: appRow.audio && appRow.audio.muted ? Theme.base : Theme.fg
+          }
+
+          MouseArea {
+            id: appHover
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: Volume.toggleMute(appRow.modelData)
+          }
+        }
+
+        Column {
+          anchors.verticalCenter: parent.verticalCenter
+          width: parent.width - 36
+          spacing: 0
+
+          Item {
+            width: parent.width
+            height: 16
+
+            Text {
+              anchors.left: parent.left
+              anchors.verticalCenter: parent.verticalCenter
+              width: parent.width - 40
+              text: root.appLabel(appRow.modelData)
+              elide: Text.ElideRight
+              font.family: Theme.fontFamily
+              font.pixelSize: Theme.smallSize + 1
+              color: Theme.fg
+            }
+
+            Text {
+              anchors.right: parent.right
+              anchors.verticalCenter: parent.verticalCenter
+              text: appRow.audio ? Math.round(appRow.audio.volume * 100) + "%" : "--"
+              font.family: Theme.fontFamily
+              font.pixelSize: Theme.smallSize + 1
+              font.bold: true
+              color: Theme.accent
+            }
+          }
+
+          Slider {
+            width: parent.width
+            value: appRow.audio ? appRow.audio.volume : 0
+            enabled: appRow.audio !== null && !appRow.audio.muted
+            onMoved: v => Volume.set(appRow.modelData, v)
           }
         }
       }

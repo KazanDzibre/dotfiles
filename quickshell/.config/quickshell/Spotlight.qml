@@ -122,6 +122,8 @@ Singleton {
   function ask(query) {
     const q = query.trim();
     root.pendingQuery = q;
+    if (root.procTerm(q.toLowerCase()) !== null)
+      Procs.watch();
     const gif = root.gifTerm(q.toLowerCase());
     if (gif !== null && root.gifConfigured) {
       root.gifPending = gif;
@@ -356,7 +358,7 @@ Singleton {
           example: example,
           points: 0
         });
-    return [root.commandItem(root.commands[1], 0), root.commandItem(root.commands[0], 0), hint("note call the bank", "Save a quick note · note at 15:00 … reminds you", "note "), hint("?how do I…", "Ask the AI anything", "?"), hint("200 + 15%", "Sums, copied with Enter", "200 + 15%"), hint("time in tokyo", "Also 5 km to mi, days until…", "time in tokyo"), hint(":fire", "Find an emoji · Enter copies it", ":"), hint("gif cats", "Search GIFs · Enter copies the link", "gif ")];
+    return [root.commandItem(root.commands[1], 0), root.commandItem(root.commands[0], 0), hint("note call the bank", "Save a quick note · note at 15:00 … reminds you", "note "), hint("?how do I…", "Ask the AI anything", "?"), hint("200 + 15%", "Sums, copied with Enter", "200 + 15%"), hint("time in tokyo", "Also 5 km to mi, days until…", "time in tokyo"), hint(":fire", "Find an emoji · Enter copies it", ":"), hint("gif cats", "Search GIFs · Enter copies the link", "gif "), hint("kill chrome", "Heaviest programs · Enter quits one", "kill ")];
   }
 
   // ------------------------------------------------------------------ emoji
@@ -404,6 +406,46 @@ Singleton {
   }
 
   // The text after the trigger, or null if this isn't an emoji search.
+  // "kill" or "kill chrome": the heaviest programs, Enter quits one.
+  function procTerm(q) {
+    if (q === "kill" || q === "top")
+      return "";
+    if (q.startsWith("kill "))
+      return q.substring(5).trim();
+    return null;
+  }
+
+  function procResults(term) {
+    const rows = Procs.list.filter(p => term.length === 0 || p.name.toLowerCase().includes(term)).slice(0, root.maxResults);
+    if (rows.length === 0)
+      return [
+        {
+          kind: "hint",
+          label: "",
+          title: Procs.list.length === 0 ? "Looking…" : "Nothing running by that name",
+          sub: "",
+          icon: "",
+          glyph: Icons.stop,
+          example: "kill ",
+          points: 0
+        }
+      ];
+    return rows.map((p, i) => {
+      const force = Procs.forcing(p.name);
+      return {
+        kind: "proc",
+        label: force ? "Force quit" : "Quit",
+        title: p.name + (p.count > 1 ? " ×" + p.count : ""),
+        sub: p.cpu.toFixed(0) + "% CPU · " + (p.rssMb >= 1024 ? (p.rssMb / 1024).toFixed(1) + " GB" : p.rssMb + " MB") + (force ? " · still running, Enter forces it" : ""),
+        icon: "",
+        glyph: Icons.stop,
+        name: p.name,
+        pids: p.pids,
+        points: 100 - i
+      };
+    });
+  }
+
   function emojiTerm(q) {
     if (q.startsWith(":"))
       return q.substring(1).trim();
@@ -593,6 +635,10 @@ Singleton {
     if (q === "help")
       return root.helpItems();
 
+    const procTerm = root.procTerm(q);
+    if (procTerm !== null)
+      return root.procResults(procTerm);
+
     const gifTerm = root.gifTerm(q);
     if (gifTerm !== null)
       return root.gifResults(gifTerm);
@@ -708,6 +754,9 @@ Singleton {
       break;
     case "window":
       item.toplevel.activate();
+      break;
+    case "proc":
+      Procs.quit(item);
       break;
     case "gif":
     case "emoji":
