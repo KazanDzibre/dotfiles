@@ -1592,6 +1592,126 @@ PanelWindow {
       }
     }
 
+    // ----------------------------------------------------------- pointer light
+    // Rest the pointer on the island and its outline lights up where the
+    // pointer is, a white line that follows it round the edge. Drawn only while
+    // hovered; it never takes a click.
+    Item {
+      id: pointerLight
+
+      readonly property bool on: islandHover.hovered && root.settled
+      readonly property real px: islandHover.point.position.x
+      readonly property real py: islandHover.point.position.y
+
+      anchors.fill: parent
+      z: 20
+      opacity: on ? 1 : 0
+      visible: opacity > 0.01
+      enabled: false
+
+      Behavior on opacity {
+        NumberAnimation {
+          duration: 260
+          easing.type: Easing.OutCubic
+        }
+      }
+
+      // Where the light is: the pointer, a little behind it so it glides.
+      Item {
+        id: pool
+        x: pointerLight.px - 130
+        y: pointerLight.py - 130
+        width: 260
+        height: 260
+
+        Behavior on x {
+          NumberAnimation {
+            duration: 110
+            easing.type: Easing.OutCubic
+          }
+        }
+        Behavior on y {
+          NumberAnimation {
+            duration: 110
+            easing.type: Easing.OutCubic
+          }
+        }
+      }
+
+      // The outline, lit only near the pointer: the rim is masked by a
+      // smaller copy of the same light.
+      Rectangle {
+        id: rimSource
+        anchors.fill: parent
+        radius: shape.radius
+        color: "transparent"
+        border.width: 1.5
+        border.color: Qt.rgba(1, 1, 1, 0.85)
+        visible: false
+        layer.enabled: true
+      }
+
+      Item {
+        id: rimMask
+        anchors.fill: parent
+        visible: false
+        layer.enabled: true
+
+        Shape {
+          x: pool.x
+          y: pool.y
+          width: 260
+          height: 260
+          preferredRendererType: Shape.CurveRenderer
+
+          ShapePath {
+            strokeColor: "transparent"
+            fillGradient: RadialGradient {
+              centerX: 130
+              centerY: 130
+              centerRadius: 90
+              focalX: 130
+              focalY: 130
+              GradientStop {
+                position: 0
+                color: "white"
+              }
+              GradientStop {
+                position: 1
+                color: "transparent"
+              }
+            }
+            startX: 0
+            startY: 0
+            PathLine {
+              x: 260
+              y: 0
+            }
+            PathLine {
+              x: 260
+              y: 260
+            }
+            PathLine {
+              x: 0
+              y: 260
+            }
+            PathLine {
+              x: 0
+              y: 0
+            }
+          }
+        }
+      }
+
+      MultiEffect {
+        anchors.fill: parent
+        source: rimSource
+        maskEnabled: true
+        maskSource: rimMask
+        opacity: 0.9
+      }
+    }
+
     MouseArea {
       id: tapArea
       anchors.fill: parent
