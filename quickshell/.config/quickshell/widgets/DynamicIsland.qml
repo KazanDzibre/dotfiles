@@ -1778,30 +1778,18 @@ PanelWindow {
         }
       }
 
-      // Where the light is: the pointer, a little behind it so it glides.
+      // Where the light is: a point riding round the outline. Moved directly
+      // every frame; no easing on top, which would restart each frame.
       Item {
         id: pool
         x: pointerLight.px - 130
         y: pointerLight.py - 130
         width: 260
         height: 260
-
-        Behavior on x {
-          NumberAnimation {
-            duration: 110
-            easing.type: Easing.OutCubic
-          }
-        }
-        Behavior on y {
-          NumberAnimation {
-            duration: 110
-            easing.type: Easing.OutCubic
-          }
-        }
       }
 
-      // The outline, lit only near the pointer: the rim is masked by a
-      // smaller copy of the same light.
+      // The outline, lit only near the light: the rim is masked by a soft
+      // round spot. The textures only exist while the light runs.
       Rectangle {
         id: rimSource
         anchors.fill: parent
@@ -1810,21 +1798,23 @@ PanelWindow {
         border.width: 1.5
         border.color: Qt.rgba(1, 1, 1, 0.85)
         visible: false
-        layer.enabled: true
+        layer.enabled: pointerLight.visible
       }
 
       Item {
         id: rimMask
         anchors.fill: parent
         visible: false
-        layer.enabled: true
+        layer.enabled: pointerLight.visible
 
+        // The spot is drawn once into its own texture and then only moved,
+        // so a frame of the sweep is a cheap copy, not a new gradient.
         Shape {
           x: pool.x
           y: pool.y
           width: 260
           height: 260
-          preferredRendererType: Shape.CurveRenderer
+          layer.enabled: true
 
           ShapePath {
             strokeColor: "transparent"

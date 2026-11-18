@@ -504,14 +504,16 @@ hl.layer_rule({
 
 -- The bar (namespace "quickshell"): frosted glass behind its pills and behind
 -- every panel that drops out of it (control center, Wi-Fi, clipboard…), as in
--- the design. ignore_alpha keeps the fully transparent gaps unblurred.
+-- the design. ignore_alpha keeps the fully transparent gaps unblurred. It sits
+-- well below the glass's own opacity (Theme.island, ~0.36): any closer and the
+-- blur stops in a staircase along the soft rounded edges.
 hl.layer_rule({
     name  = "bar-glass",
     match = { namespace = "^quickshell$" },
 
     blur         = true,
     blur_popups  = true,
-    ignore_alpha = 0.3,
+    ignore_alpha = 0.12,
 })
 
 -- The control center (MorphPanel.qml) grows out of the status pill and animates
@@ -521,7 +523,7 @@ hl.layer_rule({
     match = { namespace = "^quickshell:panel$" },
 
     blur         = true,
-    ignore_alpha = 0.3,
+    ignore_alpha = 0.12,
     no_anim      = true,
 })
 
@@ -531,7 +533,7 @@ hl.layer_rule({
     match = { namespace = "^quickshell:workspace-preview$" },
 
     blur         = true,
-    ignore_alpha = 0.3,
+    ignore_alpha = 0.12,
     no_anim      = true,
 })
 
