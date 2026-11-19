@@ -176,10 +176,8 @@ MorphPanel {
   }
 
   // ------------------------------------------------------------- components
-  component Glyph: Text {
-    font.family: Theme.fontFamily
+  component Glyph: GlyphSwap {
     font.pixelSize: Theme.iconSize + 2
-    color: Theme.fg
   }
 
   component Label: Text {

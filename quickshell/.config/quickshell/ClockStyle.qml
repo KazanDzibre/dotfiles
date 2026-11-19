@@ -20,14 +20,31 @@ Singleton {
       name: "Amber LED"
     },
     {
+      id: "dots",
+      name: "Dot matrix"
+    },
+    {
+      id: "vfd",
+      name: "VFD"
+    },
+    {
       id: "plain",
       name: "Plain"
     }
   ]
 
   property string skin: "led"
-  // The LED skins: a seven-segment clock with the stacked date beside it.
-  readonly property bool retro: root.skin === "led" || root.skin === "amber"
+  // Every skin but Plain is a "display" with its own date panel beside it.
+  readonly property bool retro: root.skin !== "plain"
+
+  // The colour a skin lights itself in; the others use the island's accent.
+  function tint(accent) {
+    if (root.skin === "amber")
+      return "#ffb000";
+    if (root.skin === "vfd")
+      return "#7dffd9";
+    return accent;
+  }
   readonly property string name: (root.skins.find(s => s.id === root.skin) ?? root.skins[0]).name
 
   function next() {

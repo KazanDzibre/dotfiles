@@ -835,9 +835,11 @@ PanelWindow {
   function sizeFor(m) {
     switch (m) {
     case "clock":
-      // The LED skins' smaller clock and stacked date would shrink the island;
-      // they keep the width it had with the bigger digits, centred in it.
-      return [Math.max(clockRow.implicitWidth + 34, ClockStyle.retro ? 158 : 0), compactH];
+      // The same width as the music island whatever the skin, so switching
+      // skins (or starting a song) never resizes it; the content is centred.
+      // It only grows if something (a long date, the do-not-disturb bell)
+      // would not fit.
+      return [Math.max(clockRow.implicitWidth + 34, 200), compactH];
     case "music":
       return [200, compactH];
     case "player":
@@ -2026,7 +2028,8 @@ PanelWindow {
           visible: ClockStyle.retro
           anchors.verticalCenter: parent.verticalCenter
           date: Time.now
-          accent: ClockStyle.skin === "amber" ? "#ffb000" : root.hot
+          accent: ClockStyle.tint(root.hot)
+          skin: ClockStyle.skin
           ink: root.ink
         }
         Ink {
@@ -5608,9 +5611,10 @@ PanelWindow {
                 }
               }
 
-              Ink {
+              GlyphSwap {
                 anchors.centerIn: parent
                 text: ctl.modelData.glyph
+                color: root.ink
                 font.pixelSize: ctl.main ? Theme.iconSize + 4 : Theme.iconSize + 1
               }
 

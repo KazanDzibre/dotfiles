@@ -70,17 +70,9 @@ Item {
   readonly property color batTint: Moments.charging ? Theme.good : percent <= 15 ? Theme.crit : percent <= 30 ? Theme.warn : Theme.fg
 
   // ------------------------------------------------------------------- face
-  component Glyph: Text {
+  component Glyph: GlyphSwap {
     anchors.verticalCenter: parent.verticalCenter
-    font.family: Theme.fontFamily
-    font.pixelSize: Theme.iconSize
     color: root.lit ? Theme.fg : Theme.fgDim
-
-    Behavior on color {
-      ColorAnimation {
-        duration: Theme.animFast
-      }
-    }
   }
 
   Row {
