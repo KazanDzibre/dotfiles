@@ -1,20 +1,12 @@
-# Rendered by pywal to ~/.cache/wal/colors-ptyxis.palette on every wallpaper
-# change, then copied into ~/.local/share/org.gnome.Ptyxis/palettes/pywal.palette
-# by waypaper/wallpaper_update.sh.
-#
-# The copy is deliberate. That palettes directory is NOT a stow package: Ptyxis
-# reads palettes from $XDG_DATA_HOME, and if the repo were symlinked there every
-# wallpaper change would rewrite a tracked file and leave the git tree dirty.
-# The repo owns the template; the cache owns the rendered result.
-#
-# Ptyxis re-reads the directory when it changes, but an already-open window
-# keeps the palette it started with -- a new tab or window picks up the new one.
+# Fallback only. theme-sync writes Ptyxis's palette itself (wal.palette, the
+# same colours as Alacritty); waypaper/wallpaper_update.sh copies this pywal
+# rendering into ~/.local/share/org.gnome.Ptyxis/palettes/wal.palette only on
+# a machine without theme-sync.
 #
 # Format is a GKeyFile, matching Ptyxis's own bundled palettes: one [Palette]
-# section, Color0-15, and no Light/Dark split (pywal only produces a dark
-# palette, and Theme.qml derives light mode from it rather than exporting one).
+# section, Color0-15, and no Light/Dark split.
 [Palette]
-Name=Pywal
+Name=Wal
 Background={background}
 Foreground={foreground}
 Cursor={cursor}

@@ -9,7 +9,7 @@ up at `~/.config/hypr/hyprland.conf`.
 ```sh
 git clone <this repo> ~/Nuketown/dotfiles
 cd ~/Nuketown/dotfiles
-stow -t ~ hypr quickshell screensaver nvim zed wireplumber
+stow -t ~ hypr quickshell screensaver nvim zed wireplumber alacritty
 ```
 
 Stow refuses to overwrite files that already exist. If a package reports a

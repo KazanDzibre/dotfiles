@@ -2,7 +2,8 @@
 """Push the pywal palette to everything on the desktop that can take it.
 
 Runs after `wal` on every wallpaper change (~/.config/waypaper/post-command.sh).
-Run it by hand any time: `theme-sync`. Each target is independent, so one
+Run it by hand any time: `theme-sync` (or `theme-sync terminal` for just the
+terminals). Each target is independent, so one
 failing can't stop the others; failures go to ~/.cache/wal/theme-sync.log.
 
 The first time a file outside the repo is edited, the original is kept in
@@ -14,6 +15,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import time
 import traceback
 from pathlib import Path
@@ -86,6 +88,50 @@ BORDER = mix(BG, FG, 0.2)
 DIM = mix(FG, BG, 0.38)
 DARK = mix(BG, "#000000", 0.25)
 GOOD, WARN, CRIT = "#8ad79a", "#f0c674", "#f0808f"
+
+
+# ------------------------------------------------------------- terminal
+# One palette for every terminal (Alacritty here, Ptyxis or GNOME Terminal on
+# the Ubuntu laptop). pywal's own 16 colours are just the wallpaper's ramp in
+# order, so its "red" can be blue and a git diff stops making sense. These keep
+# the meaning of each ANSI colour (red is red), lean every hue a little toward
+# the wallpaper's accent so they belong to it, and set each one's lightness for
+# a fixed contrast against the background, so nothing is too dim to read.
+def terminal_palette():
+    bg = BG
+    accent_h = colorsys.rgb_to_hls(*rgb(ACCENT))[0]
+
+    def lean(h, t=0.12):
+        d = (accent_h - h + 0.5) % 1 - 0.5
+        return (h + d * t) % 1
+
+    def at_contrast(h, s, want):
+        lo, hi = 0.0, 1.0
+        for _ in range(24):
+            mid = (lo + hi) / 2
+            if contrast(to_hex(colorsys.hls_to_rgb(h, mid, s)), bg) < want:
+                lo = mid
+            else:
+                hi = mid
+        return to_hex(colorsys.hls_to_rgb(h, hi, s))
+
+    # red, green, yellow, blue, magenta, cyan: hue and saturation. Green and
+    # cyan are muted more, since at equal saturation they glare.
+    hues = [(0.99, 0.6), (0.36, 0.38), (0.115, 0.55), (0.61, 0.62), (0.83, 0.45), (0.5, 0.36)]
+    normal = [at_contrast(lean(h), s, 5.5) for h, s in hues]
+    bright = [at_contrast(lean(h), s + 0.06, 8.0) for h, s in hues]
+    ansi = ([mix(bg, FG, 0.16)] + normal + [mix(FG, bg, 0.14)]
+            + [at_contrast(colorsys.rgb_to_hls(*rgb(DIM))[0], 0.12, 3.6)] + bright + [mix(FG, "#ffffff", 0.35)])
+    return {
+        "bg": bg, "fg": FG, "cursor": ACCENT, "cursor_text": ON_ACCENT,
+        "selection": mix(ACCENT, bg, 0.62), "ansi": ansi,
+    }
+
+
+TERM = terminal_palette()
+# Shared by every terminal, so they look the same on both laptops.
+TERM_FONT, TERM_SIZE = "FantasqueSansM Nerd Font Mono", 12
+TERM_OPACITY = 0.65
 
 
 # ------------------------------------------------------------------ helpers
@@ -378,20 +424,78 @@ def neovim():
             "execute(\"if get(g:,'colors_name','')=='pywal'|colorscheme pywal|endif\")")
 
 
-TARGETS = [hyprland, hyprlock, btop, starship, kitty, rofi, gtk, kde, vscode, chromium, neovim]
+
+def alacritty():
+    # alacritty.toml (the alacritty package) imports this; Alacritty watches
+    # imported files, so open windows recolour at once.
+    t = TERM
+    names = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"]
+    def block(title, colors):
+        return f"[colors.{title}]\n" + "".join(f'{n} = "{c}"\n' for n, c in zip(names, colors)) + "\n"
+    write(CACHE / "terminal-alacritty.toml",
+          f'[colors.primary]\nbackground = "{t["bg"]}"\nforeground = "{t["fg"]}"\n\n'
+          f'[colors.cursor]\ncursor = "{t["cursor"]}"\ntext = "{t["cursor_text"]}"\n\n'
+          f'[colors.selection]\nbackground = "{t["selection"]}"\ntext = "CellForeground"\n\n'
+          + block("normal", t["ansi"][:8]) + block("bright", t["ansi"][8:]))
+
+
+def ptyxis():
+    # Ptyxis, the Ubuntu laptop's terminal. Palettes are files in its data
+    # directory; ptyxis/.local/bin/ptyxis-theme.sh selects this one and sets the
+    # font, padding and opacity. An open window keeps the palette it started
+    # with, so the new colours show in the next window.
+    if not shutil.which("ptyxis"):
+        return
+    t = TERM
+    lines = ["[Palette]", "Name=Wal", f"Background={t['bg']}", f"Foreground={t['fg']}",
+             f"Cursor={t['cursor']}"] + [f"Color{i}={c}" for i, c in enumerate(t["ansi"])]
+    write(HOME / ".local/share/org.gnome.Ptyxis/palettes/wal.palette", "\n".join(lines) + "\n")
+
+
+def gnome_terminal():
+    # Classic GNOME Terminal: dconf, which also repaints open windows.
+    if "org.gnome.Terminal.ProfilesList" not in run("gsettings", "list-schemas").stdout.split():
+        return
+    uuid = run("gsettings", "get", "org.gnome.Terminal.ProfilesList", "default").stdout.strip().strip("'")
+    if not uuid:
+        return
+    schema = f"org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:{uuid}/"
+    t = TERM
+    settings = {
+        "use-theme-colors": "false", "background-color": f"'{t['bg']}'", "foreground-color": f"'{t['fg']}'",
+        "palette": "[" + ", ".join(f"'{c}'" for c in t["ansi"]) + "]",
+        "cursor-colors-set": "true", "cursor-background-color": f"'{t['cursor']}'",
+        "cursor-foreground-color": f"'{t['cursor_text']}'",
+        "highlight-colors-set": "true", "highlight-background-color": f"'{t['selection']}'",
+        "highlight-foreground-color": f"'{t['fg']}'", "bold-is-bright": "false",
+        "use-system-font": "false", "font": f"'{TERM_FONT} {TERM_SIZE}'",
+        "cursor-shape": "'ibeam'", "cursor-blink-mode": "'on'", "audible-bell": "false",
+        "use-transparent-background": "true",
+        "background-transparency-percent": str(round((1 - TERM_OPACITY) * 100)),
+        "scrollbar-policy": "'never'",
+    }
+    for key, value in settings.items():
+        run("gsettings", "set", schema, key, value)
+
+
+TERMINALS = [alacritty, ptyxis, gnome_terminal]
+TARGETS = [hyprland, hyprlock, btop, starship, kitty, alacritty, ptyxis, gnome_terminal, rofi, gtk, kde, vscode, chromium, neovim]
 
 
 def main():
+    # `theme-sync terminal` themes only the terminals: what the Ubuntu
+    # laptop's waypaper/wallpaper_update.sh asks for.
+    targets = TERMINALS if sys.argv[1:] == ["terminal"] else TARGETS
     failures = []
-    for target in TARGETS:
+    for target in targets:
         try:
             target()
         except Exception:
             failures.append(f"{target.__name__}:\n{traceback.format_exc()}")
     stamp = time.strftime("%Y-%m-%d %H:%M:%S")
     with open(CACHE / "theme-sync.log", "a") as log:
-        log.write(f"[{stamp}] {len(TARGETS) - len(failures)}/{len(TARGETS)} ok\n" + "".join(failures))
-    print(f"{len(TARGETS) - len(failures)}/{len(TARGETS)} themed")
+        log.write(f"[{stamp}] {len(targets) - len(failures)}/{len(targets)} ok\n" + "".join(failures))
+    print(f"{len(targets) - len(failures)}/{len(targets)} themed")
     for f in failures:
         print(f)
 

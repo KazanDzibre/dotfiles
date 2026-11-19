@@ -131,14 +131,17 @@ else
     echo "wallpaper_update: could not generate colors-hyprland.conf" >&2
 fi
 
-# ------------------------------------------------------------------ Ptyxis
+# --------------------------------------------------------------- terminal
 #
-# Copied out of the cache rather than symlinked from the repo: see the header of
-# wal/.config/wal/templates/colors-ptyxis.palette. Open windows keep the palette
-# they started with; new tabs pick this one up.
-if [ -f "$CACHE/colors-ptyxis.palette" ]; then
+# Ptyxis (or GNOME Terminal) gets the same palette as Alacritty on the Arch
+# laptop: theme-sync (wal/.local/bin) builds it and writes wal.palette. Open
+# Ptyxis windows keep the palette they started with; new ones pick this up.
+# Without theme-sync, fall back to pywal's own rendering of the template.
+if command -v theme-sync >/dev/null 2>&1; then
+    theme-sync terminal >/dev/null || echo "wallpaper_update: theme-sync terminal failed" >&2
+elif [ -f "$CACHE/colors-ptyxis.palette" ]; then
     mkdir -p "$PTYXIS_PALETTES"
-    cp -f "$CACHE/colors-ptyxis.palette" "$PTYXIS_PALETTES/pywal.palette" \
+    cp -f "$CACHE/colors-ptyxis.palette" "$PTYXIS_PALETTES/wal.palette" \
         || echo "wallpaper_update: could not install the Ptyxis palette" >&2
 fi
 

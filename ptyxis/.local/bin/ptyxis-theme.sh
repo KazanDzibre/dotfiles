@@ -9,10 +9,10 @@
 #   ptyxis-theme.sh            apply
 #   ptyxis-theme.sh --show     print what is set now, change nothing
 #
-# The colours themselves are NOT set here. They come from the pywal palette
-# written to ~/.local/share/org.gnome.Ptyxis/palettes/pywal.palette on every
-# wallpaper change by waypaper/wallpaper_update.sh; this script only selects it.
-# So the terminal follows the wallpaper exactly like the bar and rofi do.
+# The colours themselves are NOT set here. theme-sync (wal/.local/bin) writes
+# them to ~/.local/share/org.gnome.Ptyxis/palettes/wal.palette on every
+# wallpaper change; this script only selects it. It's the same palette, font
+# and opacity as Alacritty on the Arch laptop, so the two terminals match.
 #
 # Note on when changes appear: Ptyxis applies font, padding and opacity to open
 # windows immediately, but a window keeps the *palette* it started with. Open a
@@ -27,8 +27,8 @@ PROFILE_SCHEMA="org.gnome.Ptyxis.Profile"
 # so the terminal and the bar share one typeface. It must be the Nerd Font
 # build: the plain Fantasque has none of the glyphs a prompt or the bar draws.
 FONT="FantasqueSansM Nerd Font 12"
-PALETTE="pywal"
-OPACITY="0.92"
+PALETTE="wal"
+OPACITY="0.65"
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
@@ -69,9 +69,9 @@ set_app font-name         "$FONT"
 set_app interface-style   "'dark'"
 set_app cursor-shape      "'ibeam'"
 set_app cursor-blink-mode "'on'"
-# The default padding is generous; on a 1280x800 logical screen it costs real
-# rows. `true` here means "no extra padding", matching the bar's compactness.
-set_app disable-padding   true
+# Ptyxis's own padding is replaced by ptyxis/.config/gtk-4.0/gtk.css, which
+# gives the same 16x12 room as Alacritty.
+set_app disable-padding   false
 set_app scrollbar-policy  "'never'"
 set_app audible-bell      false
 set_app visual-bell       true
@@ -81,8 +81,8 @@ set_app toast-on-copy-clipboard false
 if [ -f "$HOME/.local/share/org.gnome.Ptyxis/palettes/$PALETTE.palette" ]; then
     set_profile palette "'$PALETTE'"
 else
-    echo "ptyxis-theme: $PALETTE palette not installed yet -- set a wallpaper with" >&2
-    echo "              waypaper first, that is what generates it. Leaving the" >&2
+    echo "ptyxis-theme: $PALETTE palette not written yet -- run theme-sync (or" >&2
+    echo "              change the wallpaper), then re-run this. Leaving the" >&2
     echo "              current palette alone." >&2
 fi
 
@@ -106,7 +106,7 @@ else
     echo "ptyxis-theme: fish is not installed -- leaving the shell alone." >&2
     echo "              install it, then re-run this script." >&2
 fi
-set_profile bold-is-bright   true
+set_profile bold-is-bright   false
 set_profile limit-scrollback false
 set_profile scroll-on-output false
 set_profile scroll-on-keystroke true

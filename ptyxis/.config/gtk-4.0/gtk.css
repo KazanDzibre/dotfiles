@@ -68,8 +68,8 @@ window.ptyxis-window .window-contents {
   border-radius: 0;
 }
 
-/* Without a header bar there is no visual gap at the top, so give the terminal
- * back a little breathing room. Ptyxis's own style.css sets 7px 6px 3px 6px. */
+/* Room around the text, the same as Alacritty's padding on the Arch laptop
+ * (16 across, 12 down). Ptyxis's own style.css sets 7px 6px 3px 6px. */
 window.ptyxis-window vte-terminal.padded {
-  padding: 6px 8px 4px 8px;
+  padding: 12px 16px;
 }

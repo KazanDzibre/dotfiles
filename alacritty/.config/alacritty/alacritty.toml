@@ -1,0 +1,82 @@
+# Alacritty, dressed like the rest of the desktop: glass over the wallpaper
+# (Hyprland blurs what's behind it), the bar's typeface, room around the text
+# and a thin cursor in the accent colour.
+#
+# The colours are not here. theme-sync writes them to
+# ~/.cache/wal/terminal-alacritty.toml on every wallpaper change, and the
+# import below picks them up live. The same palette, font and opacity go to
+# Ptyxis / GNOME Terminal on the Ubuntu laptop (theme-sync again), so both
+# terminals look the same.
+
+[general]
+import = ["~/.cache/wal/terminal-alacritty.toml"]
+live_config_reload = true
+working_directory = "None"
+
+[env]
+TERM = "xterm-256color"
+WINIT_X11_SCALE_FACTOR = "1"
+
+[window]
+padding = { x = 16, y = 12 }
+dynamic_padding = true
+decorations = "None"
+# The control centre's glass, a little thicker so text stays readable on a
+# bright wallpaper. Ptyxis and GNOME Terminal get the same (theme-sync).
+opacity = 0.65
+title = "Alacritty"
+dimensions = { columns = 100, lines = 30 }
+class = { instance = "Alacritty", general = "Alacritty" }
+
+[scrolling]
+history = 10000
+multiplier = 3
+
+[font]
+normal = { family = "FantasqueSansM Nerd Font Mono", style = "Regular" }
+bold = { family = "FantasqueSansM Nerd Font Mono", style = "Bold" }
+italic = { family = "FantasqueSansM Nerd Font Mono", style = "Italic" }
+bold_italic = { family = "FantasqueSansM Nerd Font Mono", style = "Bold Italic" }
+size = 12
+# A little more air between lines.
+offset = { x = 0, y = 2 }
+glyph_offset = { x = 0, y = 1 }
+
+[cursor]
+style = { shape = "Beam", blinking = "On" }
+vi_mode_style = { shape = "Block", blinking = "Off" }
+blink_interval = 650
+blink_timeout = 0
+thickness = 0.14
+unfocused_hollow = true
+
+[selection]
+semantic_escape_chars = ",│`|:\"' ()[]{}<>\t"
+save_to_clipboard = true
+
+[mouse]
+hide_when_typing = true
+
+[[mouse.bindings]]
+mouse = "Middle"
+action = "PasteSelection"
+
+[keyboard]
+bindings = [
+  { key = "Paste", action = "Paste" },
+  { key = "Copy", action = "Copy" },
+  { key = "L", mods = "Control", action = "ClearLogNotice" },
+  { key = "L", mods = "Control", mode = "~Vi", chars = "\f" },
+  { key = "PageUp", mods = "Shift", mode = "~Alt", action = "ScrollPageUp" },
+  { key = "PageDown", mods = "Shift", mode = "~Alt", action = "ScrollPageDown" },
+  { key = "Home", mods = "Shift", mode = "~Alt", action = "ScrollToTop" },
+  { key = "End", mods = "Shift", mode = "~Alt", action = "ScrollToBottom" },
+  { key = "V", mods = "Control|Shift", action = "Paste" },
+  { key = "C", mods = "Control|Shift", action = "Copy" },
+  { key = "F", mods = "Control|Shift", action = "SearchForward" },
+  { key = "B", mods = "Control|Shift", action = "SearchBackward" },
+  { key = "C", mods = "Control|Shift", mode = "Vi", action = "ClearSelection" },
+  { key = "Key0", mods = "Control", action = "ResetFontSize" },
+  # Shift+Enter sends a newline that doesn't submit (Claude Code and friends).
+  { key = "Return", mods = "Shift", chars = "\u001B\r" },
+]
