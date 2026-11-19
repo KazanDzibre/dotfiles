@@ -420,6 +420,44 @@ MorphPanel {
     radius: 14
     color: Theme.raised
 
+    // The song's own colour (from its cover), fading in and out as songs come
+    // and go. Without one, the wallpaper's accent as before.
+    property color cover: Media.hasCoverTint ? Media.coverTint : Theme.accent
+    // The same colour pushed light (or dark, on a light theme) so it reads on
+    // the card.
+    readonly property color coverInk: Qt.hsla(Math.max(0, cover.hslHue), Math.min(1, cover.hslSaturation), Theme.isLight ? Math.min(0.38, cover.hslLightness) : Math.max(0.68, cover.hslLightness), 1)
+
+    Behavior on cover {
+      ColorAnimation {
+        duration: Theme.motionAmbient
+      }
+    }
+
+    // A wash of that colour from the left.
+    Rectangle {
+      anchors.fill: parent
+      radius: parent.radius
+      opacity: Media.hasCoverTint ? 1 : 0
+
+      Behavior on opacity {
+        NumberAnimation {
+          duration: Theme.motionAmbient
+        }
+      }
+
+      gradient: Gradient {
+        orientation: Gradient.Horizontal
+        GradientStop {
+          position: 0
+          color: Qt.rgba(mediaSection.cover.r, mediaSection.cover.g, mediaSection.cover.b, 0.34)
+        }
+        GradientStop {
+          position: 0.8
+          color: Qt.rgba(mediaSection.cover.r, mediaSection.cover.g, mediaSection.cover.b, 0)
+        }
+      }
+    }
+
     ClippingRectangle {
       id: mediaArt
       anchors.left: parent.left
@@ -494,7 +532,7 @@ MorphPanel {
           width: main ? 34 : 28
           height: width
           radius: width / 2
-          color: mediaBtnArea.containsMouse ? Theme.hover : main ? Theme.accentSoft : "transparent"
+          color: mediaBtnArea.containsMouse ? Theme.hover : main ? Qt.rgba(mediaSection.cover.r, mediaSection.cover.g, mediaSection.cover.b, 0.24) : "transparent"
           scale: mediaBtnArea.pressed ? 0.86 : 1
 
           Behavior on scale {
@@ -509,7 +547,7 @@ MorphPanel {
             anchors.centerIn: parent
             text: mediaBtn.modelData.glyph
             font.pixelSize: mediaBtn.main ? Theme.iconSize + 2 : Theme.iconSize
-            color: mediaBtn.main ? Theme.accent : Theme.fg
+            color: mediaBtn.main ? mediaSection.coverInk : Theme.fg
           }
 
           MouseArea {
