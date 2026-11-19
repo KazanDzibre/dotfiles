@@ -139,6 +139,8 @@ fi
 # Without theme-sync, fall back to pywal's own rendering of the template.
 if command -v theme-sync >/dev/null 2>&1; then
     theme-sync terminal >/dev/null || echo "wallpaper_update: theme-sync terminal failed" >&2
+    # Folders in the wallpaper's colour (bootstrap/install-icons.sh).
+    theme-sync icons >/dev/null || echo "wallpaper_update: theme-sync icons failed" >&2
 elif [ -f "$CACHE/colors-ptyxis.palette" ]; then
     mkdir -p "$PTYXIS_PALETTES"
     cp -f "$CACHE/colors-ptyxis.palette" "$PTYXIS_PALETTES/wal.palette" \

@@ -2,8 +2,8 @@
 """Push the pywal palette to everything on the desktop that can take it.
 
 Runs after `wal` on every wallpaper change (~/.config/waypaper/post-command.sh).
-Run it by hand any time: `theme-sync` (or `theme-sync terminal` for just the
-terminals). Each target is independent, so one
+Run it by hand any time: `theme-sync` (or `theme-sync terminal` / `theme-sync
+icons` for just those). Each target is independent, so one
 failing can't stop the others; failures go to ~/.cache/wal/theme-sync.log.
 
 The first time a file outside the repo is edited, the original is kept in
@@ -478,14 +478,74 @@ def gnome_terminal():
         run("gsettings", "set", schema, key, value)
 
 
+
+# Papirus's folder colours, roughly as each one looks.
+PAPIRUS_FOLDERS = {
+    "adwaita": "#93c0ea", "blue": "#5294e2", "bluegrey": "#607d8b", "breeze": "#57b8ec",
+    "brown": "#ae8e6c", "carmine": "#a30002", "cyan": "#00bcd4", "darkcyan": "#45abb7",
+    "deeporange": "#eb6637", "green": "#87b158", "grey": "#8e8e8e", "indigo": "#5c6bc0",
+    "magenta": "#ca71df", "nordic": "#81a1c1", "orange": "#ee923a", "palebrown": "#d1bfae",
+    "paleorange": "#eeca8f", "pink": "#f06292", "red": "#e25252", "teal": "#16a085",
+    "violet": "#7e57c2", "yellow": "#f9bd30",
+}
+
+
+def folder_colour():
+    # The Papirus colour nearest the accent, by hue first.
+    h, s, v = colorsys.rgb_to_hsv(*rgb(ACCENT))
+
+    def distance(name):
+        h2, s2, v2 = colorsys.rgb_to_hsv(*rgb(PAPIRUS_FOLDERS[name]))
+        dh = min(abs(h - h2), 1 - abs(h - h2))
+        return dh * 4 + abs(s - s2) + abs(v - v2) * 0.5
+
+    return min(PAPIRUS_FOLDERS, key=distance)
+
+
+def icons():
+    # Folders in the wallpaper's colour. Papirus-Dark-Wal (made by
+    # bootstrap/install-icons.sh) is a small theme of its own that inherits
+    # everything from Papirus-Dark and holds only the folder icons: links to
+    # Papirus's folders in one colour, under their plain names. Papirus itself
+    # is never touched, so this needs no sudo.
+    icons_dir = HOME / ".local/share/icons"
+    overlay, papirus = icons_dir / "Papirus-Dark-Wal", icons_dir / "Papirus-Dark"
+    if not (overlay / "index.theme").exists() or not papirus.exists():
+        return
+    colour = folder_colour()
+    stamp = overlay / ".colour"
+    if stamp.exists() and stamp.read_text().strip() == colour:
+        return
+    pattern = re.compile(rf"^(folder|user)-{colour}(-.+)?\.svg$")
+    for places in sorted(papirus.glob("*/places")):
+        out = overlay / places.parent.name / "places"
+        out.mkdir(parents=True, exist_ok=True)
+        for old in out.iterdir():
+            if old.is_symlink():
+                old.unlink()
+        for icon in places.iterdir():
+            m = pattern.match(icon.name)
+            if m:
+                (out / f"{m.group(1)}{m.group(2) or ''}.svg").symlink_to(icon)
+    stamp.write_text(colour + "\n")
+    os.utime(overlay)
+    # GTK only looks again when the icon theme's name changes.
+    current = run("gsettings", "get", "org.gnome.desktop.interface", "icon-theme").stdout.strip().strip("'")
+    if current == overlay.name:
+        run("gsettings", "set", "org.gnome.desktop.interface", "icon-theme", "Papirus-Dark")
+        time.sleep(0.15)
+        run("gsettings", "set", "org.gnome.desktop.interface", "icon-theme", overlay.name)
+
+
 TERMINALS = [alacritty, ptyxis, gnome_terminal]
-TARGETS = [hyprland, hyprlock, btop, starship, kitty, alacritty, ptyxis, gnome_terminal, rofi, gtk, kde, vscode, chromium, neovim]
+TARGETS = [hyprland, hyprlock, btop, starship, kitty, alacritty, ptyxis, gnome_terminal, rofi, icons, gtk, kde, vscode, chromium, neovim]
 
 
 def main():
-    # `theme-sync terminal` themes only the terminals: what the Ubuntu
-    # laptop's waypaper/wallpaper_update.sh asks for.
-    targets = TERMINALS if sys.argv[1:] == ["terminal"] else TARGETS
+    # `theme-sync terminal` themes only the terminals (what the Ubuntu
+    # laptop's waypaper/wallpaper_update.sh asks for); `theme-sync icons` only
+    # the folder colour.
+    targets = {"terminal": TERMINALS, "icons": [icons]}.get(" ".join(sys.argv[1:]), TARGETS)
     failures = []
     for target in targets:
         try:
