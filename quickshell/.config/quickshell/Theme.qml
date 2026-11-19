@@ -71,16 +71,76 @@ Singleton {
   // ------------------------------------------------------- raw wallpaper tones
   // Fallbacks are Catppuccin Mocha, so the bar still looks deliberate if pywal
   // has never run.
-  readonly property color walBg: hasWal && wal.special ? wal.special.background : "#11111b"
-  readonly property color walFg: hasWal && wal.special ? wal.special.foreground : "#cdd6f4"
-  readonly property color walDim: walColor("color8", "#6c7086")
+  property color walBg: hasWal && wal.special ? wal.special.background : "#11111b"
+  property color walFg: hasWal && wal.special ? wal.special.foreground : "#cdd6f4"
+  property color walDim: walColor("color8", "#6c7086")
 
-  readonly property color c1: walColor("color1", "#f38ba8")
-  readonly property color c2: walColor("color2", "#a6e3a1")
-  readonly property color c3: walColor("color3", "#f9e2af")
-  readonly property color c4: walColor("color4", "#89b4fa")
-  readonly property color c5: walColor("color5", "#cba6f7")
-  readonly property color c6: walColor("color6", "#94e2d5")
+  property color c1: walColor("color1", "#f38ba8")
+  property color c2: walColor("color2", "#a6e3a1")
+  property color c3: walColor("color3", "#f9e2af")
+  property color c4: walColor("color4", "#89b4fa")
+  property color c5: walColor("color5", "#cba6f7")
+  property color c6: walColor("color6", "#94e2d5")
+
+  // A new wallpaper changes these; everything the shell derives from them
+  // (accent, text, glass, highlights) follows, so the palette glides to the
+  // new colours instead of snapping.
+  Behavior on walBg {
+    ColorAnimation {
+      duration: root.paletteMs
+      easing.type: Easing.InOutQuad
+    }
+  }
+  Behavior on walFg {
+    ColorAnimation {
+      duration: root.paletteMs
+      easing.type: Easing.InOutQuad
+    }
+  }
+  Behavior on walDim {
+    ColorAnimation {
+      duration: root.paletteMs
+      easing.type: Easing.InOutQuad
+    }
+  }
+  Behavior on c1 {
+    ColorAnimation {
+      duration: root.paletteMs
+      easing.type: Easing.InOutQuad
+    }
+  }
+  Behavior on c2 {
+    ColorAnimation {
+      duration: root.paletteMs
+      easing.type: Easing.InOutQuad
+    }
+  }
+  Behavior on c3 {
+    ColorAnimation {
+      duration: root.paletteMs
+      easing.type: Easing.InOutQuad
+    }
+  }
+  Behavior on c4 {
+    ColorAnimation {
+      duration: root.paletteMs
+      easing.type: Easing.InOutQuad
+    }
+  }
+  Behavior on c5 {
+    ColorAnimation {
+      duration: root.paletteMs
+      easing.type: Easing.InOutQuad
+    }
+  }
+  Behavior on c6 {
+    ColorAnimation {
+      duration: root.paletteMs
+      easing.type: Easing.InOutQuad
+    }
+  }
+
+  readonly property int paletteMs: motionAmbient
 
   // Pick the liveliest colour in the palette. pywal often produces six muddy
   // near-greys, so we score on saturation weighted by brightness.
@@ -148,5 +208,12 @@ Singleton {
   readonly property int smallSize: 11
 
   readonly property int animFast: 140
+  // The motion scale: the speeds the shell's animations are measured in.
+  readonly property int motionTap: 90
+  readonly property int motionQuick: 160
+  readonly property int motionBase: 280
+  readonly property int motionMorph: 520
+  // Glows, backdrops and the palette: slow enough to never draw the eye.
+  readonly property int motionAmbient: 900
   readonly property int animSlow: 260
 }

@@ -1573,12 +1573,12 @@ PanelWindow {
     autoPaddingEnabled: true
     // The player's glow waits for the morph to finish; blurring a resizing
     // shape every frame is what made this stutter before.
-    opacity: root.mode === "charging" || (root.mode === "alert" && root.settled) || (root.mode === "alertCard" && root.settled) || (root.mode === "claudeWaiting" && root.settled) ? 0.7 : root.mode === "player" && root.settled && Media.hasCoverTint ? 0.42 : root.musicGlowing ? root.musicGlow : 0
+    opacity: root.mode === "charging" || (root.mode === "claudeWaiting" && root.settled) ? 0.7 : root.mode === "player" && root.settled && Media.hasCoverTint ? 0.42 : root.musicGlowing ? root.musicGlow : 0
 
     // Quick while it follows the beat, slow for everything else.
     Behavior on opacity {
       NumberAnimation {
-        duration: root.musicGlowing ? 110 : 500
+        duration: root.musicGlowing ? 110 : Theme.motionAmbient
         easing.type: Easing.OutQuad
       }
     }
@@ -4103,39 +4103,44 @@ PanelWindow {
           }
         }
 
-        // Air quality: a dot in the colour of its band, then the number.
+        // Air quality: a pill tinted with its band's colour (dot, then the
+        // number), and the band's name and PM2.5 beside it.
         Row {
           anchors.left: parent.left
           anchors.top: wxStats.bottom
           anchors.topMargin: 10
           spacing: 8
           visible: Weather.aqi >= 0
-          height: 20
+          height: 22
 
           Rectangle {
             anchors.verticalCenter: parent.verticalCenter
-            width: 14
-            height: 14
-            radius: 7
-            color: Weather.aqiBand.color
+            width: aqiRow.implicitWidth + 18
+            height: 22
+            radius: 11
+            color: Qt.alpha(Weather.aqiBand.color, 0.2)
 
-            Rectangle {
+            Row {
+              id: aqiRow
               anchors.centerIn: parent
-              width: 22
-              height: 22
-              radius: 11
-              color: "transparent"
-              border.width: 1
-              border.color: Weather.aqiBand.color
-              opacity: 0.4
+              spacing: 6
+
+              Rectangle {
+                anchors.verticalCenter: parent.verticalCenter
+                width: 8
+                height: 8
+                radius: 4
+                color: Weather.aqiBand.color
+              }
+              Ink {
+                anchors.verticalCenter: parent.verticalCenter
+                text: "AQI " + Weather.aqi
+                font.bold: true
+                color: Weather.aqiBand.color
+              }
             }
           }
 
-          Ink {
-            anchors.verticalCenter: parent.verticalCenter
-            text: "AIR " + Weather.aqi
-            font.bold: true
-          }
           Ink {
             anchors.verticalCenter: parent.verticalCenter
             text: Weather.aqiBand.label + " · PM2.5 " + Weather.pm25.toFixed(1)

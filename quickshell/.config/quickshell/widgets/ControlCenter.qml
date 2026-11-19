@@ -321,22 +321,12 @@ MorphPanel {
     Slider {
       anchors.left: levelGlyph.right
       anchors.leftMargin: 12
-      anchors.right: levelText.left
-      anchors.rightMargin: 10
-      anchors.verticalCenter: parent.verticalCenter
-      value: level.value
-      onMoved: v => level.moved(v)
-    }
-
-    Label {
-      id: levelText
       anchors.right: parent.right
       anchors.verticalCenter: parent.verticalCenter
-      width: 30
-      horizontalAlignment: Text.AlignRight
-      text: level.readout
-      font.pixelSize: Theme.smallSize + 1
-      color: Theme.fgDim
+      pill: true
+      readout: level.readout
+      value: level.value
+      onMoved: v => level.moved(v)
     }
   }
 
@@ -797,7 +787,9 @@ MorphPanel {
     width: root.inner
     height: 46
     radius: 14
-    color: appsArea.containsMouse ? Theme.accentSoft : Theme.raised
+    color: appsArea.containsMouse ? Theme.accentSoft : "transparent"
+    border.width: 1
+    border.color: Theme.border
     transform: Translate {
       id: appsShift
     }

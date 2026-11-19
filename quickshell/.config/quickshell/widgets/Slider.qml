@@ -10,12 +10,15 @@ Item {
 
   property real value: 0            // 0..1
   property color fill: Theme.accent
+  // A fat pill with the readout inside the fill, like the control centre tiles.
+  property bool pill: false
+  property string readout: ""
 
   // `enabled` is Item's own property — setting it false already blocks the
   // MouseArea, so we only need to reflect it visually.
   signal moved(real value)
 
-  implicitHeight: 20
+  implicitHeight: root.pill ? 26 : 20
 
   function clamp(v) {
     return Math.max(0, Math.min(1, v));
@@ -26,14 +29,15 @@ Item {
 
     anchors.verticalCenter: parent.verticalCenter
     width: parent.width
-    height: 6
-    radius: 3
+    height: root.pill ? 26 : 6
+    radius: height / 2
     color: Theme.raised
+    clip: root.pill
 
     Rectangle {
       width: Math.max(height, track.width * root.clamp(root.value))
       height: parent.height
-      radius: 3
+      radius: height / 2
       color: root.enabled ? root.fill : Theme.fgDim
 
       Behavior on width {
@@ -46,11 +50,24 @@ Item {
           duration: Theme.animFast
         }
       }
+
+      Text {
+        visible: root.pill && root.readout !== ""
+        anchors.left: parent.left
+        anchors.leftMargin: 11
+        anchors.verticalCenter: parent.verticalCenter
+        text: root.readout
+        font.family: Theme.fontFamily
+        font.pixelSize: Theme.smallSize + 1
+        font.bold: true
+        color: parent.width > implicitWidth + 22 ? Theme.base : Theme.fg
+      }
     }
   }
 
   Rectangle {
     id: knob
+    visible: !root.pill
 
     x: (track.width - width) * root.clamp(root.value)
     anchors.verticalCenter: parent.verticalCenter

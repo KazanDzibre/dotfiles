@@ -38,7 +38,7 @@ Row {
         source: entry.modelData.icon
         asynchronous: true
         // Items that need attention shouldn't blend in with the rest.
-        opacity: mouse.containsMouse ? 1.0 : entry.modelData.status === Status.Passive ? 0.55 : 0.85
+        opacity: entry.modelData.status === Status.Passive ? 0.55 : 0.85
 
         Behavior on opacity {
           NumberAnimation {
@@ -79,8 +79,6 @@ Row {
         id: mouse
 
         anchors.fill: parent
-        hoverEnabled: true
-        cursorShape: Qt.PointingHandCursor
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
 
         onClicked: event => {
