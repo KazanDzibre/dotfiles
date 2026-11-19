@@ -51,8 +51,18 @@ PanelWindow {
   mask: Region {
     x: hit.x
     y: hit.y
-    width: hit.width
+    width: root.termAside ? 0 : hit.width
     height: hit.height
+  }
+
+  // The island has turned into the island terminal (IslandTerm.qml): the
+  // terminal window sits exactly where the island is, so the island steps
+  // aside, all of it at once, bubbles included, and takes no clicks.
+  readonly property bool termAside: IslandTerm.shown && IslandTerm.screenName === screenName()
+  Binding {
+    target: root.contentItem
+    property: "opacity"
+    value: root.termAside ? 0 : 1
   }
 
   // ------------------------------------------------------------------ look
@@ -401,6 +411,10 @@ PanelWindow {
   readonly property bool musicMerged: Media.hasPlayer && Media.playing
 
   readonly property string mode: {
+    // The island terminal arriving or leaving (IslandTerm.qml): the island
+    // covers its spot, over everything else.
+    if (IslandTerm.covering && IslandTerm.screenName === screenName())
+      return "term";
     if (dragOver)
       return "drop";
     if (view === "search")
@@ -845,6 +859,9 @@ PanelWindow {
       return [Math.max(clockRow.implicitWidth + 34, root.compactW), compactH];
     case "music":
       return [root.compactW, compactH];
+    case "term":
+      // Exactly the terminal's rectangle: the island becomes it.
+      return [IslandTerm.width, IslandTerm.height];
     case "player":
       return [400, 154 + (Lyrics.available ? 76 : 0)];
     case "claudeWaiting":
@@ -1623,6 +1640,13 @@ PanelWindow {
       color: "transparent"
       border.width: 1.5
       border.color: Qt.rgba(1, 1, 1, modelData.a)
+      // Gone while the island is the terminal's shape, which has no halo.
+      opacity: root.mode === "term" ? 0 : 1
+      Behavior on opacity {
+        NumberAnimation {
+          duration: 200
+        }
+      }
       transform: [
         Translate {
           x: root.nudge
@@ -1645,10 +1669,12 @@ PanelWindow {
     y: Math.round((Theme.barHeight - root.compactH) / 2)
     width: root.size[0] + root.tailTarget
     height: root.size[1]
-    radius: Math.min(height / 2, 30)
+    // The terminal's corners while covering it, so the hand-off has no seam.
+    radius: Math.min(height / 2, root.mode === "term" ? IslandTerm.radius : 30)
     color: "#050403"
     border.width: 1
-    border.color: root.rim
+    // No rim while it's the terminal's shape, so the hand-over has no seam.
+    border.color: root.mode === "term" ? "transparent" : root.rim
     clip: true
     scale: tapArea.pressed ? 0.96 : 1
     transform: [
@@ -1764,7 +1790,9 @@ PanelWindow {
         function onSettledChanged() {
           if (!root.settled)
             return;
-          if (Math.abs(root.size[1] - pointerLight.lastHeight) > 12)
+          // Not while covering the terminal: the light runs once the island
+          // is back on its pill.
+          if (root.mode !== "term" && Math.abs(root.size[1] - pointerLight.lastHeight) > 12)
             landSweep.restart();
           pointerLight.lastHeight = root.size[1];
         }

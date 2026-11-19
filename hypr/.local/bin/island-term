@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# The island terminal (Super+`): a black terminal that drops out of the
+# Dynamic Island and folds back into it. One terminal, kept running on the
+# hidden special:term workspace, so what you left in it is still there.
+#
+# Hyprland places it (the island-term window rule: size, spot, workspace); the
+# bar does the motion (IslandTerm.qml): the island grows into the terminal's
+# shape, the terminal takes its place, and closing turns it back into the
+# island. A click outside it closes it too. The size
+# and spot are written twice and must agree: the island-term window rule
+# (hyprland.lua and hyprland.conf) and IslandTerm.qml.
+set -uo pipefail
+
+CLASS=island-term
+CONFIG=$HOME/.config/alacritty/island.toml
+
+client() { hyprctl clients -j | jq -c --arg c "$CLASS" 'first(.[] | select(.class == $c)) // empty'; }
+
+# Without the bar: just move it, no motion.
+move_plain() { # workspace address
+  hyprctl dispatch "hl.dsp.window.move({ workspace = \"$1\", follow = false, window = \"address:$2\" })" >/dev/null 2>&1 \
+    || hyprctl dispatch movetoworkspacesilent "$1,address:$2" >/dev/null
+}
+
+if [[ -z $(client) ]]; then
+  command -v alacritty >/dev/null || { notify-send "Island terminal" "Needs Alacritty installed."; exit 1; }
+  alacritty --class "$CLASS" --config-file "$CONFIG" --working-directory "$HOME" >/dev/null 2>&1 &
+  disown
+  for _ in $(seq 60); do [[ -n $(client) ]] && break; sleep 0.05; done
+fi
+
+win=$(client)
+[[ -n $win ]] || exit 1
+address=$(jq -r .address <<<"$win")
+here=$(hyprctl activeworkspace -j | jq -r .id)
+
+# Open on this workspace already: put it away. Anywhere else (parked, or left
+# open on another workspace): bring it here.
+if [[ $(jq -r .workspace.id <<<"$win") == "$here" ]]; then
+  action=close
+else
+  action=open
+fi
+
+if ! qs ipc call islandterm "$action" "$address" >/dev/null 2>&1; then
+  if [[ $action == open ]]; then move_plain "$here" "$address"; else move_plain special:term "$address"; fi
+fi

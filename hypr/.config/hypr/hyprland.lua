@@ -389,6 +389,8 @@ hl.bind(mainMod .. " + SHIFT + m", hl.dsp.window.move({ workspace = 11 }))
 
 -- Special workspace (scratchpad)
 hl.bind(mainMod .. " + S",         hl.dsp.workspace.toggle_special("magic"))
+-- The island terminal: drops out of the island, folds back into it.
+hl.bind(mainMod .. " + grave",     hl.dsp.exec_cmd("~/.local/bin/island-term"))
 hl.bind(mainMod .. " + SHIFT + S", hl.dsp.window.move({ workspace = "special:magic" }))
 
 --TODO need to work on this to make it user friendly
@@ -479,6 +481,25 @@ hl.window_rule({
     -- this is set per-window. If it still enters from the wrong side, the other
     -- lever is the specialWorkspaceIn/Out style above.
     animation = "slide left",
+})
+
+-- The island terminal (Super+`, ~/.local/bin/island-term): a black Alacritty
+-- that the Dynamic Island turns into and back from (IslandTerm.qml). It takes
+-- exactly the rectangle the island grows into, top edge on the island's top
+-- edge, at the island's corner radius, with no border or shadow so the two
+-- can't be told apart; it's parked on special:term between uses. The size
+-- and spot must match IslandTerm.qml: 720x430, 3px from the top.
+hl.window_rule({
+    name  = "island-term",
+    match = { class = "^island-term$" },
+
+    float       = true,
+    size        = "720 430",
+    move        = "(monitor_w-720)/2 3",
+    workspace   = "special:term silent",
+    rounding    = 22,
+    border_size = 0,
+    no_shadow   = true,
 })
 
 -- Quickshell wallpaper picker (WallpaperPicker.qml). Its scrim is only ~22%
