@@ -57,6 +57,9 @@ PACKAGES=(
 
   # Zed (zed/), and stylua, which it formats Lua with on save
   zed stylua
+
+  # The phone in the island (Phone.qml); hyprland.lua starts kdeconnectd
+  kdeconnect
 )
 
 # Programs the config calls, and which package brings each: what `check` reports.
@@ -70,7 +73,7 @@ COMMANDS=(
   upower:upower nmcli:networkmanager bluetoothctl:bluez-utils qrencode:qrencode
   checkupdates:pacman-contrib curl:curl jq:jq sqlite3:sqlite python3:python
   fprintd-verify:fprintd alacritty:alacritty nvim:neovim fish:fish stow:stow
-  zeditor:zed stylua:stylua
+  zeditor:zed stylua:stylua kdeconnect-cli:kdeconnect
 )
 
 say() { printf '\033[1m%s\033[0m\n' "$*"; }

@@ -71,8 +71,12 @@ end)
 ---- ENVIRONMENT VARIABLES ----
 -------------------------------
 
-hl.env("XCURSOR_SIZE", "14")
-hl.env("HYPRCURSOR_SIZE", "14")
+-- The cursor: Bibata Modern Classic, installed by bootstrap/install-cursor.sh
+-- (which also sets it for GTK and Qt apps). Change the size there too.
+hl.env("XCURSOR_THEME", "Bibata-Modern-Classic")
+hl.env("XCURSOR_SIZE", "20")
+hl.env("HYPRCURSOR_THEME", "Bibata-Modern-Classic")
+hl.env("HYPRCURSOR_SIZE", "20")
 -- Lets Qt and KDE apps (Dolphin, Ark…) use the colour scheme theme-sync writes.
 hl.env("QT_QPA_PLATFORMTHEME", "kde")
 

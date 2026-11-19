@@ -63,6 +63,9 @@ PanelWindow {
   readonly property color hot: Qt.hsva(Theme.accentHue, Math.min(1.0, Theme.accentRaw.hsvSaturation * 1.15), Math.max(0.8, Theme.accentRaw.hsvValue), 1.0)
   readonly property color good: "#8ad79a"
   readonly property int compactH: 28
+  // The resting island's width, the same for the clock (every skin) and for
+  // music. The widest face, Plain with its text date, fits inside it.
+  readonly property int compactW: 150
 
   // The mockup's curves, verbatim: CSS cubic-bezier(.34,1.32,.5,1) over 620ms
   // for the island's shape, (.34,1.4,.5,1) for content arriving.
@@ -839,9 +842,9 @@ PanelWindow {
       // skins (or starting a song) never resizes it; the content is centred.
       // It only grows if something (a long date, the do-not-disturb bell)
       // would not fit.
-      return [Math.max(clockRow.implicitWidth + 34, 200), compactH];
+      return [Math.max(clockRow.implicitWidth + 34, root.compactW), compactH];
     case "music":
-      return [200, compactH];
+      return [root.compactW, compactH];
     case "player":
       return [400, 154 + (Lyrics.available ? 76 : 0)];
     case "claudeWaiting":
