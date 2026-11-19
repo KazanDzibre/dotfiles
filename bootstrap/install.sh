@@ -31,7 +31,7 @@ FONT_DIR="$HOME/.local/share/fonts"
 
 # Packages that are stow packages in this repo. `reference` and `bootstrap` are
 # not -- the first is frozen prior art, the second is this script.
-STOW_PACKAGES=(hypr quickshell nvim zed rofi wal waypaper ptyxis env screensaver fish starship)
+STOW_PACKAGES=(hypr quickshell nvim zed rofi wal waypaper ptyxis env screensaver fish starship fontconfig)
 
 say()  { printf '\n\033[1;36m==>\033[0m %s\n' "$*"; }
 note() { printf '    %s\n' "$*"; }

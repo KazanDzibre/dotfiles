@@ -516,7 +516,11 @@ def icons():
     stamp = overlay / ".colour"
     if stamp.exists() and stamp.read_text().strip() == colour:
         return
-    pattern = re.compile(rf"^(folder|user)-{colour}(-.+)?\.svg$")
+    # Every plain name (folder, inode-directory, folder-documents, user-home...)
+    # is a link that ends at a blue folder; point the same name at that
+    # folder in the chosen colour instead.
+    blue = re.compile(r"^(folder|user)-blue(-.+)?\.svg$")
+    coloured = re.compile(rf"^(folder|user)-({'|'.join(PAPIRUS_FOLDERS)}|black|white|yaru)(-|\.)")
     for places in sorted(papirus.glob("*/places")):
         out = overlay / places.parent.name / "places"
         out.mkdir(parents=True, exist_ok=True)
@@ -524,9 +528,14 @@ def icons():
             if old.is_symlink():
                 old.unlink()
         for icon in places.iterdir():
-            m = pattern.match(icon.name)
-            if m:
-                (out / f"{m.group(1)}{m.group(2) or ''}.svg").symlink_to(icon)
+            if coloured.match(icon.name):
+                continue
+            m = blue.match(os.path.basename(os.path.realpath(icon)))
+            if not m:
+                continue
+            target = places / f"{m.group(1)}-{colour}{m.group(2) or ''}.svg"
+            if target.exists():
+                (out / icon.name).symlink_to(target)
     stamp.write_text(colour + "\n")
     os.utime(overlay)
     # GTK only looks again when the icon theme's name changes.

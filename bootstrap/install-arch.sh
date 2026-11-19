@@ -148,7 +148,7 @@ check() {
   # -t ~ matters: the repo lives in ~/Nuketown, and stow's default target is
   # the repo's parent, so a bare `stow` links into ~/Nuketown/.config.
   say "Configs are linked with stow from the repo root, for example:"
-  echo "  cd $(cd "$(dirname "$(readlink -f "$0")")/.." && pwd) && stow -t ~ hypr quickshell nvim wal fish screensaver starship zed wireplumber alacritty"
+  echo "  cd $(cd "$(dirname "$(readlink -f "$0")")/.." && pwd) && stow -t ~ hypr quickshell nvim wal fish screensaver starship zed wireplumber alacritty fontconfig"
   echo "  (not waypaper on Arch: its config.ini points at the Ubuntu laptop's post-command"
   echo "   script, so keep a local ~/.config/waypaper/config.ini that runs post-command.sh)"
 }
