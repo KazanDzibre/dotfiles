@@ -103,6 +103,10 @@ cmatrix
 # from ~/.local/share/quickshell/calendar-url; these two parse and expand them.
 python3-icalendar python3-recurring-ical-events
 
+# The iPhone/phone bubble in the island (Phone.qml) talks to KDE Connect; without
+# it the bubble simply never appears.
+kdeconnect
+
 # The island's wifiqr view (scripts/wifi_qr.py) draws the join QR code with this.
 qrencode
 

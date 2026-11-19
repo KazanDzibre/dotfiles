@@ -106,9 +106,9 @@ Singleton {
   // ----------------------------------------------------------- the four roots
   readonly property color base: isLight ? Qt.hsla(fgHue, Math.min(0.30, walFg.hslSaturation), 0.955, 1.0) : walBg
 
-  readonly property color fg: isLight ? Qt.hsla(bgHue, Math.min(0.45, walBg.hslSaturation + 0.12), 0.15, 1.0) : walFg
+  readonly property color fg: isLight ? Qt.hsla(bgHue, Math.min(0.45, walBg.hslSaturation + 0.12), 0.12, 1.0) : Qt.tint(walFg, Qt.rgba(1, 1, 1, 0.45))
 
-  readonly property color fgDim: isLight ? Qt.hsla(bgHue, Math.min(0.22, walBg.hslSaturation), 0.44, 1.0) : walDim
+  readonly property color fgDim: isLight ? Qt.hsla(bgHue, Math.min(0.22, walBg.hslSaturation), 0.36, 1.0) : Qt.tint(walFg, Qt.rgba(1, 1, 1, 0.35))
 
   // Dark mode forces the accent bright enough to read on near-black; light mode
   // forces it dark enough to read on near-white. Same hue either way.
@@ -143,9 +143,9 @@ Singleton {
   readonly property int spacing: 8      // between items inside an island
 
   readonly property string fontFamily: "FantasqueSansM Nerd Font"
-  readonly property int fontSize: 12
+  readonly property int fontSize: 13
   readonly property int iconSize: 14
-  readonly property int smallSize: 10
+  readonly property int smallSize: 11
 
   readonly property int animFast: 140
   readonly property int animSlow: 260

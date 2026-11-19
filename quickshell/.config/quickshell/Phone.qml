@@ -29,9 +29,20 @@ Singleton {
   signal sending(string what)
   signal arrived(string name)
 
+  // KDE Connect may simply not be installed (Ubuntu: package `kdeconnect`);
+  // then there is nothing to poll, and polling a missing binary every few
+  // seconds only fills the log.
+  property bool available: false
+
+  Process {
+    running: true
+    command: ["sh", "-c", "command -v kdeconnect-cli >/dev/null"]
+    onExited: code => root.available = code === 0
+  }
+
   // ------------------------------------------------------------- watching
   Timer {
-    running: true
+    running: root.available
     repeat: true
     interval: 8000
     triggeredOnStart: true

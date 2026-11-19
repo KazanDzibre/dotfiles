@@ -27,6 +27,9 @@ Item {
     required property real a
     property real dy: 0
     property color ink: root.tone
+    // Wider than the spacing between rings, so neighbours overlap and the
+    // steps melt into one fade instead of reading as separate lines.
+    property real w: 2.4
 
     x: root.target.x - d
     y: root.target.y - d + dy
@@ -35,13 +38,13 @@ Item {
     radius: (root.target.radius ?? 0) + d
     scale: root.target.scale
     color: "transparent"
-    border.width: 1.5
+    border.width: w
     border.color: Qt.rgba(ink.r, ink.g, ink.b, a)
   }
 
   // Underneath: the shadow, offset a little downward, darker near the edge.
   Repeater {
-    model: root.shadow && root.target ? [[3, 0.16, 2], [6, 0.1, 4], [10, 0.06, 6], [15, 0.03, 8]] : []
+    model: root.shadow && root.target ? [[2, 0.14, 1], [4, 0.09, 2], [6, 0.058, 3], [8, 0.037, 4], [10, 0.024, 5], [12, 0.015, 6], [14, 0.009, 7], [16, 0.005, 8]] : []
 
     delegate: Ring {
       required property var modelData
@@ -54,7 +57,9 @@ Item {
 
   // The halo itself.
   Repeater {
-    model: root.target ? [[1.5, 0.09], [3, 0.045], [5, 0.02]] : []
+    // A panel (shadow: true) already has the glass's own border and rim light, so
+    // its light halo would only be a third line beside them.
+    model: root.target && !root.shadow ? [[1.5, 0.06], [3.5, 0.03], [5.5, 0.012]] : []
 
     delegate: Ring {
       required property var modelData
