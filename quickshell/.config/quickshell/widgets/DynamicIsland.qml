@@ -957,6 +957,46 @@ PanelWindow {
     return [200, compactH];
   }
 
+  // A title with the letters of `query` in the accent colour, as the styled
+  // text Text understands. The query is found as one run if it appears in the
+  // title ("fir" in "Firefox"), else letter by letter in order ("ffx").
+  // Everything else is escaped, so a title with "&" or "<" shows as typed.
+  function matchMarkup(title, query) {
+    const esc = c => c === "&" ? "&amp;" : c === "<" ? "&lt;" : c === ">" ? "&gt;" : c;
+    const q = (query ?? "").trim().toLowerCase();
+    if (q.length === 0)
+      return Array.from(title, esc).join("");
+    const lower = title.toLowerCase();
+    const marked = new Array(title.length).fill(false);
+    const at = lower.indexOf(q);
+    if (at >= 0) {
+      for (let i = at; i < at + q.length; i++)
+        marked[i] = true;
+    } else {
+      let j = 0;
+      for (let i = 0; i < title.length && j < q.length; i++) {
+        if (lower[i] === q[j]) {
+          marked[i] = true;
+          j++;
+        }
+      }
+      // Not all of it matched in order (the app was found by its comment or
+      // generic name): mark nothing rather than half a word.
+      if (j < q.length)
+        return Array.from(title, esc).join("");
+    }
+    const open = "<font color=\"" + root.hot + "\">";
+    let out = "", on = false;
+    for (let i = 0; i < title.length; i++) {
+      if (marked[i] !== on) {
+        out += on ? "</font>" : open;
+        on = marked[i];
+      }
+      out += esc(title[i]);
+    }
+    return on ? out + "</font>" : out;
+  }
+
   function screenName() {
     return root.screen ? root.screen.name : "";
   }
@@ -1122,6 +1162,16 @@ PanelWindow {
   onDayOffsetChanged: {
     const now = Time.now;
     monthOffset = (shownDay.getFullYear() - now.getFullYear()) * 12 + shownDay.getMonth() - now.getMonth();
+  }
+
+  // Which way the month last moved (1 forward, -1 back), for the grid's slide.
+  signal monthSlide
+  property int monthStep: 0
+  property int lastMonthOffset: 0
+  onMonthOffsetChanged: {
+    monthStep = monthOffset > lastMonthOffset ? 1 : -1;
+    lastMonthOffset = monthOffset;
+    monthSlide();
   }
 
   readonly property date shownMonth: {
@@ -3182,8 +3232,10 @@ PanelWindow {
 
               Ink {
                 width: parent.width
-                text: resultRow.modelData.title
-                textFormat: Text.PlainText
+                // Apps: the letters you typed in the accent. Everything else
+                // is shown exactly as it is.
+                text: resultRow.modelData.kind === "app" ? root.matchMarkup(resultRow.modelData.title, root.query) : resultRow.modelData.title
+                textFormat: resultRow.modelData.kind === "app" ? Text.StyledText : Text.PlainText
                 font.bold: true
               }
               Ink {
@@ -5027,10 +5079,12 @@ PanelWindow {
           anchors.topMargin: 10
           height: 26
 
-          Ink {
+          RollingText {
             anchors.centerIn: parent
             text: Qt.formatDateTime(root.shownMonth, "MMMM yyyy")
-            font.bold: true
+            bold: true
+            color: root.ink
+            pixelSize: Theme.fontSize
           }
 
           Repeater {
@@ -5082,6 +5136,39 @@ PanelWindow {
           columns: 7
 
           readonly property real cellWidth: width / 7
+
+          // A month change slides the grid in from the side it came from.
+          transform: Translate {
+            id: gridSlide
+          }
+
+          ParallelAnimation {
+            id: monthSlideAnim
+
+            NumberAnimation {
+              target: gridSlide
+              property: "x"
+              from: root.monthStep * 26
+              to: 0
+              duration: Theme.motionBase
+              easing.type: Easing.OutCubic
+            }
+            NumberAnimation {
+              target: monthGrid
+              property: "opacity"
+              from: 0.15
+              to: 1
+              duration: Theme.motionBase
+            }
+          }
+
+          Connections {
+            target: root
+
+            function onMonthSlide() {
+              monthSlideAnim.restart();
+            }
+          }
 
           Repeater {
             model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
