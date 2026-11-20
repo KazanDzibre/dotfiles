@@ -952,6 +952,8 @@ MorphPanel {
       root.close();
       if (action.id === "screensaver")
         Screensaver.start();
+      else if (action.confirm)
+        Moments.runSession(action.label, action.cmd);
       else
         Quickshell.execDetached(action.cmd);
     }

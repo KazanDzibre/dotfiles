@@ -70,6 +70,33 @@ Singleton {
     }, ms ?? 1600);
   }
 
+  // Log out, restart or shut down. When the system refuses (an update is
+  // installing, something holds a block on shutdown) say so, instead of the
+  // control centre just closing and nothing happening.
+  function runSession(label, command) {
+    sessionProc.label = label;
+    sessionProc.command = command;
+    sessionProc.running = true;
+  }
+
+  Process {
+    id: sessionProc
+
+    property string label: ""
+
+    stderr: StdioCollector {
+      id: sessionErr
+    }
+
+    onExited: code => {
+      if (code === 0)
+        return;
+      // "Operation inhibited by "apt-get" ..." -> the program's name.
+      const by = /inhibited by "?([^"(\n]+)/i.exec(sessionErr.text);
+      root.toast(Icons.stop, sessionProc.label + " blocked", by ? by[1].trim() : "refused", false, 4200);
+    }
+  }
+
   function level(which, value) {
     root.show({
       kind: "level",
