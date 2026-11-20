@@ -172,6 +172,24 @@ MorphPanel {
           required property int index
 
           readonly property int lines: Clipboard.lineCount(modelData)
+          readonly property var info: Clipboard.describe(modelData)
+
+          // The row's text, with what matters in bold and the rest dim, as the
+          // styled text Text understands. Everything is escaped first.
+          function esc(t) {
+            return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+          }
+          function clip(t, n) {
+            return t.length > n ? t.substring(0, n) + "…" : t;
+          }
+          readonly property string markup: {
+            const dim = "<font color=\"" + Theme.fgDim + "\">";
+            if (info.type === "link")
+              return "<b>" + esc(info.host) + "</b> " + dim + esc(clip(info.rest, 80)) + "</font>";
+            if (info.type === "file")
+              return "<b>" + esc(info.name) + "</b> " + dim + esc(clip(info.folder, 80)) + "</font>";
+            return esc(Clipboard.preview(modelData));
+          }
 
           width: list.width
           height: 34
@@ -198,13 +216,43 @@ MorphPanel {
             color: row.index === 0 ? Theme.accent : Theme.fgDim
           }
 
-          Text {
+          // A leading mark for what it is: a swatch for a colour, an icon for a
+          // link or a file.
+          Item {
+            id: kindMark
             anchors.left: indexLabel.right
             anchors.leftMargin: 8
+            anchors.verticalCenter: parent.verticalCenter
+            width: row.info.type === "text" ? 0 : 16
+            height: 16
+            visible: width > 0
+
+            Rectangle {
+              anchors.fill: parent
+              visible: row.info.type === "color"
+              radius: 8
+              color: row.info.color ?? "transparent"
+              border.width: 1
+              border.color: Theme.border
+            }
+            Text {
+              anchors.centerIn: parent
+              visible: row.info.type === "link" || row.info.type === "file"
+              text: row.info.type === "link" ? Icons.web : Icons.appFiles
+              font.family: Theme.fontFamily
+              font.pixelSize: Theme.fontSize
+              color: Theme.accent
+            }
+          }
+
+          Text {
+            anchors.left: kindMark.right
+            anchors.leftMargin: kindMark.visible ? 8 : 0
             anchors.right: badge.left
             anchors.rightMargin: 8
             anchors.verticalCenter: parent.verticalCenter
-            text: Clipboard.preview(row.modelData)
+            text: row.markup
+            textFormat: Text.StyledText
             elide: Text.ElideRight
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSize

@@ -103,6 +103,51 @@ Singleton {
     return flattened.length > 120 ? flattened.substring(0, 120) + "…" : flattened;
   }
 
+  // What a clipping is, for the history list: a colour, a link, a file path or
+  // plain text. The same rules the island applies to a fresh copy (Moments.qml),
+  // kept to the simple single-line shapes.
+  //   color  { type, color }
+  //   link   { type, host, rest }
+  //   file   { type, name, folder }
+  //   text   { type }
+  function describe(text) {
+    const t = text.trim();
+    if (t.indexOf("\n") >= 0)
+      return {
+        type: "text"
+      };
+    let m = t.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+    if (m)
+      return {
+        type: "color",
+        color: "#" + m[1]
+      };
+    m = t.match(/^rgba?\(\s*(\d{1,3})\s*[, ]\s*(\d{1,3})\s*[, ]\s*(\d{1,3})/i);
+    if (m && m[1] <= 255 && m[2] <= 255 && m[3] <= 255)
+      return {
+        type: "color",
+        color: "#" + [m[1], m[2], m[3]].map(n => ("0" + Number(n).toString(16)).slice(-2)).join("")
+      };
+    m = t.match(/^https?:\/\/([^\/?#\s]+)([^\s]*)$/i);
+    if (m)
+      return {
+        type: "link",
+        host: m[1].replace(/^www\./, ""),
+        rest: m[2]
+      };
+    if (/^(~\/|\/)[^\n]{1,300}$/.test(t) && t.length > 2) {
+      const slash = t.lastIndexOf("/");
+      return {
+        type: "file",
+        name: t.substring(slash + 1) || t,
+        folder: slash > 0 ? t.substring(0, slash) : "/"
+      };
+    }
+    return {
+      type: "text"
+    };
+  }
+
   function lineCount(text) {
     return text.split("\n").length;
   }
