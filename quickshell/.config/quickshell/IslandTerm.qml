@@ -124,6 +124,29 @@ Singleton {
     onTriggered: root.busy = false
   }
 
+  // The terminal itself closing (Super+Shift+Q, `exit`, a kill) while the
+  // island is grown into it: nothing is left to park, so the island just
+  // shrinks back to its pill. Without this it stayed a black rectangle until
+  // the next click.
+  Connections {
+    target: Hyprland
+
+    function onRawEvent(event) {
+      if (event.name !== "closewindow" || root.address === "" || !(root.covering || root.shown))
+        return;
+      const closed = event.data.replace(/^0x/, "");
+      if (closed !== root.address.replace(/^0x/, ""))
+        return;
+      openPlace.stop();
+      openReveal.stop();
+      closePark.stop();
+      root.address = "";
+      root.busy = true;
+      root.shown = false;
+      closeShrink.restart();
+    }
+  }
+
   // Leaving the workspace puts it away too, without the motion: it isn't on
   // screen to morph any more.
   Connections {
