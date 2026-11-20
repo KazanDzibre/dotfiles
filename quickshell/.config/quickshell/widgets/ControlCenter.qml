@@ -8,6 +8,7 @@
 // audio outputs, clipboard, updates…) is reached through `panelRequested`;
 // StatusCluster.qml owns those panels and opens them in this one's place.
 import QtQuick
+import QtQuick.Shapes
 import Quickshell
 import Quickshell.Io
 import Quickshell.Widgets
@@ -881,7 +882,11 @@ MorphPanel {
     width: root.inner
     height: 34
 
+    // The button being held down, and the one the pointer is over; the buttons
+    // that end your session fire only after being held (see `holdMs`).
     property string armed: ""
+    property string hovered: ""
+    readonly property int holdMs: 700
 
     readonly property var actions: [
       {
@@ -932,26 +937,17 @@ MorphPanel {
       id: sessionShift
     }
 
-    Timer {
-      id: disarm
-      interval: 3500
-      onTriggered: session.armed = ""
-    }
-
     Connections {
       target: root
       function onOpenedChanged() {
-        if (!root.opened)
+        if (!root.opened) {
           session.armed = "";
+          session.hovered = "";
+        }
       }
     }
 
     function trigger(action) {
-      if (action.confirm && session.armed !== action.id) {
-        session.armed = action.id;
-        disarm.restart();
-        return;
-      }
       session.armed = "";
       root.close();
       if (action.id === "screensaver")
@@ -965,11 +961,11 @@ MorphPanel {
       anchors.verticalCenter: parent.verticalCenter
       width: parent.width - powerRow.width - 10
       font.pixelSize: Theme.smallSize + 1
-      color: session.armed ? Theme.crit : Theme.fgDim
+      color: session.armed || session.hovered ? Theme.crit : Theme.fgDim
       text: {
-        if (session.armed) {
-          const a = session.actions.find(x => x.id === session.armed);
-          return "Click again to " + a.label.toLowerCase();
+        if (session.armed || session.hovered) {
+          const a = session.actions.find(x => x.id === (session.armed || session.hovered));
+          return "Hold to " + a.label.toLowerCase();
         }
         if (!root.battery || !root.battery.isPresent)
           return Time.longDate;
@@ -997,6 +993,8 @@ MorphPanel {
 
           required property var modelData
           readonly property bool isArmed: session.armed === modelData.id
+          // 0..1 while the button is held; drains back when let go early.
+          property real held: 0
 
           width: 32
           height: 32
@@ -1017,6 +1015,53 @@ MorphPanel {
             }
           }
 
+          // The ring that closes as you hold.
+          Shape {
+            anchors.fill: parent
+            visible: pw.held > 0.001
+            preferredRendererType: Shape.CurveRenderer
+
+            ShapePath {
+              strokeWidth: 2.4
+              strokeColor: Theme.crit
+              fillColor: "transparent"
+              capStyle: ShapePath.RoundCap
+
+              PathAngleArc {
+                centerX: pw.width / 2
+                centerY: pw.height / 2
+                radiusX: pw.width / 2 - 2
+                radiusY: pw.height / 2 - 2
+                startAngle: -90
+                sweepAngle: 360 * pw.held
+              }
+            }
+          }
+
+          NumberAnimation {
+            id: holdFill
+            target: pw
+            property: "held"
+            from: pw.held
+            to: 1
+            duration: session.holdMs * (1 - pw.held)
+            onFinished: {
+              if (pw.held >= 1) {
+                pw.held = 0;
+                session.trigger(pw.modelData);
+              }
+            }
+          }
+
+          NumberAnimation {
+            id: holdDrain
+            target: pw
+            property: "held"
+            to: 0
+            duration: 260 * pw.held
+            easing.type: Easing.OutQuad
+          }
+
           Glyph {
             anchors.centerIn: parent
             text: pw.modelData.glyph
@@ -1029,7 +1074,36 @@ MorphPanel {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: session.trigger(pw.modelData)
+            onContainsMouseChanged: {
+              if (containsMouse && pw.modelData.confirm)
+                session.hovered = pw.modelData.id;
+              else if (session.hovered === pw.modelData.id)
+                session.hovered = "";
+              // Sliding off while holding cancels it.
+              if (!containsMouse && pw.isArmed)
+                pwArea.release();
+            }
+            function release() {
+              holdFill.stop();
+              if (session.armed === pw.modelData.id)
+                session.armed = "";
+              holdDrain.restart();
+            }
+            onPressed: {
+              if (!pw.modelData.confirm)
+                return;
+              session.armed = pw.modelData.id;
+              holdDrain.stop();
+              holdFill.restart();
+            }
+            onReleased: if (pw.modelData.confirm)
+              pwArea.release()
+            onCanceled: if (pw.modelData.confirm)
+              pwArea.release()
+            onClicked: {
+              if (!pw.modelData.confirm)
+                session.trigger(pw.modelData);
+            }
           }
         }
       }
