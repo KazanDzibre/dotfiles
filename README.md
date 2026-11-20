@@ -12,6 +12,10 @@ cd ~/Nuketown/dotfiles
 stow -t ~ hypr quickshell screensaver nvim zed wireplumber alacritty fontconfig
 ```
 
+The island's Claude bubble needs hooks in `~/.claude/settings.json`, which is
+outside this repo: run `bootstrap/install-claude-hooks.sh` once (safe to re-run;
+`install.sh claude` does the same on Ubuntu). Open a new Claude Code session after.
+
 Stow refuses to overwrite files that already exist. If a package reports a
 conflict, move the existing file out of the way and run it again, or use
 `stow --adopt` to pull the existing file into the repo (then check `git diff`,

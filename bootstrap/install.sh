@@ -14,6 +14,7 @@
 #   bootstrap/install.sh quickshell build and install quickshell from source
 #   bootstrap/install.sh stow       symlink the config packages into $HOME
 #   bootstrap/install.sh theme      apply the Ptyxis terminal settings
+#   bootstrap/install.sh claude     add the Claude Code hooks the island's Claude bubble needs
 #   bootstrap/install.sh check      report what is present, change nothing
 #
 # Every phase is idempotent: re-running it is the normal way to fix a partial
@@ -387,6 +388,14 @@ phase_theme() {
 }
 
 # --------------------------------------------------------------------- check
+# The island's Claude bubble is fed by hooks in ~/.claude/settings.json, which is
+# outside this repo; install-claude-hooks.sh merges them in. Runs after stow,
+# because the hook script it names is reached through the stowed quickshell link.
+phase_claude() {
+    say "Claude Code hooks for the island"
+    "$REPO/bootstrap/install-claude-hooks.sh" || fail "claude hooks"
+}
+
 phase_check() {
     say "What is present"
 
@@ -447,6 +456,7 @@ main() {
         quickshell) phase_quickshell ;;
         stow)       phase_stow ;;
         theme)      phase_theme ;;
+        claude)     phase_claude ;;
         check)      phase_check; return 0 ;;
         all)
             phase_apt
@@ -456,6 +466,7 @@ main() {
             phase_quickshell
             phase_stow
             phase_theme
+            phase_claude
             phase_check
             ;;
         *)

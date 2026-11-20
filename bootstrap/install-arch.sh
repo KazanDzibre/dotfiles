@@ -151,6 +151,8 @@ check() {
   echo "  cd $(cd "$(dirname "$(readlink -f "$0")")/.." && pwd) && stow -t ~ hypr quickshell nvim wal fish screensaver starship zed wireplumber alacritty fontconfig"
   echo "  (not waypaper on Arch: its config.ini points at the Ubuntu laptop's post-command"
   echo "   script, so keep a local ~/.config/waypaper/config.ini that runs post-command.sh)"
+  echo
+  echo "  Then, for the island's Claude bubble: bootstrap/install-claude-hooks.sh"
 }
 
 case "${1:-all}" in
