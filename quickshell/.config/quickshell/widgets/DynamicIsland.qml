@@ -4669,9 +4669,15 @@ PanelWindow {
             color: memoArea.containsMouse ? Qt.rgba(1, 1, 1, 0.09) : "transparent"
             opacity: modelData.done ? 0.45 : 1
 
+            // The row settles to its faded state once the line has crossed.
             Behavior on opacity {
-              NumberAnimation {
-                duration: 220
+              SequentialAnimation {
+                PauseAnimation {
+                  duration: memoItem.modelData.done ? 180 : 0
+                }
+                NumberAnimation {
+                  duration: 220
+                }
               }
             }
 
@@ -4683,29 +4689,83 @@ PanelWindow {
               onClicked: Notes.toggle(memoItem.index)
             }
 
-            Rectangle {
+            Item {
               id: memoCheck
               anchors.left: parent.left
               anchors.leftMargin: 9
               anchors.verticalCenter: parent.verticalCenter
               width: 15
               height: 15
-              radius: 7.5
-              color: memoItem.modelData.done ? root.hot : "transparent"
-              border.width: memoItem.modelData.done ? 0 : 1.5
-              border.color: Qt.rgba(0.96, 0.94, 0.89, 0.55)
 
+              // The empty ring, which the fill covers.
+              Rectangle {
+                anchors.fill: parent
+                radius: 7.5
+                color: "transparent"
+                border.width: 1.5
+                border.color: Qt.rgba(0.96, 0.94, 0.89, 0.55)
+                opacity: memoItem.modelData.done ? 0 : 1
+
+                Behavior on opacity {
+                  NumberAnimation {
+                    duration: 160
+                  }
+                }
+              }
+
+              // The fill grows from the centre with a little overshoot.
+              Rectangle {
+                anchors.fill: parent
+                radius: 7.5
+                color: root.hot
+                scale: memoItem.modelData.done ? 1 : 0
+
+                Behavior on scale {
+                  NumberAnimation {
+                    duration: memoItem.modelData.done ? 260 : 140
+                    easing.type: memoItem.modelData.done ? Easing.OutBack : Easing.InQuad
+                    easing.overshoot: 1.8
+                  }
+                }
+              }
+
+              // The tick pops in just after the fill.
               Ink {
                 anchors.centerIn: parent
-                visible: memoItem.modelData.done
                 text: "✓"
                 font.pixelSize: 10
                 font.bold: true
                 color: "#140f08"
+                opacity: memoItem.modelData.done ? 1 : 0
+                scale: memoItem.modelData.done ? 1 : 0.3
+
+                Behavior on opacity {
+                  SequentialAnimation {
+                    PauseAnimation {
+                      duration: memoItem.modelData.done ? 90 : 0
+                    }
+                    NumberAnimation {
+                      duration: 120
+                    }
+                  }
+                }
+                Behavior on scale {
+                  SequentialAnimation {
+                    PauseAnimation {
+                      duration: memoItem.modelData.done ? 90 : 0
+                    }
+                    NumberAnimation {
+                      duration: 200
+                      easing.type: Easing.OutBack
+                      easing.overshoot: 2
+                    }
+                  }
+                }
               }
             }
 
             Ink {
+              id: memoText
               anchors.left: memoCheck.right
               anchors.leftMargin: 11
               anchors.right: memoEnd.left
@@ -4713,7 +4773,22 @@ PanelWindow {
               anchors.verticalCenter: parent.verticalCenter
               text: memoItem.modelData.text
               textFormat: Text.PlainText
-              font.strikeout: memoItem.modelData.done
+
+              // The strikethrough sweeps across the text instead of switching on.
+              Rectangle {
+                anchors.verticalCenter: parent.verticalCenter
+                height: 1.5
+                radius: 0.75
+                color: memoText.color
+                width: memoItem.modelData.done ? Math.min(memoText.contentWidth, memoText.width) : 0
+
+                Behavior on width {
+                  NumberAnimation {
+                    duration: memoItem.modelData.done ? 200 : 120
+                    easing.type: Easing.OutCubic
+                  }
+                }
+              }
             }
 
             Item {
