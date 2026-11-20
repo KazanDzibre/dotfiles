@@ -1042,9 +1042,10 @@ MorphPanel {
             id: holdFill
             target: pw
             property: "held"
-            from: pw.held
+            // `from` and `duration` are set when the press starts (a binding
+            // on the value being animated would change them mid-run).
             to: 1
-            duration: session.holdMs * (1 - pw.held)
+            duration: session.holdMs
             onFinished: {
               if (pw.held >= 1) {
                 pw.held = 0;
@@ -1058,7 +1059,7 @@ MorphPanel {
             target: pw
             property: "held"
             to: 0
-            duration: 260 * pw.held
+            duration: 260
             easing.type: Easing.OutQuad
           }
 
@@ -1094,7 +1095,10 @@ MorphPanel {
                 return;
               session.armed = pw.modelData.id;
               holdDrain.stop();
-              holdFill.restart();
+              holdFill.stop();
+              holdFill.from = pw.held;
+              holdFill.duration = session.holdMs * (1 - pw.held);
+              holdFill.start();
             }
             onReleased: if (pw.modelData.confirm)
               pwArea.release()
