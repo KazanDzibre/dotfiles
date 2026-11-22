@@ -29,13 +29,17 @@ present() {
   python3 - "$SETTINGS" "$HOOK" "${EVENTS[@]}" <<'PY'
 import json, sys
 path, cmd, events = sys.argv[1], sys.argv[2], sys.argv[3:]
+# Any command that runs claude-hook.py counts, however it's spelled (~ or
+# "$HOME", quoted or not), so hooks added by hand aren't added a second time.
+def ours(command):
+    return "claude-hook.py" in command
 try:
     hooks = json.load(open(path)).get("hooks", {})
 except Exception:
     sys.exit(0)
 for ev in events:
     for group in hooks.get(ev, []):
-        if any(h.get("command") == cmd for h in group.get("hooks", [])):
+        if any(ours(h.get("command", "")) for h in group.get("hooks", [])):
             print(ev)
             break
 PY
@@ -60,11 +64,15 @@ install() {
   python3 - "$SETTINGS" "$HOOK" "${EVENTS[@]}" <<'PY' || { echo "install-claude-hooks: $SETTINGS is not valid JSON, left unchanged" >&2; exit 1; }
 import json, sys
 path, cmd, events = sys.argv[1], sys.argv[2], sys.argv[3:]
+# Any command that runs claude-hook.py counts, however it's spelled (~ or
+# "$HOME", quoted or not), so hooks added by hand aren't added a second time.
+def ours(command):
+    return "claude-hook.py" in command
 data = json.load(open(path))
 hooks = data.setdefault("hooks", {})
 for ev in events:
     groups = hooks.setdefault(ev, [])
-    if not any(h.get("command") == cmd for g in groups for h in g.get("hooks", [])):
+    if not any(ours(h.get("command", "")) for g in groups for h in g.get("hooks", [])):
         groups.append({"hooks": [{"type": "command", "command": cmd}]})
 with open(path, "w") as f:
     json.dump(data, f, indent=2)
