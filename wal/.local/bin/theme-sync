@@ -546,15 +546,30 @@ def icons():
         run("gsettings", "set", "org.gnome.desktop.interface", "icon-theme", overlay.name)
 
 
+def mpv():
+    # uosc's colours: black like the island, the wallpaper accent for the
+    # timeline, buttons and selections. mpv.conf includes this file; open
+    # players pick it up when they next start.
+    colours = ",".join([
+        f"foreground={bare(ACCENT)}",
+        f"foreground_text={bare(ON_ACCENT)}",
+        "background=000000",
+        f"background_text={bare(FG)}",
+        "curtain=000000",
+        f"match={bare(ACCENT)}",
+    ])
+    write(CACHE / "mpv.conf", f"# theme-sync: uosc colours for the current wallpaper\nscript-opts-append=uosc-color={colours}\n")
+
+
 TERMINALS = [alacritty, ptyxis, gnome_terminal]
-TARGETS = [hyprland, hyprlock, btop, starship, kitty, alacritty, ptyxis, gnome_terminal, rofi, icons, gtk, kde, vscode, chromium, neovim]
+TARGETS = [hyprland, hyprlock, btop, starship, kitty, alacritty, ptyxis, gnome_terminal, rofi, icons, gtk, kde, vscode, chromium, neovim, mpv]
 
 
 def main():
     # `theme-sync terminal` themes only the terminals (what the Ubuntu
     # laptop's waypaper/wallpaper_update.sh asks for); `theme-sync icons` only
-    # the folder colour.
-    targets = {"terminal": TERMINALS, "icons": [icons]}.get(" ".join(sys.argv[1:]), TARGETS)
+    # the folder colour; `theme-sync mpv` only the player's.
+    targets = {"terminal": TERMINALS, "icons": [icons], "mpv": [mpv]}.get(" ".join(sys.argv[1:]), TARGETS)
     failures = []
     for target in targets:
         try:

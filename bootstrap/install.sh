@@ -32,7 +32,7 @@ FONT_DIR="$HOME/.local/share/fonts"
 
 # Packages that are stow packages in this repo. `reference` and `bootstrap` are
 # not -- the first is frozen prior art, the second is this script.
-STOW_PACKAGES=(hypr quickshell nvim zed rofi wal waypaper ptyxis env screensaver fish starship fontconfig alacritty)
+STOW_PACKAGES=(hypr quickshell nvim zed rofi wal waypaper ptyxis env screensaver fish starship fontconfig alacritty mpv)
 
 say()  { printf '\n\033[1;36m==>\033[0m %s\n' "$*"; }
 note() { printf '    %s\n' "$*"; }
@@ -78,7 +78,7 @@ stow git curl unzip jq fontconfig xdg-utils
 hyprland hyprpaper hypridle hyprlock xdg-desktop-portal-hyprland
 xdg-desktop-portal-gtk xwayland
 
-rofi neovim ptyxis alacritty fish starship
+rofi neovim ptyxis alacritty fish starship mpv
 
 # nodejs/npm: mason installs most of the language servers in
 # nvim/.config/nvim/lua/plugins/lsp.lua through npm.
@@ -434,6 +434,7 @@ phase_check() {
             starship) target="$HOME/.config/starship.toml" ;;
             env)    target="$HOME/.config/environment.d" ;;
             hypr)   target="$HOME/.config/hypr" ;;
+            mpv)    target="$HOME/.config/mpv/mpv.conf" ;;
             *)      target="$HOME/.config/$c" ;;
         esac
         if [ -L "$target" ]; then

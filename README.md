@@ -9,12 +9,15 @@ up at `~/.config/hypr/hyprland.conf`.
 ```sh
 git clone <this repo> ~/Nuketown/dotfiles
 cd ~/Nuketown/dotfiles
-stow -t ~ hypr quickshell screensaver nvim zed wireplumber alacritty fontconfig
+stow -t ~ hypr quickshell screensaver nvim zed wireplumber alacritty fontconfig mpv
 ```
 
 The island's Claude bubble needs hooks in `~/.claude/settings.json`, which is
 outside this repo: run `bootstrap/install-claude-hooks.sh` once (safe to re-run;
 `install.sh claude` does the same on Ubuntu). Open a new Claude Code session after.
+
+mpv's player UI (uosc, with seek bar previews) is downloaded, not stored here:
+run `bootstrap/install-mpv-ui.sh` once after stowing `mpv`.
 
 Stow refuses to overwrite files that already exist. If a package reports a
 conflict, move the existing file out of the way and run it again, or use
@@ -31,6 +34,7 @@ because adopting replaces the repo's version with the one on disk).
 | `quickshell`  | the bar                                                             |
 | `screensaver` | fullscreen terminal screensaver, started from the bar's power menu  |
 | `nvim`        | Neovim                                                              |
+| `mpv`         | mpv: settings, keys and the uosc player UI's options (`bootstrap/install-mpv-ui.sh` installs uosc itself) |
 | `zed`         | Zed, with the Neovim keys; `Space H` opens its cheatsheet. Stow it before Zed's first launch, or `~/.config/zed` exists and conflicts |
 | `rofi`, `wal`, `waypaper` | launcher, pywal templates, wallpaper picker             |
 
