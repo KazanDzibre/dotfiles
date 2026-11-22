@@ -3,7 +3,9 @@
 // Each existing workspace is a small dot in the colour of its main app; the one
 // this screen is showing is covered by a pill, and the focused one takes the
 // accent colour. A dot pulses when a window there wants attention. No numbers,
-// as in the bar design. Click to switch, scroll anywhere on the group to cycle.
+// as in the bar design, until SUPER+N (WorkspaceNumbers.qml): then every dot
+// widens into a small pill with its workspace number on it, until SUPER+N again.
+// Click to switch, scroll anywhere on the group to cycle.
 //
 // The pill is one rectangle whose two edges are driven by separate springs. The
 // edge in the direction of travel is stiff and arrives first; the trailing edge
@@ -35,6 +37,21 @@ Item {
 
   implicitWidth: row.implicitWidth
   implicitHeight: 18
+
+  // SUPER+N: dots become numbered pills.
+  readonly property bool numbered: WorkspaceNumbers.shown
+  readonly property real dotW: numbered ? 17 : 8
+  readonly property real dotH: numbered ? 14 : 8
+
+  // Number colour on a dot: dark on a bright colour, light on a dark or faint one.
+  function ink(c) {
+    if (c.a < 0.6)
+      return Theme.fg;
+    const lum = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+    return lum > 0.45 ? Qt.rgba(0.04, 0.04, 0.04, 0.9) : Qt.rgba(1, 1, 1, 0.95);
+  }
+
+  readonly property var sizeEase: [0.16, 1, 0.3, 1, 1, 1]
 
   // The slot of the workspace this screen is showing. `rep.count` is read so the
   // binding re-runs once the Repeater has actually built the delegate.
@@ -175,7 +192,7 @@ Item {
 
         // The active slot is wider so the pill has room; the dot itself stays
         // a dot and the pill, drawn above, does the stretching.
-        implicitWidth: slot.active ? 22 : 8
+        implicitWidth: slot.active ? root.dotW + 14 : root.dotW
         implicitHeight: 18
 
         Behavior on implicitWidth {
@@ -192,10 +209,47 @@ Item {
           id: dot
 
           anchors.centerIn: parent
-          width: 8
-          height: 8
-          radius: 4
+          width: root.dotW
+          height: root.dotH
+          radius: height / 2
           color: slot.tone
+
+          Behavior on width {
+            NumberAnimation {
+              duration: 220
+              easing.type: Easing.BezierSpline
+              easing.bezierCurve: root.sizeEase
+            }
+          }
+          Behavior on height {
+            NumberAnimation {
+              duration: 220
+              easing.type: Easing.BezierSpline
+              easing.bezierCurve: root.sizeEase
+            }
+          }
+
+          Text {
+            anchors.centerIn: parent
+            text: slot.modelData.id
+            color: root.ink(slot.tone)
+            font.family: Theme.fontFamily
+            font.pixelSize: 11
+            font.bold: true
+            opacity: root.numbered ? 1 : 0
+            scale: root.numbered ? 1 : 0.5
+            Behavior on opacity {
+              NumberAnimation {
+                duration: 180
+              }
+            }
+            Behavior on scale {
+              NumberAnimation {
+                duration: 220
+                easing.type: Easing.OutBack
+              }
+            }
+          }
 
           SequentialAnimation on scale {
             running: slot.urgent
@@ -246,9 +300,9 @@ Item {
     visible: root.activeSlot !== null && (Math.abs(root.ghostLeft - root.edgeLeft) > 1.5 || Math.abs(root.ghostRight - root.edgeRight) > 1.5)
     y: (root.height - height) / 2
     x: Math.min(root.ghostLeft, root.ghostRight)
-    width: Math.max(8, Math.abs(root.ghostRight - root.ghostLeft))
-    height: 8
-    radius: 4
+    width: Math.max(root.dotW, Math.abs(root.ghostRight - root.ghostLeft))
+    height: root.dotH
+    radius: height / 2
     color: pill.color
     opacity: 0.25
   }
@@ -287,10 +341,41 @@ Item {
     // Edges can cross for a frame while the springs overshoot; sort them so the
     // width never goes negative, and never shrink below a dot.
     x: Math.min(root.edgeLeft, root.edgeRight)
-    width: Math.max(8, Math.abs(root.edgeRight - root.edgeLeft))
-    height: 8
-    radius: 4
+    width: Math.max(root.dotW, Math.abs(root.edgeRight - root.edgeLeft))
+    height: root.dotH
+    radius: height / 2
     color: root.activeSlot ? root.activeSlot.tone : Theme.accent
+
+    Behavior on height {
+      NumberAnimation {
+        duration: 220
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: root.sizeEase
+      }
+    }
+
+    // The pill covers the active dot, so it carries that number itself.
+    Text {
+      anchors.centerIn: parent
+      text: root.activeSlot ? root.activeSlot.modelData.id : ""
+      color: root.ink(pill.color)
+      font.family: Theme.fontFamily
+      font.pixelSize: 11
+      font.bold: true
+      opacity: root.numbered ? 1 : 0
+      scale: root.numbered ? 1 : 0.5
+      Behavior on opacity {
+        NumberAnimation {
+          duration: 180
+        }
+      }
+      Behavior on scale {
+        NumberAnimation {
+          duration: 220
+          easing.type: Easing.OutBack
+        }
+      }
+    }
 
     Behavior on color {
       ColorAnimation {

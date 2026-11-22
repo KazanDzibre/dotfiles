@@ -422,6 +422,8 @@ hl.bind(mainMod .. " + SHIFT + W", hl.dsp.global("quickshell:wallpaperPicker"))
 hl.bind(mainMod .. " + SHIFT + P", hl.dsp.global("quickshell:screenshotRegion"))
 -- Every workspace side by side (WorkspaceOverview.qml); again, or Esc, closes it.
 hl.bind(mainMod .. " + Tab",       hl.dsp.global("quickshell:overview"))
+-- Numbers on the bar's workspace dots (WorkspaceNumbers.qml); again hides them.
+hl.bind(mainMod .. " + N",         hl.dsp.global("quickshell:workspaceNumbers"))
 
 
 --------------------------------

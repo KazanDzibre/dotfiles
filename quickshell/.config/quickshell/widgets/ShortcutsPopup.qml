@@ -26,7 +26,7 @@ MorphPanel {
     },
     {
       title: "KEYS",
-      rows: [["Super Shift D", "Search"], ["Super Shift V", "Clipboard history"], ["Super Shift W", "Wallpaper picker"], ["Super Shift P", "Screenshot an area (also Print)"], ["Shift Print", "Screenshot the whole screen"], ["Super Shift A", "Keep awake"]]
+      rows: [["Super Shift D", "Search"], ["Super Shift V", "Clipboard history"], ["Super Shift W", "Wallpaper picker"], ["Super Shift P", "Screenshot an area (also Print)"], ["Shift Print", "Screenshot the whole screen"], ["Super Shift A", "Keep awake"], ["Super N", "Workspace numbers on the dots"]]
     }
   ]
 
