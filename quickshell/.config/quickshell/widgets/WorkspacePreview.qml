@@ -245,7 +245,7 @@ PanelWindow {
 
       Text {
         anchors.verticalCenter: parent.verticalCenter
-        text: root.workspace ? "Workspace " + root.workspace.name : ""
+        text: root.workspace ? "Workspace " + WorkspaceNumbers.label(root.workspace.id) : ""
         font.family: Theme.fontFamily
         font.pixelSize: Theme.fontSize
         color: Theme.fg

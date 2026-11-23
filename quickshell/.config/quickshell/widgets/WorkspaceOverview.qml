@@ -47,7 +47,7 @@ PanelWindow {
   // seeing what is open anywhere. Ones living on another screen carry that
   // screen's name on their card, and landing on one moves you to that screen
   // instead of zooming this one.
-  readonly property var workspaces: Array.from(Hyprland.workspaces.values).filter(w => w.id > 0).sort((a, b) => a.id - b.id)
+  readonly property var workspaces: Array.from(Hyprland.workspaces.values).filter(w => w.id > 0).sort((a, b) => WorkspaceNumbers.order(a.id) - WorkspaceNumbers.order(b.id))
 
   function isLocal(ws) {
     return !ws || !root.monitor || !ws.monitor || ws.monitor.name === root.monitor.name;
@@ -627,7 +627,7 @@ PanelWindow {
         Text {
           anchors.verticalCenter: parent.verticalCenter
           visible: !card.isNew
-          text: card.ws ? card.ws.name : ""
+          text: card.ws ? WorkspaceNumbers.label(card.ws.id) : ""
           font.family: Theme.fontFamily
           font.pixelSize: Theme.fontSize
           font.bold: true

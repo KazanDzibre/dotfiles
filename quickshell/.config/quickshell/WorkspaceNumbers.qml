@@ -16,6 +16,15 @@ Singleton {
 
   property bool shown: false
 
+  // Workspace 11 (SUPER+M) is shown as 0 and sorted first, everywhere the
+  // shell shows a workspace number: the bar, the overview, the hover preview.
+  function label(id) {
+    return id === 11 ? "0" : String(id);
+  }
+  function order(id) {
+    return id === 11 ? 0 : id;
+  }
+
   function toggle() {
     root.shown = !root.shown;
   }
