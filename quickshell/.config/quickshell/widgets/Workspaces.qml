@@ -141,7 +141,7 @@ Item {
   // nothing that has no monitor yet.
   ScriptModel {
     id: wsModel
-    values: Array.from(Hyprland.workspaces.values).filter(w => w.id > 0 && (!root.monitor || (w.monitor && w.monitor.name === root.monitor.name))).sort((a, b) => a.id - b.id)
+    values: Array.from(Hyprland.workspaces.values).filter(w => w.id > 0 && (!root.monitor || (w.monitor && w.monitor.name === root.monitor.name))).sort((a, b) => (a.id === 11 ? 0 : a.id) - (b.id === 11 ? 0 : b.id))
   }
 
   Row {
@@ -231,7 +231,7 @@ Item {
 
           Text {
             anchors.centerIn: parent
-            text: slot.modelData.id
+            text: slot.modelData.id === 11 ? 0 : slot.modelData.id
             color: root.ink(slot.tone)
             font.family: Theme.fontFamily
             font.pixelSize: 11
@@ -357,7 +357,7 @@ Item {
     // The pill covers the active dot, so it carries that number itself.
     Text {
       anchors.centerIn: parent
-      text: root.activeSlot ? root.activeSlot.modelData.id : ""
+      text: root.activeSlot ? (root.activeSlot.modelData.id === 11 ? 0 : root.activeSlot.modelData.id) : ""
       color: root.ink(pill.color)
       font.family: Theme.fontFamily
       font.pixelSize: 11
