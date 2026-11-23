@@ -14,6 +14,7 @@
 #   bootstrap/install.sh quickshell build and install quickshell from source
 #   bootstrap/install.sh stow       symlink the config packages into $HOME
 #   bootstrap/install.sh theme      apply the Ptyxis terminal settings
+#   bootstrap/install.sh lid        keep running with the lid shut (logind ignores the lid switch)
 #   bootstrap/install.sh claude     add the Claude Code hooks the island's Claude bubble needs
 #   bootstrap/install.sh check      report what is present, change nothing
 #
@@ -387,6 +388,25 @@ phase_theme() {
     "$script" || fail "ptyxis-theme.sh reported a problem"
 }
 
+# ---------------------------------------------------------------------- lid
+#
+# With the laptop shut and only external monitors in use, logind would suspend
+# it on the lid switch (on battery or on mains -- the "docked" exemption is
+# unreliable). A drop-in sets all three lid actions to ignore; Hyprland keeps
+# eDP-1 disabled in hyprland.conf, so the panel stays dark either way.
+phase_lid() {
+    say "Keeping the laptop awake with the lid closed"
+
+    require_sudo || { fail "phase_lid: no terminal for sudo"; return 1; }
+    local dir=/etc/systemd/logind.conf.d
+    sudo mkdir -p "$dir" || { fail "mkdir $dir"; return 1; }
+    printf '[Login]\nHandleLidSwitch=ignore\nHandleLidSwitchExternalPower=ignore\nHandleLidSwitchDocked=ignore\n' \
+        | sudo tee "$dir/lid-ignore.conf" >/dev/null || { fail "write lid-ignore.conf"; return 1; }
+    # logind re-reads this on SIGHUP; restarting it would end the session.
+    sudo systemctl kill -s HUP systemd-logind || { fail "reload logind"; return 1; }
+    note "lid switch ignored"
+}
+
 # --------------------------------------------------------------------- check
 # The island's Claude bubble is fed by hooks in ~/.claude/settings.json, which is
 # outside this repo; install-claude-hooks.sh merges them in. Runs after stow,
@@ -457,6 +477,7 @@ main() {
         quickshell) phase_quickshell ;;
         stow)       phase_stow ;;
         theme)      phase_theme ;;
+        lid)        phase_lid ;;
         claude)     phase_claude ;;
         check)      phase_check; return 0 ;;
         all)
@@ -467,6 +488,7 @@ main() {
             phase_quickshell
             phase_stow
             phase_theme
+            phase_lid
             phase_claude
             phase_check
             ;;
