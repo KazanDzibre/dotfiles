@@ -139,6 +139,10 @@ Singleton {
 
   // ---------------------------------------------------------------- windows
   readonly property string windows: String.fromCodePoint(0xe6fa)
+  readonly property string tv: String.fromCodePoint(0xe63b)
+  readonly property string unpark: String.fromCodePoint(0xf70d)   // pip_exit
+  readonly property string replay10: String.fromCodePoint(0xe059)
+  readonly property string forward10: String.fromCodePoint(0xe056)
   readonly property string close: String.fromCodePoint(0xe5cd)
 
   // ------------------------------------------------------------- wallpaper

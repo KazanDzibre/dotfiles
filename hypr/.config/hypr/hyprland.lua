@@ -424,6 +424,8 @@ hl.bind(mainMod .. " + SHIFT + P", hl.dsp.global("quickshell:screenshotRegion"))
 hl.bind(mainMod .. " + Tab",       hl.dsp.global("quickshell:overview"))
 -- Numbers on the bar's workspace dots (WorkspaceNumbers.qml); again hides them.
 hl.bind(mainMod .. " + N",         hl.dsp.global("quickshell:workspaceNumbers"))
+-- Park the focused window inside the island as a live screen (IslandPark.qml); again sends it back.
+hl.bind(mainMod .. " + I",         hl.dsp.global("quickshell:islandPark"))
 
 
 --------------------------------
@@ -502,6 +504,28 @@ hl.window_rule({
     rounding    = 22,
     border_size = 0,
     no_shadow   = true,
+})
+
+-- The island TV (IslandPark.qml). A parked window is tagged islandtv-frame as it
+-- flies into the island (no border or shadow, the island's corners), then
+-- islandtv once the island covers it: it waits just above the top edge with a
+-- 2px sliver on screen, which keeps it drawing so the island's live picture
+-- keeps moving. Opacity 0 would stop Hyprland drawing it (the picture
+-- freezes); 0.01 is invisible but still drawn. set_prop opacity has no effect
+-- here, so this is a rule.
+hl.window_rule({
+    name  = "island-tv-frame",
+    match = { tag = "islandtv-frame" },
+
+    rounding    = 16,
+    border_size = 0,
+    no_shadow   = true,
+})
+hl.window_rule({
+    name  = "island-tv",
+    match = { tag = "islandtv" },
+
+    opacity = "0.01 override",
 })
 
 -- Quickshell wallpaper picker (WallpaperPicker.qml). Its scrim is only ~22%

@@ -451,6 +451,10 @@ PanelWindow {
       return "today";
     if (ClaudeCode.waiting)
       return "claudeWaiting";
+    // A window parked in the island (IslandPark.qml, SUPER+I): the island is
+    // its live screen until it's sent back.
+    if (IslandPark.shown)
+      return "park";
     // Everything that runs for a while (Claude working, the AI answering,
     // updates, a download, the focus timer, a tone, a meeting coming up) sits
     // beside the island as a bubble instead, so the island stays yours.
@@ -862,6 +866,9 @@ PanelWindow {
     case "term":
       // Exactly the terminal's rectangle: the island becomes it.
       return [IslandTerm.width, IslandTerm.height];
+    case "park":
+      // The parked window's size plus a black frame around it.
+      return [IslandPark.width + 2 * IslandPark.frame, IslandPark.height + 2 * IslandPark.frame];
     case "player":
       return [400, 154 + (Lyrics.available ? 76 : 0)];
     case "claudeWaiting":
@@ -1088,6 +1095,14 @@ PanelWindow {
     case "meeting":
       Calendar.join(root.moment.event);
       Moments.dismiss();
+      return;
+    case "park":
+      // Clicking the picture plays or pauses it; the return button (or SUPER+I)
+      // sends the window back.
+      if (IslandPark.player)
+        IslandPark.player.togglePlaying();
+      else
+        IslandPark.unpark();
       return;
     case "music":
     case "clock":
@@ -1721,7 +1736,7 @@ PanelWindow {
     width: root.size[0] + root.tailTarget
     height: root.size[1]
     // The terminal's corners while covering it, so the hand-off has no seam.
-    radius: Math.min(height / 2, root.mode === "term" ? IslandTerm.radius : 30)
+    radius: Math.min(height / 2, root.mode === "term" ? IslandTerm.radius : root.mode === "park" ? IslandPark.radius + IslandPark.frame : 30)
     color: "#050403"
     border.width: 1
     // No rim while it's the terminal's shape, so the hand-over has no seam.
@@ -3015,6 +3030,260 @@ PanelWindow {
           font.pixelSize: Theme.smallSize + 1
           textFormat: Text.PlainText
         }
+      }
+    }
+
+    // ------------------------------------------------- parked window
+    // A live picture of the window parked in the island (IslandPark.qml).
+    Layer {
+      id: parkLayer
+      key: "park"
+
+      ClippingRectangle {
+        id: tvScreen
+        anchors.fill: parent
+        anchors.margins: IslandPark.frame
+        radius: IslandPark.radius
+        color: "black"
+
+        ScreencopyView {
+          id: parkCapture
+          anchors.fill: parent
+          live: parkLayer.shown
+          captureSource: parkLayer.shown && IslandPark.ready ? IslandPark.toplevel : null
+          opacity: hasContent && IslandPark.ready ? 1 : 0
+          Behavior on opacity {
+            NumberAnimation {
+              duration: Theme.motionBase
+            }
+          }
+          // Starting a capture needs a first frame asked for explicitly.
+          onCaptureSourceChanged: if (captureSource)
+            captureFrame()
+        }
+
+        // The controls, over the picture while the island is hovered big.
+        Item {
+          id: tvControls
+          anchors.fill: parent
+          opacity: IslandPark.expanded ? 1 : 0
+          visible: opacity > 0.01
+          Behavior on opacity {
+            NumberAnimation {
+              duration: Theme.motionBase
+              easing.type: Easing.OutCubic
+            }
+          }
+
+          readonly property var player: IslandPark.player
+          readonly property bool playing: player !== null && player.isPlaying
+          readonly property real length: player && player.lengthSupported ? player.length : 0
+          readonly property real position: player && player.positionSupported ? player.position : 0
+
+          // Shade top and bottom so the controls read over any picture.
+          Rectangle {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            height: 76
+            gradient: Gradient {
+              GradientStop {
+                position: 0
+                color: "transparent"
+              }
+              GradientStop {
+                position: 1
+                color: Qt.rgba(0, 0, 0, 0.82)
+              }
+            }
+          }
+          Rectangle {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            height: 52
+            gradient: Gradient {
+              GradientStop {
+                position: 0
+                color: Qt.rgba(0, 0, 0, 0.6)
+              }
+              GradientStop {
+                position: 1
+                color: "transparent"
+              }
+            }
+          }
+
+          Ink {
+            anchors.left: parent.left
+            anchors.leftMargin: 14
+            anchors.right: tvReturn.left
+            anchors.rightMargin: 10
+            anchors.verticalCenter: tvReturn.verticalCenter
+            text: tvControls.player && tvControls.player.trackTitle ? tvControls.player.trackTitle : IslandPark.title
+            font.pixelSize: Theme.smallSize + 1
+            font.features: ({})
+            font.weight: Font.DemiBold
+          }
+
+          // Send the window back to where it was.
+          Rectangle {
+            id: tvReturn
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.margins: 8
+            width: 28
+            height: 28
+            radius: 14
+            color: tvReturnArea.containsMouse ? Qt.rgba(1, 1, 1, 0.22) : Qt.rgba(1, 1, 1, 0.1)
+
+            Ink {
+              anchors.centerIn: parent
+              font.family: Theme.iconFamily
+              font.pixelSize: Theme.iconSize + 1
+              text: Icons.unpark
+            }
+            MouseArea {
+              id: tvReturnArea
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: IslandPark.unpark()
+            }
+          }
+
+          Row {
+            id: tvButtons
+            visible: tvControls.player !== null
+            anchors.left: parent.left
+            anchors.leftMargin: 10
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 8
+            spacing: 2
+
+            Repeater {
+              model: [
+                {
+                  glyph: Icons.replay10,
+                  act: "back"
+                },
+                {
+                  glyph: tvControls.playing ? Icons.pause : Icons.play,
+                  act: "play"
+                },
+                {
+                  glyph: Icons.forward10,
+                  act: "fwd"
+                }
+              ]
+
+              Rectangle {
+                required property var modelData
+                width: 30
+                height: 30
+                radius: 15
+                color: tvBtnArea.containsMouse ? Qt.rgba(1, 1, 1, 0.18) : "transparent"
+
+                Ink {
+                  anchors.centerIn: parent
+                  font.family: Theme.iconFamily
+                  font.pixelSize: modelData.act === "play" ? Theme.iconSize + 6 : Theme.iconSize + 2
+                  text: modelData.glyph
+                }
+                MouseArea {
+                  id: tvBtnArea
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: {
+                    const p = tvControls.player;
+                    if (!p)
+                      return;
+                    if (modelData.act === "play")
+                      p.togglePlaying();
+                    else if (p.canSeek)
+                      p.seek(modelData.act === "fwd" ? 10 : -10);
+                  }
+                }
+              }
+            }
+          }
+
+          Ink {
+            id: tvTime
+            visible: tvControls.length > 0
+            anchors.right: parent.right
+            anchors.rightMargin: 14
+            anchors.verticalCenter: tvButtons.verticalCenter
+            text: Media.formatTime(tvControls.position) + " / " + Media.formatTime(tvControls.length)
+            font.pixelSize: Theme.smallSize
+            color: root.inkDim
+          }
+
+          // The seek bar: click or drag along it.
+          Item {
+            visible: tvControls.length > 0
+            anchors.left: tvButtons.right
+            anchors.leftMargin: 10
+            anchors.right: tvTime.left
+            anchors.rightMargin: 12
+            anchors.verticalCenter: tvButtons.verticalCenter
+            height: 16
+
+            Rectangle {
+              id: tvTrack
+              anchors.left: parent.left
+              anchors.right: parent.right
+              anchors.verticalCenter: parent.verticalCenter
+              height: tvSeekArea.containsMouse ? 5 : 3
+              radius: height / 2
+              color: Qt.rgba(1, 1, 1, 0.25)
+              Behavior on height {
+                NumberAnimation {
+                  duration: Theme.motionQuick
+                }
+              }
+
+              Rectangle {
+                width: tvControls.length > 0 ? parent.width * Math.min(1, tvControls.position / tvControls.length) : 0
+                height: parent.height
+                radius: parent.radius
+                color: root.hot
+              }
+            }
+            MouseArea {
+              id: tvSeekArea
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              function seekTo(x) {
+                const p = tvControls.player;
+                if (p && p.canSeek && tvControls.length > 0)
+                  p.position = tvControls.length * Math.max(0, Math.min(1, x / width));
+              }
+              onPressed: mouse => seekTo(mouse.x)
+              onPositionChanged: mouse => {
+                if (pressed)
+                  seekTo(mouse.x);
+              }
+            }
+          }
+        }
+      }
+
+      // Hovered, the island grows into the big screen; leaving shrinks it back
+      // after a moment, so brushing past doesn't make it jump.
+      Binding {
+        target: IslandPark
+        property: "expanded"
+        value: true
+        when: root.mode === "park" && islandHover.hovered
+        restoreMode: Binding.RestoreNone
+      }
+      Timer {
+        running: root.mode === "park" && !islandHover.hovered && IslandPark.expanded
+        interval: 700
+        onTriggered: IslandPark.expanded = false
       }
     }
 
