@@ -22,7 +22,8 @@ MorphPanel {
       anchors.left: parent.left
       anchors.verticalCenter: parent.verticalCenter
       text: "BRIGHTNESS"
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.smallSize
       font.bold: true
       font.letterSpacing: 1
@@ -33,7 +34,8 @@ MorphPanel {
       anchors.right: parent.right
       anchors.verticalCenter: parent.verticalCenter
       text: Backlight.brightnessAvailable ? Math.round(Backlight.brightness * 100) + "%" : "unavailable"
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.fontSize
       font.bold: true
       color: Backlight.brightnessAvailable ? Theme.accent : Theme.fgDim
@@ -49,7 +51,7 @@ MorphPanel {
       width: 20
       horizontalAlignment: Text.AlignHCenter
       text: Backlight.brightness < 0.4 ? Icons.brightnessLow : Icons.brightness
-      font.family: Theme.fontFamily
+      font.family: Theme.iconFamily
       font.pixelSize: Theme.iconSize + 2
       color: Theme.accent
     }
@@ -78,7 +80,8 @@ MorphPanel {
       anchors.left: parent.left
       anchors.verticalCenter: parent.verticalCenter
       text: "WARMTH"
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.smallSize
       font.bold: true
       font.letterSpacing: 1
@@ -89,7 +92,8 @@ MorphPanel {
       anchors.right: parent.right
       anchors.verticalCenter: parent.verticalCenter
       text: !Backlight.temperatureAvailable ? "unavailable" : Backlight.temperature >= Backlight.neutralTemperature ? "off" : Backlight.temperature + "K"
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.fontSize
       font.bold: true
       color: !Backlight.temperatureAvailable ? Theme.fgDim : Backlight.temperature >= Backlight.neutralTemperature ? Theme.fgDim : Backlight.kelvinToColor(Backlight.temperature)
@@ -105,7 +109,7 @@ MorphPanel {
       width: 20
       horizontalAlignment: Text.AlignHCenter
       text: Icons.warmth
-      font.family: Theme.fontFamily
+      font.family: Theme.iconFamily
       font.pixelSize: Theme.iconSize + 2
       color: Backlight.temperatureAvailable ? Backlight.kelvinToColor(Backlight.temperature) : Theme.fgDim
     }
@@ -132,7 +136,7 @@ MorphPanel {
     Text {
       anchors.top: parent.top
       text: Icons.alert
-      font.family: Theme.fontFamily
+      font.family: Theme.iconFamily
       font.pixelSize: Theme.iconSize
       color: Theme.warn
     }
@@ -145,7 +149,8 @@ MorphPanel {
         width: parent.width
         text: "Warmth needs hyprsunset."
         wrapMode: Text.WordWrap
-        font.family: Theme.fontFamily
+        font.family: Theme.textFamily
+        font.features: Theme.tabular
         font.pixelSize: Theme.smallSize
         color: Theme.fg
       }
@@ -154,7 +159,8 @@ MorphPanel {
         width: parent.width
         text: Updates.manager === "apt" ? "Not packaged for Ubuntu; build it from source (github.com/hyprwm/hyprsunset)." : "sudo pacman -S hyprsunset"
         wrapMode: Text.WordWrap
-        font.family: Theme.fontFamily
+        font.family: Theme.textFamily
+        font.features: Theme.tabular
         font.pixelSize: Theme.smallSize
         color: Theme.fgDim
       }

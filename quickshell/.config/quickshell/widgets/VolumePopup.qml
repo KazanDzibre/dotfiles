@@ -54,7 +54,8 @@ MorphPanel {
   // ------------------------------------------------------------------ output
   Text {
     text: "OUTPUT"
-    font.family: Theme.fontFamily
+    font.family: Theme.textFamily
+    font.features: Theme.tabular
     font.pixelSize: Theme.smallSize
     font.bold: true
     font.letterSpacing: 1
@@ -71,7 +72,8 @@ MorphPanel {
       width: parent.width - 46
       text: root.nodeLabel(root.sink)
       elide: Text.ElideRight
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.fontSize
       color: Theme.fg
     }
@@ -80,7 +82,8 @@ MorphPanel {
       anchors.right: parent.right
       anchors.verticalCenter: parent.verticalCenter
       text: root.sinkAudio ? Math.round(root.sinkAudio.volume * 100) + "%" : "--"
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.fontSize
       font.bold: true
       color: Theme.accent
@@ -108,7 +111,7 @@ MorphPanel {
       Text {
         anchors.centerIn: parent
         text: root.sinkAudio && root.sinkAudio.muted ? Icons.volMute : Icons.volHigh
-        font.family: Theme.fontFamily
+        font.family: Theme.iconFamily
         font.pixelSize: Theme.iconSize
         color: root.sinkAudio && root.sinkAudio.muted ? Theme.base : Theme.fg
       }
@@ -174,7 +177,8 @@ MorphPanel {
 
   Text {
     text: "APPS"
-    font.family: Theme.fontFamily
+    font.family: Theme.textFamily
+    font.features: Theme.tabular
     font.pixelSize: Theme.smallSize
     font.bold: true
     font.letterSpacing: 1
@@ -215,7 +219,7 @@ MorphPanel {
           Text {
             anchors.centerIn: parent
             text: appRow.audio && appRow.audio.muted ? Icons.volMute : Icons.volHigh
-            font.family: Theme.fontFamily
+            font.family: Theme.iconFamily
             font.pixelSize: Theme.iconSize - 2
             color: appRow.audio && appRow.audio.muted ? Theme.base : Theme.fg
           }
@@ -244,7 +248,8 @@ MorphPanel {
               width: parent.width - 40
               text: root.appLabel(appRow.modelData)
               elide: Text.ElideRight
-              font.family: Theme.fontFamily
+              font.family: Theme.textFamily
+              font.features: Theme.tabular
               font.pixelSize: Theme.smallSize + 1
               color: Theme.fg
             }
@@ -253,7 +258,8 @@ MorphPanel {
               anchors.right: parent.right
               anchors.verticalCenter: parent.verticalCenter
               text: appRow.audio ? Math.round(appRow.audio.volume * 100) + "%" : "--"
-              font.family: Theme.fontFamily
+              font.family: Theme.textFamily
+              font.features: Theme.tabular
               font.pixelSize: Theme.smallSize + 1
               font.bold: true
               color: Theme.accent
@@ -280,7 +286,8 @@ MorphPanel {
 
   Text {
     text: "MICROPHONE"
-    font.family: Theme.fontFamily
+    font.family: Theme.textFamily
+    font.features: Theme.tabular
     font.pixelSize: Theme.smallSize
     font.bold: true
     font.letterSpacing: 1
@@ -307,7 +314,7 @@ MorphPanel {
       Text {
         anchors.centerIn: parent
         text: root.sourceAudio && root.sourceAudio.muted ? Icons.micOff : Icons.mic
-        font.family: Theme.fontFamily
+        font.family: Theme.iconFamily
         font.pixelSize: Theme.iconSize
         color: root.sourceAudio && root.sourceAudio.muted ? Theme.base : Theme.fg
       }
@@ -346,7 +353,8 @@ MorphPanel {
 
   Text {
     text: "PLAY THROUGH"
-    font.family: Theme.fontFamily
+    font.family: Theme.textFamily
+    font.features: Theme.tabular
     font.pixelSize: Theme.smallSize
     font.bold: true
     font.letterSpacing: 1
@@ -386,7 +394,8 @@ MorphPanel {
           width: parent.width - 34
           text: root.nodeLabel(deviceRow.modelData)
           elide: Text.ElideRight
-          font.family: Theme.fontFamily
+          font.family: Theme.textFamily
+          font.features: Theme.tabular
           font.pixelSize: Theme.fontSize
           color: deviceRow.current ? Theme.accent : Theme.fg
         }
@@ -397,7 +406,7 @@ MorphPanel {
           anchors.verticalCenter: parent.verticalCenter
           visible: deviceRow.current
           text: Icons.check
-          font.family: Theme.fontFamily
+          font.family: Theme.iconFamily
           font.pixelSize: Theme.iconSize
           color: Theme.accent
         }

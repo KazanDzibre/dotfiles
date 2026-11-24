@@ -233,7 +233,8 @@ Item {
             anchors.centerIn: parent
             text: WorkspaceNumbers.label(slot.modelData.id)
             color: root.ink(slot.tone)
-            font.family: Theme.fontFamily
+            font.family: Theme.textFamily
+            font.features: Theme.tabular
             font.pixelSize: 11
             font.bold: true
             opacity: root.numbered ? 1 : 0
@@ -359,7 +360,8 @@ Item {
       anchors.centerIn: parent
       text: root.activeSlot ? WorkspaceNumbers.label(root.activeSlot.modelData.id) : ""
       color: root.ink(pill.color)
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: 11
       font.bold: true
       opacity: root.numbered ? 1 : 0

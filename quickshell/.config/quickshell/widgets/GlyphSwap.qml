@@ -49,7 +49,7 @@ Item {
     id: cur
     anchors.centerIn: parent
     text: root.text
-    font.family: Theme.fontFamily
+    font.family: Theme.iconFamily
     font.pixelSize: Theme.iconSize
     color: root.color
   }

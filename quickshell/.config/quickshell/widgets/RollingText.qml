@@ -15,6 +15,8 @@ Row {
   property color color: Theme.fg
   property int pixelSize: Theme.fontSize
   property bool bold: false
+  // Inter with tabular digits; the clock skins pass Theme.monoFamily.
+  property string family: Theme.textFamily
   property int instantTail: 0
   property int duration: 320
 
@@ -36,7 +38,8 @@ Row {
       Text {
         id: cur
         text: cell.ch
-        font.family: Theme.fontFamily
+        font.family: root.family
+        font.features: root.family === Theme.textFamily ? Theme.tabular : ({})
         font.pixelSize: root.pixelSize
         font.bold: root.bold
         color: root.color

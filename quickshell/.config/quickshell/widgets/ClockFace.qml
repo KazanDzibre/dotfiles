@@ -49,6 +49,7 @@ Loader {
     id: cards
 
     RollingText {
+      family: Theme.monoFamily
       text: root.text
       bold: true
       color: root.ink

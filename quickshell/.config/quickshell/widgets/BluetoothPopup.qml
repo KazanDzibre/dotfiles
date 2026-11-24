@@ -97,7 +97,8 @@ MorphPanel {
       anchors.left: parent.left
       anchors.verticalCenter: parent.verticalCenter
       text: "BLUETOOTH"
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.smallSize
       font.bold: true
       font.letterSpacing: 1
@@ -113,7 +114,8 @@ MorphPanel {
         anchors.verticalCenter: parent.verticalCenter
         visible: root.scanning
         text: "scanning…"
-        font.family: Theme.fontFamily
+        font.family: Theme.textFamily
+        font.features: Theme.tabular
         font.pixelSize: Theme.smallSize
         color: Theme.fgDim
 
@@ -181,7 +183,8 @@ MorphPanel {
     visible: root.adapter === null
     text: "No Bluetooth adapter found."
     wrapMode: Text.WordWrap
-    font.family: Theme.fontFamily
+    font.family: Theme.textFamily
+    font.features: Theme.tabular
     font.pixelSize: Theme.fontSize
     color: Theme.fgDim
   }
@@ -190,7 +193,8 @@ MorphPanel {
     width: parent.width
     visible: root.adapter !== null && !root.poweredOn
     text: "Bluetooth is off."
-    font.family: Theme.fontFamily
+    font.family: Theme.textFamily
+    font.features: Theme.tabular
     font.pixelSize: Theme.fontSize
     color: Theme.fgDim
   }
@@ -250,7 +254,7 @@ MorphPanel {
             width: 18
             horizontalAlignment: Text.AlignHCenter
             text: Icons.forBluetoothDevice(deviceRow.modelData.icon)
-            font.family: Theme.fontFamily
+            font.family: Theme.iconFamily
             font.pixelSize: Theme.iconSize
             color: deviceRow.modelData.connected ? Theme.accent : Theme.fg
           }
@@ -267,7 +271,8 @@ MorphPanel {
               width: parent.width
               text: root.label(deviceRow.modelData)
               elide: Text.ElideRight
-              font.family: Theme.fontFamily
+              font.family: Theme.textFamily
+              font.features: Theme.tabular
               font.pixelSize: Theme.fontSize
               color: deviceRow.modelData.connected ? Theme.accent : Theme.fg
             }
@@ -276,7 +281,8 @@ MorphPanel {
               width: parent.width
               text: root.subtitle(deviceRow.modelData)
               elide: Text.ElideRight
-              font.family: Theme.fontFamily
+              font.family: Theme.textFamily
+              font.features: Theme.tabular
               font.pixelSize: Theme.smallSize - 1
               color: Theme.fgDim
             }
@@ -289,7 +295,7 @@ MorphPanel {
             anchors.verticalCenter: parent.verticalCenter
             visible: deviceRow.isBusy
             text: Icons.spinner
-            font.family: Theme.fontFamily
+            font.family: Theme.iconFamily
             font.pixelSize: Theme.iconSize
             color: Theme.accent
 
@@ -324,7 +330,7 @@ MorphPanel {
             Text {
               anchors.centerIn: parent
               text: Icons.forget
-              font.family: Theme.fontFamily
+              font.family: Theme.iconFamily
               font.pixelSize: Theme.smallSize + 3
               color: forgetHover.containsMouse ? Theme.base : Theme.fgDim
             }
@@ -355,7 +361,8 @@ MorphPanel {
     width: parent.width
     visible: root.poweredOn && root.devices.length === 0
     text: root.scanning ? "Looking for devices…" : "No devices found."
-    font.family: Theme.fontFamily
+    font.family: Theme.textFamily
+    font.features: Theme.tabular
     font.pixelSize: Theme.fontSize
     color: Theme.fgDim
   }

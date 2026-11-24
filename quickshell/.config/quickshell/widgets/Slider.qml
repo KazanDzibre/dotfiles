@@ -57,7 +57,8 @@ Item {
         anchors.leftMargin: 11
         anchors.verticalCenter: parent.verticalCenter
         text: root.readout
-        font.family: Theme.fontFamily
+        font.family: Theme.textFamily
+        font.features: Theme.tabular
         font.pixelSize: Theme.smallSize + 1
         font.bold: true
         color: parent.width > implicitWidth + 22 ? Theme.base : Theme.fg

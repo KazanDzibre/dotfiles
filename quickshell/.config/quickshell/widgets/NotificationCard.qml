@@ -79,7 +79,7 @@ Rectangle {
       width: 26
       horizontalAlignment: Text.AlignHCenter
       text: Icons.bell
-      font.family: Theme.fontFamily
+      font.family: Theme.iconFamily
       font.pixelSize: Theme.iconSize + 2
       color: Notifications.urgencyColor(root.notification)
     }
@@ -101,7 +101,8 @@ Rectangle {
           width: parent.width - (ageLabel.visible ? ageLabel.width + 8 : 0)
           text: root.notification.appName
           elide: Text.ElideRight
-          font.family: Theme.fontFamily
+          font.family: Theme.textFamily
+          font.features: Theme.tabular
           font.pixelSize: Theme.smallSize
           font.bold: true
           font.letterSpacing: 0.5
@@ -113,7 +114,8 @@ Rectangle {
           anchors.right: parent.right
           visible: root.showAge
           text: Notifications.ageText(root.notification)
-          font.family: Theme.fontFamily
+          font.family: Theme.textFamily
+          font.features: Theme.tabular
           font.pixelSize: Theme.smallSize
           color: Theme.fgDim
         }
@@ -126,7 +128,8 @@ Rectangle {
         elide: Text.ElideRight
         maximumLineCount: 2
         wrapMode: Text.WordWrap
-        font.family: Theme.fontFamily
+        font.family: Theme.textFamily
+        font.features: Theme.tabular
         font.pixelSize: Theme.fontSize
         font.bold: true
         color: Theme.fg
@@ -140,7 +143,8 @@ Rectangle {
         maximumLineCount: 3
         wrapMode: Text.WordWrap
         textFormat: Text.StyledText     // the spec allows limited markup in bodies
-        font.family: Theme.fontFamily
+        font.family: Theme.textFamily
+        font.features: Theme.tabular
         font.pixelSize: Theme.smallSize + 1
         color: Theme.fgDim
       }
@@ -178,7 +182,8 @@ Rectangle {
               horizontalAlignment: Text.AlignHCenter
               text: actionButton.modelData.text
               elide: Text.ElideRight
-              font.family: Theme.fontFamily
+              font.family: Theme.textFamily
+              font.features: Theme.tabular
               font.pixelSize: Theme.smallSize
               color: actionHover.containsMouse ? Theme.base : Theme.fg
             }
@@ -219,7 +224,7 @@ Rectangle {
     Text {
       anchors.centerIn: parent
       text: Icons.close
-      font.family: Theme.fontFamily
+      font.family: Theme.iconFamily
       font.pixelSize: Theme.smallSize
       color: closeHover.containsMouse ? Theme.base : Theme.fgDim
     }

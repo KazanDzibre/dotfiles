@@ -130,7 +130,8 @@ PanelWindow {
       id: sizeLabel
       anchors.centerIn: parent
       text: Math.round(root.selW * root.pixelRatio) + " × " + Math.round(root.selH * root.pixelRatio)
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.smallSize
       color: Theme.fg
     }
@@ -142,7 +143,8 @@ PanelWindow {
     anchors.topMargin: Theme.barHeight + 24
     visible: Screenshot.mode === "region" && !root.dragging && root.selW < 1
     text: "Drag to select  ·  Esc to cancel"
-    font.family: Theme.fontFamily
+    font.family: Theme.textFamily
+    font.features: Theme.tabular
     font.pixelSize: Theme.fontSize
     color: Theme.fg
     opacity: 0.75

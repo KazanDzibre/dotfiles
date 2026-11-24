@@ -1514,7 +1514,8 @@ PanelWindow {
   }
 
   component Ink: Text {
-    font.family: Theme.fontFamily
+    font.family: Theme.textFamily
+    font.features: Theme.tabular
     font.pixelSize: Theme.fontSize
     color: root.ink
     elide: Text.ElideRight
@@ -2019,6 +2020,7 @@ PanelWindow {
         scale: bump
 
         Ink {
+          font.family: Theme.iconFamily
           anchors.verticalCenter: parent.verticalCenter
           text: Icons.bellBadge
           color: root.hot
@@ -2122,6 +2124,7 @@ PanelWindow {
 
         // Do not disturb: a quiet reminder, since the bar has no bell now.
         Ink {
+          font.family: Theme.iconFamily
           visible: Notifications.doNotDisturb
           text: Icons.bellOff
           color: root.inkDim
@@ -2182,6 +2185,7 @@ PanelWindow {
         }
 
         Ink {
+          font.family: Theme.iconFamily
           anchors.centerIn: parent
           visible: root.mode === "clock"
           text: Weather.ready ? Weather.glyph : Icons.calendar
@@ -2239,6 +2243,7 @@ PanelWindow {
             }
 
             Ink {
+              font.family: Theme.iconFamily
               anchors.verticalCenter: parent.verticalCenter
               text: Icons.volHigh
               font.pixelSize: Theme.iconSize - 1
@@ -2322,6 +2327,7 @@ PanelWindow {
         color: root.hot
 
         Ink {
+          font.family: Theme.iconFamily
           anchors.centerIn: parent
           text: Icons.download
           font.pixelSize: Theme.iconSize + 5
@@ -2412,6 +2418,7 @@ PanelWindow {
         }
 
         Ink {
+          font.family: Theme.iconFamily
           anchors.centerIn: parent
           text: Icons.forBluetoothDevice(headphonesLayer.device ? headphonesLayer.device.icon : "audio-headset")
           font.pixelSize: 24
@@ -2456,6 +2463,7 @@ PanelWindow {
       height: 22
 
       Ink {
+        font.family: Theme.iconFamily
         id: hdrGlyph
         anchors.left: parent.left
         anchors.verticalCenter: parent.verticalCenter
@@ -2472,6 +2480,7 @@ PanelWindow {
         }
       }
       Ink {
+        font.family: Theme.iconFamily
         anchors.left: hdrGlyph.right
         anchors.leftMargin: 10
         anchors.right: hdrEnd.left
@@ -2690,6 +2699,7 @@ PanelWindow {
               height: 58
 
               Ink {
+                font.family: Theme.iconFamily
                 id: driveGlyph
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
@@ -2925,6 +2935,7 @@ PanelWindow {
             }
 
             Ink {
+              font.family: Theme.iconFamily
               anchors.centerIn: parent
               text: quickButton.modelData.glyph
               font.pixelSize: Theme.iconSize
@@ -2951,6 +2962,7 @@ PanelWindow {
       readonly property var m: root.moment && root.moment.kind === "welcome" ? root.moment : null
 
       Ink {
+        font.family: Theme.iconFamily
         id: welcomeGlyph
         anchors.left: parent.left
         anchors.leftMargin: 18
@@ -3091,6 +3103,7 @@ PanelWindow {
       key: "search"
 
       Ink {
+        font.family: Theme.iconFamily
         id: searchGlyph
         x: 20
         y: 12 + (36 - height) / 2
@@ -3110,7 +3123,7 @@ PanelWindow {
         color: root.ink
         selectionColor: root.hot
         selectedTextColor: "#140f08"
-        font.family: Theme.fontFamily
+        font.family: Theme.iconFamily
         font.pixelSize: Theme.fontSize + 4
         clip: true
 
@@ -3197,6 +3210,7 @@ PanelWindow {
               }
 
               Ink {
+                font.family: Theme.iconFamily
                 anchors.centerIn: parent
                 visible: resultRow.modelData.icon.length === 0 && !resultRow.modelData.emoji && !resultRow.modelData.thumb
                 text: resultRow.modelData.glyph
@@ -3407,6 +3421,7 @@ PanelWindow {
                 }
 
                 Ink {
+                  font.family: Theme.iconFamily
                   anchors.centerIn: parent
                   visible: inboxIcon.status !== Image.Ready
                   text: Icons.bell
@@ -3452,6 +3467,7 @@ PanelWindow {
                       color: Qt.rgba(1, 1, 1, 0.14)
 
                       Ink {
+                        font.family: Theme.iconFamily
                         id: stackLabel
                         anchors.centerIn: parent
                         text: note.more > 0 ? "+" + note.more : Icons.chevronUp
@@ -3496,6 +3512,7 @@ PanelWindow {
                 color: dismissArea.containsMouse ? Qt.rgba(1, 1, 1, 0.18) : "transparent"
 
                 Ink {
+                  font.family: Theme.iconFamily
                   anchors.centerIn: parent
                   text: Icons.close
                   font.pixelSize: Theme.smallSize + 1
@@ -3597,6 +3614,7 @@ PanelWindow {
       key: "claudeWaiting"
 
       Ink {
+        font.family: Theme.iconFamily
         id: waitSpark
         anchors.left: parent.left
         anchors.leftMargin: 12
@@ -3639,6 +3657,7 @@ PanelWindow {
         spacing: 12
 
         Ink {
+          font.family: Theme.iconFamily
           anchors.verticalCenter: parent.verticalCenter
           text: Icons.shelf
           font.pixelSize: 22
@@ -3694,6 +3713,7 @@ PanelWindow {
               spacing: 9
 
               Ink {
+                font.family: Theme.iconFamily
                 anchors.verticalCenter: parent.verticalCenter
                 text: modelData.glyph
                 font.pixelSize: 20
@@ -3812,6 +3832,7 @@ PanelWindow {
               }
 
               Ink {
+                font.family: Theme.iconFamily
                 anchors.centerIn: parent
                 visible: !shelfRowItem.modelData.image
                 text: Icons.appFiles
@@ -3842,6 +3863,7 @@ PanelWindow {
               color: shelfPhoneArea.containsMouse ? Qt.rgba(1, 1, 1, 0.18) : "transparent"
 
               Ink {
+                font.family: Theme.iconFamily
                 anchors.centerIn: parent
                 text: Icons.phone
                 font.pixelSize: Theme.iconSize - 1
@@ -3867,6 +3889,7 @@ PanelWindow {
               color: shelfCopyArea.containsMouse ? Qt.rgba(1, 1, 1, 0.18) : "transparent"
 
               Ink {
+                font.family: Theme.iconFamily
                 anchors.centerIn: parent
                 text: Icons.copy
                 font.pixelSize: Theme.iconSize - 1
@@ -3892,6 +3915,7 @@ PanelWindow {
               color: shelfRemoveArea.containsMouse ? Qt.rgba(1, 1, 1, 0.18) : "transparent"
 
               Ink {
+                font.family: Theme.iconFamily
                 anchors.centerIn: parent
                 text: Icons.close
                 font.pixelSize: Theme.smallSize + 1
@@ -3922,6 +3946,7 @@ PanelWindow {
       }
 
       Ink {
+        font.family: Theme.iconFamily
         id: askSpark
         x: 18
         y: 15
@@ -4003,7 +4028,8 @@ PanelWindow {
           wrapMode: Text.Wrap
           textFormat: Text.MarkdownText
           text: root.answer.length > 0 ? root.answer : "Thinking…"
-          font.family: Theme.fontFamily
+          font.family: Theme.textFamily
+          font.features: Theme.tabular
           font.pixelSize: Theme.fontSize
           color: AiChat.error ? "#f0808f" : root.answer.length > 0 ? root.ink : root.inkDim
         }
@@ -4042,6 +4068,7 @@ PanelWindow {
         spacing: 5
 
         Ink {
+          font.family: Theme.iconFamily
           anchors.verticalCenter: parent.verticalCenter
           text: Icons.shelf
           color: root.hot
@@ -4090,6 +4117,7 @@ PanelWindow {
           spacing: 14
 
           Ink {
+            font.family: Theme.iconFamily
             anchors.verticalCenter: parent.verticalCenter
             text: Weather.glyph
             font.pixelSize: 44
@@ -4296,6 +4324,7 @@ PanelWindow {
                 font.pixelSize: Theme.smallSize
               }
               Ink {
+                font.family: Theme.iconFamily
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: Weather.glyphForWmo(parent.modelData.code)
                 font.pixelSize: 20
@@ -4345,6 +4374,7 @@ PanelWindow {
                 font.pixelSize: Theme.smallSize
               }
               Ink {
+                font.family: Theme.iconFamily
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: Weather.glyphFor(parent.modelData.code)
                 font.pixelSize: 20
@@ -4806,6 +4836,7 @@ PanelWindow {
                 visible: memoItem.modelData.at > 0 && !memoArea.containsMouse && !memoRemove.containsMouse
 
                 Ink {
+                  font.family: Theme.iconFamily
                   anchors.verticalCenter: parent.verticalCenter
                   text: Icons.bell
                   font.pixelSize: Theme.smallSize
@@ -4874,6 +4905,7 @@ PanelWindow {
         spacing: 10
 
         Ink {
+          font.family: Theme.iconFamily
           anchors.verticalCenter: parent.verticalCenter
           text: Icons.bell
           font.pixelSize: Theme.iconSize
@@ -4939,6 +4971,7 @@ PanelWindow {
         spacing: 10
 
         Ink {
+          font.family: Theme.iconFamily
           anchors.verticalCenter: parent.verticalCenter
           text: root.alertData ? root.alertData.glyph : ""
           font.pixelSize: Theme.iconSize
@@ -4983,6 +5016,7 @@ PanelWindow {
           spacing: 10
 
           Ink {
+            font.family: Theme.iconFamily
             anchors.verticalCenter: parent.verticalCenter
             text: root.alertData ? root.alertData.glyph : ""
             font.pixelSize: Theme.iconSize + 3
@@ -5107,6 +5141,7 @@ PanelWindow {
           opacity: weatherHover.containsMouse ? 1 : 0.85
 
           Ink {
+            font.family: Theme.iconFamily
             anchors.verticalCenter: parent.verticalCenter
             text: Weather.glyph
             font.pixelSize: 26
@@ -5186,6 +5221,7 @@ PanelWindow {
               color: monthArrowArea.containsMouse ? Qt.rgba(1, 1, 1, 0.14) : "transparent"
 
               Ink {
+                font.family: Theme.iconFamily
                 anchors.centerIn: parent
                 text: monthArrow.modelData.glyph
                 font.pixelSize: Theme.iconSize
@@ -5494,6 +5530,7 @@ PanelWindow {
           spacing: 8
 
           Ink {
+            font.family: Theme.iconFamily
             anchors.verticalCenter: parent.verticalCenter
             text: Icons.timer
             color: Tones.timing ? root.hot : root.inkDim
@@ -5601,6 +5638,7 @@ PanelWindow {
         }
 
         Ink {
+          font.family: Theme.iconFamily
           text: Icons.volHigh
           font.pixelSize: Theme.smallSize + 1
           color: root.tint
@@ -5847,6 +5885,7 @@ PanelWindow {
         spacing: 12
 
         Ink {
+          font.family: Theme.iconFamily
           anchors.verticalCenter: parent.verticalCenter
           width: 16
           horizontalAlignment: Text.AlignHCenter
@@ -5915,6 +5954,7 @@ PanelWindow {
         spacing: 10
 
         Ink {
+          font.family: Theme.iconFamily
           anchors.verticalCenter: parent.verticalCenter
           text: toastLayer.m.glyph
           font.pixelSize: Theme.iconSize
@@ -6024,6 +6064,7 @@ PanelWindow {
         spacing: 10
 
         Ink {
+          font.family: Theme.iconFamily
           anchors.verticalCenter: parent.verticalCenter
           text: Icons.batteryCharging
           color: root.good
@@ -6037,6 +6078,7 @@ PanelWindow {
         }
 
         Ink {
+          font.family: Theme.iconFamily
           anchors.verticalCenter: parent.verticalCenter
           text: Icons.bolt
           color: root.good
@@ -6283,6 +6325,7 @@ PanelWindow {
           }
 
           Ink {
+            font.family: Theme.iconFamily
             anchors.centerIn: parent
             visible: noteIcon.status !== Image.Ready
             text: Icons.bell
@@ -6329,6 +6372,7 @@ PanelWindow {
           color: root.hot
 
           Ink {
+            font.family: Theme.iconFamily
             anchors.centerIn: parent
             text: Icons.ai
             font.pixelSize: Theme.iconSize + 4
@@ -6736,6 +6780,7 @@ PanelWindow {
       }
 
       Ink {
+        font.family: Theme.iconFamily
         anchors.centerIn: parent
         text: Icons.timer
         color: Stopwatch.running ? root.hot : root.inkDim

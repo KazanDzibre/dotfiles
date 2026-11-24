@@ -182,7 +182,8 @@ MorphPanel {
   }
 
   component Label: Text {
-    font.family: Theme.fontFamily
+    font.family: Theme.textFamily
+    font.features: Theme.tabular
     font.pixelSize: Theme.fontSize
     color: Theme.fg
     elide: Text.ElideRight
@@ -847,6 +848,7 @@ MorphPanel {
     }
 
     Label {
+      font.family: Theme.iconFamily
       anchors.left: appsGlyph.right
       anchors.leftMargin: 12
       anchors.verticalCenter: parent.verticalCenter
@@ -855,6 +857,7 @@ MorphPanel {
     }
 
     Label {
+      font.family: Theme.iconFamily
       anchors.right: parent.right
       anchors.rightMargin: 14
       anchors.verticalCenter: parent.verticalCenter

@@ -37,7 +37,8 @@ MorphPanel {
     Text {
       anchors.verticalCenter: parent.verticalCenter
       text: "Open windows"
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.fontSize
       font.bold: true
       color: Theme.fg
@@ -47,7 +48,8 @@ MorphPanel {
       anchors.right: parent.right
       anchors.verticalCenter: parent.verticalCenter
       text: root.windows.length
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.fontSize
       color: Theme.fgDim
     }
@@ -186,7 +188,8 @@ MorphPanel {
             width: tile.width - 42
             text: tile.modelData.title
             elide: Text.ElideRight
-            font.family: Theme.fontFamily
+            font.family: Theme.textFamily
+            font.features: Theme.tabular
             font.pixelSize: Theme.smallSize + 1
             color: Theme.fg
           }
@@ -211,7 +214,7 @@ MorphPanel {
           Text {
             anchors.centerIn: parent
             text: Icons.close
-            font.family: Theme.fontFamily
+            font.family: Theme.iconFamily
             font.pixelSize: Theme.smallSize + 1
             color: "white"
           }

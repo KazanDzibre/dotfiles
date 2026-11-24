@@ -25,7 +25,8 @@ MorphPanel {
       anchors.left: parent.left
       anchors.verticalCenter: parent.verticalCenter
       text: "FREQUENCIES"
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.smallSize
       font.bold: true
       font.letterSpacing: 1
@@ -36,7 +37,8 @@ MorphPanel {
       anchors.right: parent.right
       anchors.verticalCenter: parent.verticalCenter
       text: Tones.active ? Tones.playing + " Hz" : "silent"
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.fontSize
       font.bold: true
       color: Tones.active ? Theme.accent : Theme.fgDim
@@ -96,7 +98,8 @@ MorphPanel {
 
           Text {
             text: tile.modelData.hz + " Hz"
-            font.family: Theme.fontFamily
+            font.family: Theme.textFamily
+            font.features: Theme.tabular
             font.pixelSize: Theme.fontSize
             font.bold: true
             color: tile.sounding ? Theme.accent : Theme.fg
@@ -112,7 +115,8 @@ MorphPanel {
             width: parent.width
             text: tile.modelData.name
             elide: Text.ElideRight
-            font.family: Theme.fontFamily
+            font.family: Theme.textFamily
+            font.features: Theme.tabular
             font.pixelSize: Theme.smallSize - 1
             color: Theme.fgDim
           }
@@ -146,7 +150,7 @@ MorphPanel {
       width: 20
       horizontalAlignment: Text.AlignHCenter
       text: Tones.volume < 0.02 ? Icons.volMute : Tones.volume < 0.5 ? Icons.volLow : Icons.volMed
-      font.family: Theme.fontFamily
+      font.family: Theme.iconFamily
       font.pixelSize: Theme.iconSize + 2
       color: Tones.active ? Theme.accent : Theme.fgDim
 
@@ -182,7 +186,7 @@ MorphPanel {
       anchors.left: parent.left
       anchors.verticalCenter: parent.verticalCenter
       text: Icons.timer
-      font.family: Theme.fontFamily
+      font.family: Theme.iconFamily
       font.pixelSize: Theme.iconSize + 2
       color: Tones.timing ? Theme.accent : Theme.fgDim
     }
@@ -192,7 +196,8 @@ MorphPanel {
       anchors.leftMargin: 26
       anchors.verticalCenter: parent.verticalCenter
       text: Tones.timing ? Tones.formatLeft(Tones.timerLeft) : "Focus"
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.fontSize
       font.bold: Tones.timing
       color: Tones.timing ? Theme.accent : Theme.fg
@@ -227,7 +232,8 @@ MorphPanel {
             id: chipLabel
             anchors.centerIn: parent
             text: chip.isStop ? "Stop timer" : chip.modelData + " min"
-            font.family: Theme.fontFamily
+            font.family: Theme.textFamily
+            font.features: Theme.tabular
             font.pixelSize: Theme.smallSize + 1
             color: chipHover.containsMouse ? (chip.isStop ? Theme.crit : Theme.accent) : Theme.fg
           }
@@ -275,7 +281,7 @@ MorphPanel {
       Text {
         anchors.verticalCenter: parent.verticalCenter
         text: Icons.stop
-        font.family: Theme.fontFamily
+        font.family: Theme.iconFamily
         font.pixelSize: Theme.iconSize
         color: stopHover.containsMouse ? Theme.crit : Theme.fgDim
 
@@ -289,7 +295,8 @@ MorphPanel {
       Text {
         anchors.verticalCenter: parent.verticalCenter
         text: Tones.active ? "Stop " + Tones.nameFor(Tones.playing) : "Stop"
-        font.family: Theme.fontFamily
+        font.family: Theme.textFamily
+        font.features: Theme.tabular
         font.pixelSize: Theme.fontSize
         color: stopHover.containsMouse ? Theme.fg : Theme.fgDim
 

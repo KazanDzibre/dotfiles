@@ -100,7 +100,7 @@ Row {
     anchors.verticalCenter: parent.verticalCenter
     visible: root.iconUrl === ""
     text: Icons.forClass(root.shownClass)
-    font.family: Theme.fontFamily
+    font.family: Theme.iconFamily
     font.pixelSize: Theme.iconSize
     color: Theme.accent
   }
@@ -108,7 +108,8 @@ Row {
   Text {
     anchors.verticalCenter: parent.verticalCenter
     text: root.shownTitle
-    font.family: Theme.fontFamily
+    font.family: Theme.textFamily
+    font.features: Theme.tabular
     font.pixelSize: Theme.fontSize
     color: Theme.fg
     elide: Text.ElideRight

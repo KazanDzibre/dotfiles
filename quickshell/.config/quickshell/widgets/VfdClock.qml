@@ -6,6 +6,7 @@ import QtQuick.Effects
 import qs
 
 RollingText {
+  family: Theme.monoFamily
   id: root
 
   bold: true

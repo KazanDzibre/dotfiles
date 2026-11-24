@@ -48,7 +48,8 @@ MorphPanel {
       anchors.left: parent.left
       anchors.verticalCenter: parent.verticalCenter
       text: "DASHBOARD"
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.smallSize
       font.bold: true
       font.letterSpacing: 1
@@ -70,7 +71,7 @@ MorphPanel {
         Text {
           anchors.centerIn: parent
           text: Icons.refresh
-          font.family: Theme.fontFamily
+          font.family: Theme.iconFamily
           font.pixelSize: Theme.iconSize
           color: Dashboard.loadingStocks || Dashboard.loadingNews ? Theme.accent : Theme.fgDim
 
@@ -145,7 +146,7 @@ MorphPanel {
           Text {
             anchors.verticalCenter: parent.verticalCenter
             text: tab.modelData.glyph
-            font.family: Theme.fontFamily
+            font.family: Theme.iconFamily
             font.pixelSize: Theme.iconSize
             color: tab.current ? Theme.accent : Theme.fgDim
           }
@@ -153,7 +154,8 @@ MorphPanel {
           Text {
             anchors.verticalCenter: parent.verticalCenter
             text: tab.modelData.label
-            font.family: Theme.fontFamily
+            font.family: Theme.textFamily
+            font.features: Theme.tabular
             font.pixelSize: Theme.fontSize
             font.bold: tab.current
             color: tab.current ? Theme.accent : Theme.fgDim
@@ -224,7 +226,8 @@ MorphPanel {
                 width: parent.width
                 text: quote.modelData.symbol
                 elide: Text.ElideRight
-                font.family: Theme.fontFamily
+                font.family: Theme.textFamily
+                font.features: Theme.tabular
                 font.pixelSize: Theme.fontSize
                 font.bold: true
                 color: Theme.fg
@@ -234,7 +237,8 @@ MorphPanel {
                 width: parent.width
                 text: quote.failed ? "unavailable" : quote.modelData.name
                 elide: Text.ElideRight
-                font.family: Theme.fontFamily
+                font.family: Theme.textFamily
+                font.features: Theme.tabular
                 font.pixelSize: Theme.smallSize - 1
                 color: Theme.fgDim
               }
@@ -261,7 +265,8 @@ MorphPanel {
                 horizontalAlignment: Text.AlignRight
                 text: quote.failed ? "—" : Dashboard.formatPrice(quote.modelData.price)
                 elide: Text.ElideRight
-                font.family: Theme.fontFamily
+                font.family: Theme.textFamily
+                font.features: Theme.tabular
                 font.pixelSize: Theme.fontSize
                 font.bold: true
                 color: Theme.fg
@@ -275,7 +280,7 @@ MorphPanel {
                 Text {
                   anchors.verticalCenter: parent.verticalCenter
                   text: quote.change > 0 ? Icons.trendUp : quote.change < 0 ? Icons.trendDown : ""
-                  font.family: Theme.fontFamily
+                  font.family: Theme.iconFamily
                   font.pixelSize: Theme.smallSize + 2
                   color: quote.tone
                 }
@@ -283,7 +288,8 @@ MorphPanel {
                 Text {
                   anchors.verticalCenter: parent.verticalCenter
                   text: (quote.change >= 0 ? "+" : "") + quote.change.toFixed(2) + "%"
-                  font.family: Theme.fontFamily
+                  font.family: Theme.textFamily
+                  font.features: Theme.tabular
                   font.pixelSize: Theme.smallSize
                   color: quote.tone
                 }
@@ -305,7 +311,8 @@ MorphPanel {
           visible: Dashboard.stocks.length === 0
           text: Dashboard.loadingStocks ? "Fetching quotes…" : Dashboard.stocksError.length > 0 ? Dashboard.stocksError : "No symbols configured."
           wrapMode: Text.WordWrap
-          font.family: Theme.fontFamily
+          font.family: Theme.textFamily
+          font.features: Theme.tabular
           font.pixelSize: Theme.fontSize
           color: Theme.fgDim
         }
@@ -361,7 +368,8 @@ MorphPanel {
                 wrapMode: Text.WordWrap
                 maximumLineCount: 3
                 elide: Text.ElideRight
-                font.family: Theme.fontFamily
+                font.family: Theme.textFamily
+                font.features: Theme.tabular
                 font.pixelSize: Theme.fontSize
                 color: Theme.fg
               }
@@ -371,7 +379,8 @@ MorphPanel {
 
                 Text {
                   text: story.modelData.source
-                  font.family: Theme.fontFamily
+                  font.family: Theme.textFamily
+                  font.features: Theme.tabular
                   font.pixelSize: Theme.smallSize
                   color: Theme.accent
                 }
@@ -379,7 +388,8 @@ MorphPanel {
                 Text {
                   visible: Dashboard.relativeDate(story.modelData.date).length > 0
                   text: "·  " + Dashboard.relativeDate(story.modelData.date)
-                  font.family: Theme.fontFamily
+                  font.family: Theme.textFamily
+                  font.features: Theme.tabular
                   font.pixelSize: Theme.smallSize
                   color: Theme.fgDim
                 }
@@ -401,7 +411,8 @@ MorphPanel {
           visible: Dashboard.news.length === 0
           text: Dashboard.loadingNews ? "Fetching headlines…" : Dashboard.newsError.length > 0 ? Dashboard.newsError : "No feeds configured."
           wrapMode: Text.WordWrap
-          font.family: Theme.fontFamily
+          font.family: Theme.textFamily
+          font.features: Theme.tabular
           font.pixelSize: Theme.fontSize
           color: Theme.fgDim
         }
@@ -447,7 +458,8 @@ MorphPanel {
               id: chipLabel
               anchors.centerIn: parent
               text: chip.modelData.label
-              font.family: Theme.fontFamily
+              font.family: Theme.textFamily
+              font.features: Theme.tabular
               font.pixelSize: Theme.smallSize
               font.bold: chip.current
               color: chip.current ? Theme.base : Theme.fgDim
@@ -516,7 +528,8 @@ MorphPanel {
                   wrapMode: Text.WordWrap
                   maximumLineCount: 3
                   elide: Text.ElideRight
-                  font.family: Theme.fontFamily
+                  font.family: Theme.textFamily
+                  font.features: Theme.tabular
                   font.pixelSize: Theme.fontSize
                   color: Theme.fg
                 }
@@ -529,7 +542,8 @@ MorphPanel {
                     anchors.verticalCenter: parent.verticalCenter
                     text: post.modelData.source
                     elide: Text.ElideRight
-                    font.family: Theme.fontFamily
+                    font.family: Theme.textFamily
+                    font.features: Theme.tabular
                     font.pixelSize: Theme.smallSize
                     color: Theme.accent
                   }
@@ -538,7 +552,8 @@ MorphPanel {
                     anchors.verticalCenter: parent.verticalCenter
                     visible: Dashboard.relativeDate(post.modelData.date).length > 0
                     text: "·  " + Dashboard.relativeDate(post.modelData.date)
-                    font.family: Theme.fontFamily
+                    font.family: Theme.textFamily
+                    font.features: Theme.tabular
                     font.pixelSize: Theme.smallSize
                     color: Theme.fgDim
                   }
@@ -560,7 +575,8 @@ MorphPanel {
                         id: badge
                         anchors.centerIn: parent
                         text: parent.modelData
-                        font.family: Theme.fontFamily
+                        font.family: Theme.textFamily
+                        font.features: Theme.tabular
                         font.pixelSize: Theme.smallSize - 2
                         color: Theme.accent
                       }
@@ -584,7 +600,8 @@ MorphPanel {
             visible: Dashboard.devFiltered.length === 0
             text: Dashboard.loadingDev ? "Fetching tech headlines…" : Dashboard.devError.length > 0 ? Dashboard.devError : Dashboard.dev.length > 0 ? "Nothing tagged with that yet." : "No feeds configured."
             wrapMode: Text.WordWrap
-            font.family: Theme.fontFamily
+            font.family: Theme.textFamily
+            font.features: Theme.tabular
             font.pixelSize: Theme.fontSize
             color: Theme.fgDim
           }

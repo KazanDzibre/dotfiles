@@ -18,7 +18,8 @@ MorphPanel {
       anchors.left: parent.left
       anchors.verticalCenter: parent.verticalCenter
       text: "NOTIFICATIONS"
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.smallSize
       font.bold: true
       font.letterSpacing: 1
@@ -47,7 +48,7 @@ MorphPanel {
         Text {
           anchors.centerIn: parent
           text: Notifications.doNotDisturb ? Icons.bellOff : Icons.bell
-          font.family: Theme.fontFamily
+          font.family: Theme.iconFamily
           font.pixelSize: Theme.iconSize
           color: Notifications.doNotDisturb ? Theme.accent : Theme.fgDim
         }
@@ -73,7 +74,7 @@ MorphPanel {
         Text {
           anchors.centerIn: parent
           text: Icons.clearAll
-          font.family: Theme.fontFamily
+          font.family: Theme.iconFamily
           font.pixelSize: Theme.iconSize
           color: clearHover.containsMouse ? Theme.base : Theme.fgDim
         }
@@ -94,7 +95,8 @@ MorphPanel {
     visible: Notifications.doNotDisturb
     text: "Do not disturb is on — notifications are collected here without popping up."
     wrapMode: Text.WordWrap
-    font.family: Theme.fontFamily
+    font.family: Theme.textFamily
+    font.features: Theme.tabular
     font.pixelSize: Theme.smallSize
     color: Theme.fgDim
   }
@@ -137,7 +139,7 @@ MorphPanel {
     Text {
       anchors.verticalCenter: parent.verticalCenter
       text: Icons.bellOutline
-      font.family: Theme.fontFamily
+      font.family: Theme.iconFamily
       font.pixelSize: Theme.iconSize
       color: Theme.fgDim
     }
@@ -145,7 +147,8 @@ MorphPanel {
     Text {
       anchors.verticalCenter: parent.verticalCenter
       text: "Nothing to see here."
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.fontSize
       color: Theme.fgDim
     }

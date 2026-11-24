@@ -374,7 +374,7 @@ PanelWindow {
         Text {
           anchors.verticalCenter: parent.verticalCenter
           text: Icons.chevronLeft
-          font.family: Theme.fontFamily
+          font.family: Theme.iconFamily
           font.pixelSize: Theme.iconSize
           color: backArea.containsMouse ? Theme.accent : Theme.fgDim
           // Nudges left on hover, pointing the way.
@@ -392,7 +392,8 @@ PanelWindow {
         Text {
           anchors.verticalCenter: parent.verticalCenter
           text: "Control center"
-          font.family: Theme.fontFamily
+          font.family: Theme.textFamily
+          font.features: Theme.tabular
           font.pixelSize: Theme.smallSize + 1
           color: backArea.containsMouse ? Theme.fg : Theme.fgDim
         }

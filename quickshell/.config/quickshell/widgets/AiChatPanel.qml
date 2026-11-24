@@ -99,7 +99,8 @@ PanelWindow {
 
         Text {
           text: "ASSISTANT"
-          font.family: Theme.fontFamily
+          font.family: Theme.textFamily
+          font.features: Theme.tabular
           font.pixelSize: Theme.smallSize
           font.bold: true
           font.letterSpacing: 1
@@ -108,7 +109,8 @@ PanelWindow {
 
         Text {
           text: AiChat.provider.label + "  ·  " + AiChat.modelLabel
-          font.family: Theme.fontFamily
+          font.family: Theme.textFamily
+          font.features: Theme.tabular
           font.pixelSize: Theme.smallSize - 1
           color: Theme.accent
         }
@@ -131,7 +133,7 @@ PanelWindow {
           Text {
             anchors.centerIn: parent
             text: Icons.plus
-            font.family: Theme.fontFamily
+            font.family: Theme.iconFamily
             font.pixelSize: Theme.iconSize
             color: Theme.fgDim
           }
@@ -156,7 +158,7 @@ PanelWindow {
           Text {
             anchors.centerIn: parent
             text: Icons.web
-            font.family: Theme.fontFamily
+            font.family: Theme.iconFamily
             font.pixelSize: Theme.iconSize
             color: Theme.fgDim
           }
@@ -183,7 +185,7 @@ PanelWindow {
           Text {
             anchors.centerIn: parent
             text: Icons.close
-            font.family: Theme.fontFamily
+            font.family: Theme.iconFamily
             font.pixelSize: Theme.iconSize
             color: closeHover.containsMouse ? Theme.base : Theme.fgDim
           }
@@ -244,7 +246,8 @@ PanelWindow {
 
             Text {
               text: bubble.mine ? "You" : "Assistant"
-              font.family: Theme.fontFamily
+              font.family: Theme.textFamily
+              font.features: Theme.tabular
               font.pixelSize: Theme.smallSize - 1
               font.bold: true
               color: bubble.mine ? Theme.fgDim : Theme.accent
@@ -267,7 +270,8 @@ PanelWindow {
                 wrapMode: Text.Wrap
                 // Replies are markdown; Qt renders it natively.
                 textFormat: Text.MarkdownText
-                font.family: Theme.fontFamily
+                font.family: Theme.textFamily
+                font.features: Theme.tabular
                 font.pixelSize: Theme.fontSize
                 color: Theme.fg
                 onLinkActivated: link => Dashboard.openLink(link)
@@ -284,7 +288,8 @@ PanelWindow {
 
           Text {
             text: "Assistant"
-            font.family: Theme.fontFamily
+            font.family: Theme.textFamily
+            font.features: Theme.tabular
             font.pixelSize: Theme.smallSize - 1
             font.bold: true
             color: Theme.accent
@@ -306,7 +311,8 @@ PanelWindow {
               text: AiChat.partial.length > 0 ? AiChat.partial : "…"
               wrapMode: Text.Wrap
               textFormat: Text.MarkdownText
-              font.family: Theme.fontFamily
+              font.family: Theme.textFamily
+              font.features: Theme.tabular
               font.pixelSize: Theme.fontSize
               color: Theme.fg
             }
@@ -322,7 +328,8 @@ PanelWindow {
           Text {
             width: parent.width
             text: "Ask anything."
-            font.family: Theme.fontFamily
+            font.family: Theme.textFamily
+            font.features: Theme.tabular
             font.pixelSize: Theme.fontSize
             color: Theme.fgDim
           }
@@ -340,7 +347,7 @@ PanelWindow {
             Text {
               anchors.verticalCenter: parent.verticalCenter
               text: Icons.key
-              font.family: Theme.fontFamily
+              font.family: Theme.iconFamily
               font.pixelSize: Theme.iconSize + 2
               color: Theme.warn
             }
@@ -348,7 +355,8 @@ PanelWindow {
             Text {
               anchors.verticalCenter: parent.verticalCenter
               text: "Needs an API key"
-              font.family: Theme.fontFamily
+              font.family: Theme.textFamily
+              font.features: Theme.tabular
               font.pixelSize: Theme.fontSize
               font.bold: true
               color: Theme.fg
@@ -359,7 +367,8 @@ PanelWindow {
             width: parent.width
             text: "Unlike the web app, a native chat has no browser session to borrow — it needs a key of its own.\n\nPick a provider and add it to your shell profile:"
             wrapMode: Text.WordWrap
-            font.family: Theme.fontFamily
+            font.family: Theme.textFamily
+            font.features: Theme.tabular
             font.pixelSize: Theme.smallSize + 1
             color: Theme.fgDim
           }
@@ -378,7 +387,7 @@ PanelWindow {
               anchors.verticalCenter: parent.verticalCenter
               text: "set -gx QS_AI_PROVIDER " + AiChat.providerId + "\nset -gx QS_AI_API_KEY  …\n\n# providers: openrouter · groq · xai · gemini · ollama"
               wrapMode: Text.WrapAnywhere
-              font.family: Theme.fontFamily
+              font.family: Theme.monoFamily
               font.pixelSize: Theme.smallSize
               color: Theme.accent
             }
@@ -388,7 +397,8 @@ PanelWindow {
             width: parent.width
             text: "Put it in ~/.config/fish/config.fish (not your dotfiles repo) and restart the shell. The web app still works from the globe button above."
             wrapMode: Text.WordWrap
-            font.family: Theme.fontFamily
+            font.family: Theme.textFamily
+            font.features: Theme.tabular
             font.pixelSize: Theme.smallSize
             color: Theme.fgDim
           }
@@ -410,7 +420,8 @@ PanelWindow {
             anchors.verticalCenter: parent.verticalCenter
             text: AiChat.error
             wrapMode: Text.WordWrap
-            font.family: Theme.fontFamily
+            font.family: Theme.textFamily
+            font.features: Theme.tabular
             font.pixelSize: Theme.smallSize
             color: Theme.crit
           }
@@ -451,7 +462,8 @@ PanelWindow {
         anchors.verticalCenter: parent.verticalCenter
 
         wrapMode: TextEdit.Wrap
-        font.family: Theme.fontFamily
+        font.family: Theme.textFamily
+        font.features: Theme.tabular
         font.pixelSize: Theme.fontSize
         color: Theme.fg
         selectionColor: Theme.accent
@@ -474,7 +486,8 @@ PanelWindow {
           anchors.verticalCenter: parent.verticalCenter
           visible: input.text.length === 0
           text: AiChat.configured ? "Message…" : "Set QS_AI_API_KEY to enable"
-          font.family: Theme.fontFamily
+          font.family: Theme.textFamily
+          font.features: Theme.tabular
           font.pixelSize: Theme.fontSize
           color: Theme.fgDim
         }
@@ -503,7 +516,7 @@ PanelWindow {
         Text {
           anchors.centerIn: parent
           text: AiChat.streaming ? Icons.stop : Icons.send
-          font.family: Theme.fontFamily
+          font.family: Theme.iconFamily
           font.pixelSize: Theme.iconSize
           color: sendButton.armed ? sendHover.containsMouse ? Theme.base : Theme.accent : Theme.fgDim
         }

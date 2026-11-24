@@ -52,7 +52,7 @@ Item {
         anchors.centerIn: parent
         visible: mouse.containsMouse
         text: Icons.stop
-        font.family: Theme.fontFamily
+        font.family: Theme.iconFamily
         font.pixelSize: Theme.iconSize
         color: Theme.crit
       }
@@ -61,7 +61,8 @@ Item {
     Text {
       anchors.verticalCenter: parent.verticalCenter
       text: Recorder.formatTime(Recorder.seconds)
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.smallSize
       font.bold: true
       color: Theme.crit

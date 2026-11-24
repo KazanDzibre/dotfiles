@@ -121,7 +121,8 @@ MorphPanel {
       anchors.left: parent.left
       anchors.verticalCenter: parent.verticalCenter
       text: "WI-FI"
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.smallSize
       font.bold: true
       font.letterSpacing: 1
@@ -173,7 +174,8 @@ MorphPanel {
     visible: !Networking.wifiEnabled
     text: Networking.wifiHardwareEnabled ? "Wi-Fi is off." : "Wi-Fi is blocked by the hardware switch."
     wrapMode: Text.WordWrap
-    font.family: Theme.fontFamily
+    font.family: Theme.textFamily
+    font.features: Theme.tabular
     font.pixelSize: Theme.fontSize
     color: Theme.fgDim
   }
@@ -188,7 +190,8 @@ MorphPanel {
       width: parent.width
       text: root.pendingNetwork ? root.pendingNetwork.name : ""
       elide: Text.ElideRight
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.fontSize
       font.bold: true
       color: Theme.fg
@@ -218,7 +221,8 @@ MorphPanel {
 
         echoMode: revealButton.revealed ? TextInput.Normal : TextInput.Password
         passwordCharacter: "•"
-        font.family: Theme.fontFamily
+        font.family: Theme.textFamily
+        font.features: Theme.tabular
         font.pixelSize: Theme.fontSize
         color: Theme.fg
         selectionColor: Theme.accent
@@ -246,7 +250,8 @@ MorphPanel {
           anchors.verticalCenter: parent.verticalCenter
           visible: passwordField.text.length === 0
           text: "Password"
-          font.family: Theme.fontFamily
+          font.family: Theme.textFamily
+          font.features: Theme.tabular
           font.pixelSize: Theme.fontSize
           color: Theme.fgDim
         }
@@ -269,7 +274,7 @@ MorphPanel {
         Text {
           anchors.centerIn: parent
           text: revealButton.revealed ? Icons.eyeHide : Icons.eyeShow
-          font.family: Theme.fontFamily
+          font.family: Theme.iconFamily
           font.pixelSize: Theme.iconSize
           color: Theme.fgDim
         }
@@ -302,7 +307,8 @@ MorphPanel {
         Text {
           anchors.centerIn: parent
           text: "Connect"
-          font.family: Theme.fontFamily
+          font.family: Theme.textFamily
+          font.features: Theme.tabular
           font.pixelSize: Theme.fontSize
           font.bold: true
           color: root.password.length > 0 ? Theme.base : Theme.fgDim
@@ -324,7 +330,8 @@ MorphPanel {
         Text {
           anchors.centerIn: parent
           text: "Cancel"
-          font.family: Theme.fontFamily
+          font.family: Theme.textFamily
+          font.features: Theme.tabular
           font.pixelSize: Theme.fontSize
           color: Theme.fgDim
         }
@@ -383,7 +390,7 @@ MorphPanel {
             anchors.leftMargin: 9
             anchors.verticalCenter: parent.verticalCenter
             text: root.signalGlyph(netRow.modelData.signalStrength)
-            font.family: Theme.fontFamily
+            font.family: Theme.iconFamily
             font.pixelSize: Theme.iconSize
             color: netRow.modelData.connected ? Theme.accent : Theme.fg
           }
@@ -400,7 +407,8 @@ MorphPanel {
               width: parent.width
               text: netRow.modelData.name
               elide: Text.ElideRight
-              font.family: Theme.fontFamily
+              font.family: Theme.textFamily
+              font.features: Theme.tabular
               font.pixelSize: Theme.fontSize
               color: netRow.modelData.connected ? Theme.accent : Theme.fg
             }
@@ -409,7 +417,8 @@ MorphPanel {
               width: parent.width
               visible: netRow.busy || netRow.modelData.connected || netRow.modelData.known
               text: netRow.busy ? "Connecting…" : netRow.modelData.connected ? "Connected" : "Saved"
-              font.family: Theme.fontFamily
+              font.family: Theme.textFamily
+              font.features: Theme.tabular
               font.pixelSize: Theme.smallSize - 1
               color: Theme.fgDim
             }
@@ -422,7 +431,7 @@ MorphPanel {
             anchors.verticalCenter: parent.verticalCenter
             visible: root.needsPassword(netRow.modelData) && !netRow.busy
             text: Icons.lock
-            font.family: Theme.fontFamily
+            font.family: Theme.iconFamily
             font.pixelSize: Theme.smallSize + 1
             color: Theme.fgDim
           }
@@ -435,7 +444,7 @@ MorphPanel {
             anchors.verticalCenter: parent.verticalCenter
             visible: netRow.busy
             text: Icons.spinner
-            font.family: Theme.fontFamily
+            font.family: Theme.iconFamily
             font.pixelSize: Theme.iconSize
             color: Theme.accent
 
@@ -464,7 +473,8 @@ MorphPanel {
     width: parent.width
     visible: Networking.wifiEnabled && root.pendingNetwork === null && root.networks.length === 0
     text: "Scanning…"
-    font.family: Theme.fontFamily
+    font.family: Theme.textFamily
+    font.features: Theme.tabular
     font.pixelSize: Theme.fontSize
     color: Theme.fgDim
   }
@@ -475,7 +485,8 @@ MorphPanel {
     visible: root.errorText.length > 0
     text: root.errorText
     wrapMode: Text.WordWrap
-    font.family: Theme.fontFamily
+    font.family: Theme.textFamily
+    font.features: Theme.tabular
     font.pixelSize: Theme.smallSize
     color: Theme.crit
   }

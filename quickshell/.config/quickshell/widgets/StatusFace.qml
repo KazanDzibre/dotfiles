@@ -127,8 +127,12 @@ Item {
       Text {
         anchors.verticalCenter: parent.verticalCenter
         text: root.percent + "%"
-        font.family: Theme.fontFamily
-        font.pixelSize: Theme.fontSize
+        font.family: Theme.textFamily
+        font.features: Theme.tabular
+        // Inter's capitals stand taller than the mono's did; a size down keeps
+        // the figure level with the icons beside it.
+        font.pixelSize: Theme.fontSize - 1
+        font.weight: Font.Medium
         color: Theme.fg
       }
     }

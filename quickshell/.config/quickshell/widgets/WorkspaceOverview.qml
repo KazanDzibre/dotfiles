@@ -300,7 +300,7 @@ PanelWindow {
         anchors.leftMargin: 18
         anchors.verticalCenter: parent.verticalCenter
         text: Icons.search
-        font.family: Theme.fontFamily
+        font.family: Theme.iconFamily
         font.pixelSize: Theme.iconSize
         color: Theme.accent
       }
@@ -314,7 +314,7 @@ PanelWindow {
         anchors.verticalCenter: parent.verticalCenter
         color: root.ink
         selectionColor: Theme.accent
-        font.family: Theme.fontFamily
+        font.family: Theme.iconFamily
         font.pixelSize: Theme.fontSize + 2
         clip: true
 
@@ -354,7 +354,8 @@ PanelWindow {
       y: root.rowTop + root.cardH + 64
       horizontalAlignment: Text.AlignHCenter
       text: "←→ choose · Enter go · type to find · drag a window to move it · Esc close"
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.smallSize + 1
       color: root.inkDim
     }
@@ -477,7 +478,8 @@ PanelWindow {
           anchors.centerIn: parent
           visible: card.isNew
           text: "+"
-          font.family: Theme.fontFamily
+          font.family: Theme.textFamily
+          font.features: Theme.tabular
           font.pixelSize: 30
           color: card.dropTarget ? Theme.accent : root.inkDim
         }
@@ -628,7 +630,8 @@ PanelWindow {
           anchors.verticalCenter: parent.verticalCenter
           visible: !card.isNew
           text: card.ws ? WorkspaceNumbers.label(card.ws.id) : ""
-          font.family: Theme.fontFamily
+          font.family: Theme.textFamily
+          font.features: Theme.tabular
           font.pixelSize: Theme.fontSize
           font.bold: true
           color: root.ink
@@ -636,7 +639,8 @@ PanelWindow {
         Text {
           anchors.verticalCenter: parent.verticalCenter
           text: card.isNew ? "New workspace" : root.appName(card.app) + (root.slots[card.index] && !root.slots[card.index].local && card.mon ? "  ·  " + card.mon.name : "")
-          font.family: Theme.fontFamily
+          font.family: Theme.textFamily
+          font.features: Theme.tabular
           font.pixelSize: Theme.fontSize
           color: root.inkDim
         }

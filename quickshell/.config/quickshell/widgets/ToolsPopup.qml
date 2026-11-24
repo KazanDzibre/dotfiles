@@ -65,14 +65,15 @@ MorphPanel {
       Text {
         anchors.horizontalCenter: parent.horizontalCenter
         text: launcher.glyph
-        font.family: Theme.fontFamily
+        font.family: Theme.iconFamily
         font.pixelSize: Theme.iconSize + 2
         color: launcher.lit || launchArea.containsMouse ? Theme.accent : Theme.fg
       }
       Text {
         anchors.horizontalCenter: parent.horizontalCenter
         text: launcher.label
-        font.family: Theme.fontFamily
+        font.family: Theme.textFamily
+        font.features: Theme.tabular
         font.pixelSize: Theme.smallSize
         color: launchArea.containsMouse ? Theme.accent : Theme.fgDim
       }
@@ -92,7 +93,8 @@ MorphPanel {
         id: badgeText
         anchors.centerIn: parent
         text: launcher.badge > 99 ? "99+" : launcher.badge
-        font.family: Theme.fontFamily
+        font.family: Theme.textFamily
+        font.features: Theme.tabular
         font.pixelSize: Theme.smallSize - 1
         font.bold: true
         color: Theme.base
@@ -111,7 +113,8 @@ MorphPanel {
 
   Text {
     text: "APPS & TOOLS"
-    font.family: Theme.fontFamily
+    font.family: Theme.textFamily
+    font.features: Theme.tabular
     font.pixelSize: Theme.smallSize
     font.bold: true
     font.letterSpacing: 1

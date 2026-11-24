@@ -42,7 +42,8 @@ MorphPanel {
       anchors.left: parent.left
       anchors.verticalCenter: parent.verticalCenter
       text: "UPDATES"
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.smallSize
       font.bold: true
       font.letterSpacing: 1
@@ -58,7 +59,8 @@ MorphPanel {
         anchors.verticalCenter: parent.verticalCenter
         visible: Updates.count > 0
         text: Updates.hasAur ? Updates.repo.length + " repo  ·  " + Updates.aur.length + " AUR" : Updates.repo.length + " packages"
-        font.family: Theme.fontFamily
+        font.family: Theme.textFamily
+        font.features: Theme.tabular
         font.pixelSize: Theme.smallSize
         color: Theme.fgDim
       }
@@ -73,7 +75,7 @@ MorphPanel {
         Text {
           anchors.centerIn: parent
           text: Icons.refresh
-          font.family: Theme.fontFamily
+          font.family: Theme.iconFamily
           font.pixelSize: Theme.iconSize
           color: Updates.busy ? Theme.accent : Theme.fgDim
 
@@ -102,7 +104,8 @@ MorphPanel {
     width: parent.width
     visible: !Updates.checkedOnce
     text: "Checking for updates…"
-    font.family: Theme.fontFamily
+    font.family: Theme.textFamily
+    font.features: Theme.tabular
     font.pixelSize: Theme.fontSize
     color: Theme.fgDim
   }
@@ -115,7 +118,7 @@ MorphPanel {
     Text {
       anchors.verticalCenter: parent.verticalCenter
       text: Icons.upToDate
-      font.family: Theme.fontFamily
+      font.family: Theme.iconFamily
       font.pixelSize: Theme.iconSize
       color: Theme.good
     }
@@ -123,7 +126,8 @@ MorphPanel {
     Text {
       anchors.verticalCenter: parent.verticalCenter
       text: "Everything is up to date."
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.fontSize
       color: Theme.fg
     }
@@ -166,7 +170,8 @@ MorphPanel {
               width: parent.width
               text: pkg.modelData.name
               elide: Text.ElideRight
-              font.family: Theme.fontFamily
+              font.family: Theme.textFamily
+              font.features: Theme.tabular
               font.pixelSize: Theme.fontSize
               color: Theme.fg
             }
@@ -176,7 +181,8 @@ MorphPanel {
               visible: pkg.modelData.to.length > 0
               text: pkg.modelData.from + "  →  " + pkg.modelData.to + (pkg.modelData.age ? "   ·   " + pkg.modelData.age + " old" : "")
               elide: Text.ElideRight
-              font.family: Theme.fontFamily
+              font.family: Theme.textFamily
+              font.features: Theme.tabular
               font.pixelSize: Theme.smallSize - 1
               color: Theme.fgDim
             }
@@ -197,7 +203,8 @@ MorphPanel {
             Text {
               anchors.centerIn: parent
               text: "AUR"
-              font.family: Theme.fontFamily
+              font.family: Theme.textFamily
+              font.features: Theme.tabular
               font.pixelSize: Theme.smallSize - 2
               font.bold: true
               color: Theme.accent
@@ -229,7 +236,7 @@ MorphPanel {
       Text {
         anchors.verticalCenter: parent.verticalCenter
         text: Icons.download
-        font.family: Theme.fontFamily
+        font.family: Theme.iconFamily
         font.pixelSize: Theme.iconSize
         color: installHover.containsMouse ? Theme.base : Theme.accent
       }
@@ -237,7 +244,8 @@ MorphPanel {
       Text {
         anchors.verticalCenter: parent.verticalCenter
         text: "Install " + Updates.count + " update" + (Updates.count === 1 ? "" : "s")
-        font.family: Theme.fontFamily
+        font.family: Theme.textFamily
+        font.features: Theme.tabular
         font.pixelSize: Theme.fontSize
         font.bold: true
         color: installHover.containsMouse ? Theme.base : Theme.accent

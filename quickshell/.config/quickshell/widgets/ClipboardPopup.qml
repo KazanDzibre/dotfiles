@@ -38,7 +38,8 @@ MorphPanel {
       anchors.left: parent.left
       anchors.verticalCenter: parent.verticalCenter
       text: "CLIPBOARD"
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.smallSize
       font.bold: true
       font.letterSpacing: 1
@@ -53,7 +54,8 @@ MorphPanel {
       Text {
         anchors.verticalCenter: parent.verticalCenter
         text: Clipboard.count + " kept"
-        font.family: Theme.fontFamily
+        font.family: Theme.textFamily
+        font.features: Theme.tabular
         font.pixelSize: Theme.smallSize
         color: Theme.fgDim
       }
@@ -69,7 +71,7 @@ MorphPanel {
         Text {
           anchors.centerIn: parent
           text: Icons.clearAll
-          font.family: Theme.fontFamily
+          font.family: Theme.iconFamily
           font.pixelSize: Theme.iconSize
           color: clearHover.containsMouse ? Theme.base : Theme.fgDim
         }
@@ -106,7 +108,7 @@ MorphPanel {
       anchors.leftMargin: 9
       anchors.verticalCenter: parent.verticalCenter
       text: Icons.search
-      font.family: Theme.fontFamily
+      font.family: Theme.iconFamily
       font.pixelSize: Theme.iconSize
       color: Theme.fgDim
     }
@@ -119,7 +121,8 @@ MorphPanel {
       anchors.rightMargin: 10
       verticalAlignment: TextInput.AlignVCenter
 
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.fontSize
       color: Theme.fg
       selectionColor: Theme.accent
@@ -141,7 +144,8 @@ MorphPanel {
         anchors.verticalCenter: parent.verticalCenter
         visible: searchField.text.length === 0
         text: "Search history…"
-        font.family: Theme.fontFamily
+        font.family: Theme.textFamily
+        font.features: Theme.tabular
         font.pixelSize: Theme.fontSize
         color: Theme.fgDim
       }
@@ -211,7 +215,8 @@ MorphPanel {
             width: 16
             text: row.index === 0 ? "▸" : row.index + 1
             horizontalAlignment: Text.AlignHCenter
-            font.family: Theme.fontFamily
+            font.family: Theme.textFamily
+            font.features: Theme.tabular
             font.pixelSize: Theme.smallSize
             color: row.index === 0 ? Theme.accent : Theme.fgDim
           }
@@ -239,7 +244,7 @@ MorphPanel {
               anchors.centerIn: parent
               visible: row.info.type === "link" || row.info.type === "file"
               text: row.info.type === "link" ? Icons.web : Icons.appFiles
-              font.family: Theme.fontFamily
+              font.family: Theme.iconFamily
               font.pixelSize: Theme.fontSize
               color: Theme.accent
             }
@@ -254,7 +259,8 @@ MorphPanel {
             text: row.markup
             textFormat: Text.StyledText
             elide: Text.ElideRight
-            font.family: Theme.fontFamily
+            font.family: Theme.textFamily
+            font.features: Theme.tabular
             font.pixelSize: Theme.fontSize
             color: Theme.fg
           }
@@ -268,7 +274,8 @@ MorphPanel {
             anchors.verticalCenter: parent.verticalCenter
             visible: row.lines > 1
             text: row.lines + " lines"
-            font.family: Theme.fontFamily
+            font.family: Theme.textFamily
+            font.features: Theme.tabular
             font.pixelSize: Theme.smallSize - 1
             color: Theme.fgDim
           }
@@ -294,7 +301,7 @@ MorphPanel {
             Text {
               anchors.centerIn: parent
               text: Icons.close
-              font.family: Theme.fontFamily
+              font.family: Theme.iconFamily
               font.pixelSize: Theme.smallSize
               color: removeHover.containsMouse ? Theme.base : Theme.fgDim
             }
@@ -329,7 +336,8 @@ MorphPanel {
     width: parent.width
     visible: Clipboard.count === 0
     text: "Nothing copied yet."
-    font.family: Theme.fontFamily
+    font.family: Theme.textFamily
+    font.features: Theme.tabular
     font.pixelSize: Theme.fontSize
     color: Theme.fgDim
   }
@@ -338,7 +346,8 @@ MorphPanel {
     width: parent.width
     visible: Clipboard.count > 0 && root.results.length === 0
     text: "No matches."
-    font.family: Theme.fontFamily
+    font.family: Theme.textFamily
+    font.features: Theme.tabular
     font.pixelSize: Theme.fontSize
     color: Theme.fgDim
   }

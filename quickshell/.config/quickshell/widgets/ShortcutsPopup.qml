@@ -68,7 +68,8 @@ MorphPanel {
 
             Text {
               text: section.modelData.title
-              font.family: Theme.fontFamily
+              font.family: Theme.textFamily
+              font.features: Theme.tabular
               font.pixelSize: Theme.smallSize
               font.bold: true
               font.letterSpacing: 1
@@ -100,7 +101,8 @@ MorphPanel {
                     id: chipText
                     anchors.centerIn: parent
                     text: line.modelData[0]
-                    font.family: Theme.fontFamily
+                    font.family: Theme.textFamily
+                    font.features: Theme.tabular
                     font.pixelSize: Theme.smallSize + 1
                     font.bold: true
                     color: Theme.accent
@@ -113,7 +115,8 @@ MorphPanel {
                   anchors.right: parent.right
                   anchors.verticalCenter: parent.verticalCenter
                   text: line.modelData[1]
-                  font.family: Theme.fontFamily
+                  font.family: Theme.textFamily
+                  font.features: Theme.tabular
                   font.pixelSize: Theme.fontSize
                   color: Theme.fg
                   elide: Text.ElideRight

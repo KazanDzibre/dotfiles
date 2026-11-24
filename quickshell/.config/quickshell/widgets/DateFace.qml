@@ -38,7 +38,7 @@ Row {
 
     Text {
       text: Qt.formatDateTime(root.date, "ddd").toUpperCase()
-      font.family: Theme.fontFamily
+      font.family: Theme.monoFamily
       font.pixelSize: 8
       font.bold: true
       font.letterSpacing: 1.4
@@ -46,7 +46,7 @@ Row {
     }
     Text {
       text: Qt.formatDateTime(root.date, root.skin === "vfd" ? "dd/MM" : "d MMM").toUpperCase()
-      font.family: Theme.fontFamily
+      font.family: Theme.monoFamily
       font.pixelSize: 9
       font.letterSpacing: 0.8
       color: root.ghost(root.ink, 0.6)
@@ -62,7 +62,7 @@ Row {
     Text {
       anchors.baseline: dayNumber.baseline
       text: Qt.formatDateTime(root.date, "ddd").toUpperCase()
-      font.family: Theme.fontFamily
+      font.family: Theme.monoFamily
       font.pixelSize: 9
       font.letterSpacing: 1
       color: root.ghost(root.ink, 0.65)
@@ -70,7 +70,7 @@ Row {
     Text {
       id: dayNumber
       text: Qt.formatDateTime(root.date, "d")
-      font.family: Theme.fontFamily
+      font.family: Theme.monoFamily
       font.pixelSize: 12
       font.bold: true
       color: root.accent

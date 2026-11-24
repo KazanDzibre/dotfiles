@@ -246,7 +246,8 @@ PanelWindow {
       Text {
         anchors.verticalCenter: parent.verticalCenter
         text: root.workspace ? "Workspace " + WorkspaceNumbers.label(root.workspace.id) : ""
-        font.family: Theme.fontFamily
+        font.family: Theme.textFamily
+        font.features: Theme.tabular
         font.pixelSize: Theme.fontSize
         color: Theme.fg
       }
@@ -255,7 +256,8 @@ PanelWindow {
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
         text: root.windows.length === 0 ? "Empty" : root.windows.length === 1 ? "1 window" : root.windows.length + " windows"
-        font.family: Theme.fontFamily
+        font.family: Theme.textFamily
+        font.features: Theme.tabular
         font.pixelSize: Theme.smallSize + 1
         color: Theme.fgDim
       }

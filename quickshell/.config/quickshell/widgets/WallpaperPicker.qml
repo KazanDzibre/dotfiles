@@ -772,7 +772,8 @@ PanelWindow {
       anchors.centerIn: deck
       visible: root.count === 0
       text: Wallpaper.scanning ? "Preparing previews…" : "No images in " + Wallpaper.folder
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.fontSize
       color: "white"
     }

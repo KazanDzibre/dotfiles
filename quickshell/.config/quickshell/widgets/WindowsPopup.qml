@@ -59,7 +59,8 @@ MorphPanel {
       anchors.left: parent.left
       anchors.verticalCenter: parent.verticalCenter
       text: "OPEN WINDOWS"
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.smallSize
       font.bold: true
       font.letterSpacing: 1
@@ -70,7 +71,8 @@ MorphPanel {
       anchors.right: parent.right
       anchors.verticalCenter: parent.verticalCenter
       text: root.windows.length
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.smallSize
       color: Theme.fgDim
     }
@@ -117,7 +119,7 @@ MorphPanel {
       Text {
         anchors.horizontalCenter: parent.horizontalCenter
         text: Icons.windows
-        font.family: Theme.fontFamily
+        font.family: Theme.iconFamily
         font.pixelSize: 26
         color: Theme.fgDim
       }
@@ -125,7 +127,8 @@ MorphPanel {
       Text {
         anchors.horizontalCenter: parent.horizontalCenter
         text: "No preview available"
-        font.family: Theme.fontFamily
+        font.family: Theme.textFamily
+        font.features: Theme.tabular
         font.pixelSize: Theme.smallSize
         color: Theme.fgDim
       }
@@ -138,7 +141,8 @@ MorphPanel {
     visible: root.previewTarget !== null
     text: root.previewTarget ? root.previewTarget.title : ""
     elide: Text.ElideMiddle
-    font.family: Theme.fontFamily
+    font.family: Theme.textFamily
+    font.features: Theme.tabular
     font.pixelSize: Theme.smallSize
     color: Theme.fgDim
   }
@@ -200,7 +204,7 @@ MorphPanel {
             width: 18
             horizontalAlignment: Text.AlignHCenter
             text: Icons.forClass(row.modelData.appId)
-            font.family: Theme.fontFamily
+            font.family: Theme.iconFamily
             font.pixelSize: Theme.iconSize
             color: Theme.accent
           }
@@ -217,7 +221,8 @@ MorphPanel {
               width: parent.width
               text: row.modelData.title
               elide: Text.ElideRight
-              font.family: Theme.fontFamily
+              font.family: Theme.textFamily
+              font.features: Theme.tabular
               font.pixelSize: Theme.fontSize
               color: row.isActive ? Theme.accent : Theme.fg
             }
@@ -226,7 +231,8 @@ MorphPanel {
               width: parent.width
               text: row.workspace >= 0 ? row.modelData.appId + "  ·  workspace " + row.workspace : row.modelData.appId
               elide: Text.ElideRight
-              font.family: Theme.fontFamily
+              font.family: Theme.textFamily
+              font.features: Theme.tabular
               font.pixelSize: Theme.smallSize - 1
               color: Theme.fgDim
             }
@@ -253,7 +259,7 @@ MorphPanel {
             Text {
               anchors.centerIn: parent
               text: Icons.close
-              font.family: Theme.fontFamily
+              font.family: Theme.iconFamily
               font.pixelSize: Theme.smallSize + 2
               color: closeHover.containsMouse ? Theme.base : Theme.fgDim
             }
@@ -291,7 +297,8 @@ MorphPanel {
     width: parent.width
     visible: root.windows.length === 0
     text: "No open windows."
-    font.family: Theme.fontFamily
+    font.family: Theme.textFamily
+    font.features: Theme.tabular
     font.pixelSize: Theme.fontSize
     color: Theme.fgDim
   }

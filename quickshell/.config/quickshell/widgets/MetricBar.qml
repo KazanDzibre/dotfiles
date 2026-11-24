@@ -29,7 +29,7 @@ Column {
       Text {
         anchors.verticalCenter: parent.verticalCenter
         text: root.glyph
-        font.family: Theme.fontFamily
+        font.family: Theme.iconFamily
         font.pixelSize: Theme.iconSize
         color: root.tint
 
@@ -43,7 +43,8 @@ Column {
       Text {
         anchors.verticalCenter: parent.verticalCenter
         text: root.label
-        font.family: Theme.fontFamily
+        font.family: Theme.textFamily
+        font.features: Theme.tabular
         font.pixelSize: Theme.fontSize
         color: Theme.fg
       }
@@ -55,7 +56,8 @@ Column {
       readonly property string figure: root.readout.length > 0 ? root.readout : Math.round(root.value * 100) + "%"
 
       text: root.detail.length > 0 ? root.detail + "   " + figure : figure
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.smallSize
       color: Theme.fgDim
     }

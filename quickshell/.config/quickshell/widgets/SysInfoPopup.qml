@@ -22,7 +22,8 @@ MorphPanel {
       anchors.left: parent.left
       anchors.verticalCenter: parent.verticalCenter
       text: "SYSTEM"
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.smallSize
       font.bold: true
       font.letterSpacing: 1
@@ -34,7 +35,8 @@ MorphPanel {
       anchors.verticalCenter: parent.verticalCenter
       visible: !SysInfo.ready
       text: "reading…"
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.smallSize
       color: Theme.fgDim
     }
@@ -75,7 +77,8 @@ MorphPanel {
       anchors.left: parent.left
       anchors.bottom: parent.bottom
       text: "THERMALS"
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.smallSize
       font.bold: true
       font.letterSpacing: 1
@@ -88,7 +91,8 @@ MorphPanel {
       // The trip point the hottest sensor is being measured against, so the
       // bars have a stated scale instead of an implied one.
       text: SysInfo.hottest ? "trip " + Math.round(SysInfo.hottest.crit) + "°" : ""
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.smallSize
       color: Theme.fgDim
     }

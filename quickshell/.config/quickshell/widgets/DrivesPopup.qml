@@ -31,7 +31,8 @@ MorphPanel {
       anchors.left: parent.left
       anchors.verticalCenter: parent.verticalCenter
       text: "USB DRIVES"
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.smallSize
       font.bold: true
       font.letterSpacing: 1
@@ -42,7 +43,8 @@ MorphPanel {
       anchors.right: parent.right
       anchors.verticalCenter: parent.verticalCenter
       text: Drives.drives.length + " connected"
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.smallSize
       color: Theme.fgDim
     }
@@ -79,7 +81,8 @@ MorphPanel {
           width: parent.width
           text: card.modelData.name
           elide: Text.ElideRight
-          font.family: Theme.fontFamily
+          font.family: Theme.textFamily
+          font.features: Theme.tabular
           font.pixelSize: Theme.fontSize
           font.bold: true
           color: Theme.fg
@@ -88,7 +91,8 @@ MorphPanel {
         Text {
           width: parent.width
           text: card.modelData.size
-          font.family: Theme.fontFamily
+          font.family: Theme.textFamily
+          font.features: Theme.tabular
           font.pixelSize: Theme.smallSize - 1
           color: Theme.fgDim
         }
@@ -104,7 +108,8 @@ MorphPanel {
             width: body.width
             text: (modelData.label.length > 0 ? modelData.label : modelData.path.replace("/dev/", "")) + "  ·  " + (isMounted ? modelData.mountpoints[0] : "not mounted")
             elide: Text.ElideMiddle
-            font.family: Theme.fontFamily
+            font.family: Theme.textFamily
+            font.features: Theme.tabular
             font.pixelSize: Theme.smallSize - 1
             color: isMounted ? Theme.fg : Theme.fgDim
           }
@@ -115,7 +120,8 @@ MorphPanel {
           visible: card.error.length > 0
           text: card.error
           wrapMode: Text.WordWrap
-          font.family: Theme.fontFamily
+          font.family: Theme.textFamily
+          font.features: Theme.tabular
           font.pixelSize: Theme.smallSize - 1
           color: Theme.crit
         }
@@ -150,7 +156,7 @@ MorphPanel {
           Text {
             anchors.verticalCenter: parent.verticalCenter
             text: Icons.eject
-            font.family: Theme.fontFamily
+            font.family: Theme.iconFamily
             font.pixelSize: Theme.iconSize - 1
             color: ejectButton.lit ? Theme.base : Theme.fg
           }
@@ -158,7 +164,8 @@ MorphPanel {
           Text {
             anchors.verticalCenter: parent.verticalCenter
             text: card.busy ? "Ejecting…" : "Eject"
-            font.family: Theme.fontFamily
+            font.family: Theme.textFamily
+            font.features: Theme.tabular
             font.pixelSize: Theme.smallSize
             font.bold: true
             color: ejectButton.lit ? Theme.base : Theme.fg
@@ -180,7 +187,8 @@ MorphPanel {
   Text {
     visible: !Drives.hasDrives
     text: "No USB drives connected."
-    font.family: Theme.fontFamily
+    font.family: Theme.textFamily
+    font.features: Theme.tabular
     font.pixelSize: Theme.smallSize
     color: Theme.fgDim
   }

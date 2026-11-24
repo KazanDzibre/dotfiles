@@ -24,7 +24,7 @@ Item {
 
       anchors.verticalCenter: parent.verticalCenter
       text: Icons.usbDrive
-      font.family: Theme.fontFamily
+      font.family: Theme.iconFamily
       font.pixelSize: Theme.iconSize
       color: popup.opened || mouse.containsMouse || Drives.mountedCount > 0 ? Theme.accent : Theme.fgDim
       opacity: Drives.ejecting !== "" ? pulse : 1
@@ -56,7 +56,8 @@ Item {
       anchors.verticalCenter: parent.verticalCenter
       visible: Drives.drives.length > 1
       text: Drives.drives.length
-      font.family: Theme.fontFamily
+      font.family: Theme.textFamily
+      font.features: Theme.tabular
       font.pixelSize: Theme.smallSize
       font.bold: true
       color: Theme.fg

@@ -202,7 +202,16 @@ Singleton {
   readonly property int padding: 10     // island edge -> content
   readonly property int spacing: 8      // between items inside an island
 
-  readonly property string fontFamily: "FantasqueSansM Nerd Font"
+  // Words are Inter, like the rest of the desktop (fontconfig package);
+  // icons are Nerd Font glyphs, which only the Nerd Font has; the clock skins
+  // and code keep the monospace. Numbers in Inter use tabular digits
+  // (`font.features: Theme.tabular`) so counters and percentages don't jiggle.
+  readonly property string textFamily: "Inter"
+  readonly property string iconFamily: "FantasqueSansM Nerd Font"
+  readonly property string monoFamily: "FantasqueSansM Nerd Font"
+  readonly property var tabular: ({ "tnum": 1 })
+  // Older name, kept for anything that still asks for it: the icon font.
+  readonly property string fontFamily: iconFamily
   readonly property int fontSize: 13
   readonly property int iconSize: 14
   readonly property int smallSize: 11
