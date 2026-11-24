@@ -314,7 +314,7 @@ PanelWindow {
         anchors.verticalCenter: parent.verticalCenter
         color: root.ink
         selectionColor: Theme.accent
-        font.family: Theme.iconFamily
+        font.family: Theme.textFamily
         font.pixelSize: Theme.fontSize + 2
         clip: true
 

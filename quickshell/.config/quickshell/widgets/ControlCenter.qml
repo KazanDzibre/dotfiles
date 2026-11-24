@@ -236,6 +236,7 @@ MorphPanel {
       Glyph {
         anchors.verticalCenter: parent.verticalCenter
         text: tile.glyph
+        filled: tile.on
         color: tile.on ? Theme.base : Theme.fg
       }
 
@@ -848,7 +849,6 @@ MorphPanel {
     }
 
     Label {
-      font.family: Theme.iconFamily
       anchors.left: appsGlyph.right
       anchors.leftMargin: 12
       anchors.verticalCenter: parent.verticalCenter
@@ -856,13 +856,25 @@ MorphPanel {
       font.bold: true
     }
 
-    Label {
-      font.family: Theme.iconFamily
+    Row {
       anchors.right: parent.right
-      anchors.rightMargin: 14
+      anchors.rightMargin: 10
       anchors.verticalCenter: parent.verticalCenter
-      text: (Updates.count > 0 ? Updates.count + " updates  " : "") + Icons.chevronRight
-      color: Theme.fgDim
+      spacing: 4
+
+      Label {
+        anchors.verticalCenter: parent.verticalCenter
+        visible: Updates.count > 0
+        text: Updates.count + " updates"
+        color: Theme.fgDim
+      }
+      Label {
+        font.family: Theme.iconFamily
+        font.pixelSize: Theme.iconSize + 2
+        anchors.verticalCenter: parent.verticalCenter
+        text: Icons.chevronRight
+        color: Theme.fgDim
+      }
     }
 
     MouseArea {

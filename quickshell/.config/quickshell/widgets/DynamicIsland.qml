@@ -2480,7 +2480,6 @@ PanelWindow {
         }
       }
       Ink {
-        font.family: Theme.iconFamily
         anchors.left: hdrGlyph.right
         anchors.leftMargin: 10
         anchors.right: hdrEnd.left
@@ -2935,7 +2934,17 @@ PanelWindow {
             }
 
             Ink {
+              // Solid when the toggle is on, outlined when off.
+              property real fill: quickButton.modelData.on ? 1 : 0
+              Behavior on fill {
+                NumberAnimation {
+                  duration: Theme.motionBase
+                  easing.type: Easing.OutCubic
+                }
+              }
               font.family: Theme.iconFamily
+              font.variableAxes: ({ "FILL": fill })
+              renderType: Text.NativeRendering
               anchors.centerIn: parent
               text: quickButton.modelData.glyph
               font.pixelSize: Theme.iconSize
@@ -3123,7 +3132,8 @@ PanelWindow {
         color: root.ink
         selectionColor: root.hot
         selectedTextColor: "#140f08"
-        font.family: Theme.iconFamily
+        font.family: Theme.textFamily
+        font.features: Theme.tabular
         font.pixelSize: Theme.fontSize + 4
         clip: true
 
@@ -3467,7 +3477,7 @@ PanelWindow {
                       color: Qt.rgba(1, 1, 1, 0.14)
 
                       Ink {
-                        font.family: Theme.iconFamily
+                        font.family: note.more > 0 ? Theme.textFamily : Theme.iconFamily
                         id: stackLabel
                         anchors.centerIn: parent
                         text: note.more > 0 ? "+" + note.more : Icons.chevronUp
@@ -6614,6 +6624,7 @@ PanelWindow {
   // A glyph that keeps turning while its bubble is out.
   component Spinner: Ink {
     id: spinner
+    font.family: Theme.iconFamily
     property bool running: true
     anchors.centerIn: parent
     font.pixelSize: Theme.iconSize + 1
@@ -6631,6 +6642,7 @@ PanelWindow {
   // A glyph that breathes while its bubble is out.
   component Breather: Ink {
     id: breather
+    font.family: Theme.iconFamily
     property bool running: true
     anchors.centerIn: parent
     font.pixelSize: Theme.iconSize

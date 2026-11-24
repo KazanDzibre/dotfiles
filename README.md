@@ -19,6 +19,9 @@ outside this repo: run `bootstrap/install-claude-hooks.sh` once (safe to re-run;
 mpv's player UI (uosc, with seek bar previews) is downloaded, not stored here:
 run `bootstrap/install-mpv-ui.sh` once after stowing `mpv`.
 
+The bar's icons are Material Symbols Rounded, also downloaded rather than stored
+here: run `bootstrap/install-icon-font.sh` once, then restart Quickshell.
+
 Stow refuses to overwrite files that already exist. If a package reports a
 conflict, move the existing file out of the way and run it again, or use
 `stow --adopt` to pull the existing file into the repo (then check `git diff`,

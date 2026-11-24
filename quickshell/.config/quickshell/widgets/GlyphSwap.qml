@@ -3,7 +3,9 @@
 // stays the same does nothing.
 //
 // Takes the properties of a Text that icons use (text, color, font, and the
-// alignment, which is moot: the glyph is centred in its own box).
+// alignment, which is moot: the glyph is centred in its own box). `filled`
+// fills the Material Symbols glyph in (its FILL axis), easing between outline
+// and solid, for toggles that are on.
 import QtQuick
 import qs
 
@@ -15,6 +17,15 @@ Item {
   property alias font: cur.font
   property int horizontalAlignment: Text.AlignHCenter
   property int verticalAlignment: Text.AlignVCenter
+
+  property bool filled: false
+  property real fill: filled ? 1 : 0
+  Behavior on fill {
+    NumberAnimation {
+      duration: Theme.motionBase
+      easing.type: Easing.OutCubic
+    }
+  }
 
   property string previous: ""
 
@@ -41,6 +52,7 @@ Item {
     id: ghost
     anchors.centerIn: parent
     font: cur.font
+    renderType: cur.renderType
     color: root.color
     opacity: 0
   }
@@ -51,6 +63,10 @@ Item {
     text: root.text
     font.family: Theme.iconFamily
     font.pixelSize: Theme.iconSize
+    font.variableAxes: ({ "FILL": root.fill })
+    // The default distance-field renderer caches one shape per glyph and
+    // ignores the variable axes; native rendering draws the filled one.
+    renderType: Text.NativeRendering
     color: root.color
   }
 

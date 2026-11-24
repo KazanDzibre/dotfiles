@@ -86,16 +86,19 @@ Item {
 
     Glyph {
       text: root.netGlyph
+      filled: true
       color: root.wired || root.activeNetwork ? Theme.accent : Theme.fgDim
     }
 
     Glyph {
       text: !root.btOn ? Icons.bluetoothOff : root.btConnected > 0 ? Icons.bluetoothConnected : Icons.bluetooth
+      filled: root.btConnected > 0
       color: root.btConnected > 0 ? Theme.accent : root.btOn ? Theme.fg : Theme.fgDim
     }
 
     Glyph {
       text: !root.audio || root.audio.muted ? Icons.volMute : root.audio.volume < 0.34 ? Icons.volLow : root.audio.volume < 0.67 ? Icons.volMed : Icons.volHigh
+      filled: !!root.audio && !root.audio.muted
       color: root.audio && !root.audio.muted ? Theme.fg : Theme.fgDim
     }
 
@@ -106,6 +109,7 @@ Item {
 
       Glyph {
         text: root.batGlyph
+        filled: true
         color: root.batTint
 
         SequentialAnimation on opacity {

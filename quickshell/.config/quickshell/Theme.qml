@@ -203,11 +203,12 @@ Singleton {
   readonly property int spacing: 8      // between items inside an island
 
   // Words are Inter, like the rest of the desktop (fontconfig package);
-  // icons are Nerd Font glyphs, which only the Nerd Font has; the clock skins
-  // and code keep the monospace. Numbers in Inter use tabular digits
+  // icons are Material Symbols Rounded (Icons.qml, installed by
+  // bootstrap/install-icon-font.sh); the clock skins and code keep the
+  // monospace. Numbers in Inter use tabular digits
   // (`font.features: Theme.tabular`) so counters and percentages don't jiggle.
   readonly property string textFamily: "Inter"
-  readonly property string iconFamily: "FantasqueSansM Nerd Font"
+  readonly property string iconFamily: "Material Symbols Rounded"
   readonly property string monoFamily: "FantasqueSansM Nerd Font"
   readonly property var tabular: ({ "tnum": 1 })
   // Older name, kept for anything that still asks for it: the icon font.
